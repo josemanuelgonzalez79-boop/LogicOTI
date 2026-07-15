@@ -1,0 +1,66 @@
+<section class="hero">
+  <div>
+    <span class="eyebrow">Plantilla industrial 2026</span>
+    <h1>Angular listo para conectar con Spring Boot</h1>
+    <p>
+      Base limpia con componentes standalone, tipado estricto, PrimeNG, interceptor global y
+      configuración por ambientes.
+    </p>
+  </div>
+
+  <p-button
+    label="Comprobar backend"
+    icon="pi pi-bolt"
+    [loading]="loading()"
+    (onClick)="checkBackend()"
+  />
+</section>
+
+<section class="cards">
+  <p-card header="Frontend">
+    <div class="status-line">
+      <p-tag value="Angular 21" severity="info" />
+      <span>Standalone y compilación estricta</span>
+    </div>
+    <div class="status-line">
+      <p-tag value="PrimeNG 21" severity="success" />
+      <span>Tema Aura mediante providePrimeNG</span>
+    </div>
+  </p-card>
+
+  <p-card header="Backend">
+    @if (loading()) {
+      <div class="loading-box">
+        <p-progress-spinner ariaLabel="Consultando backend" strokeWidth="5" />
+      </div>
+    } @else if (status(); as currentStatus) {
+      <div class="status-line">
+        <span>Aplicación</span>
+        <strong>{{ currentStatus.application }}</strong>
+      </div>
+      <div class="status-line">
+        <span>API</span>
+        <p-tag
+          [value]="currentStatus.status"
+          [severity]="currentStatus.status === 'UP' ? 'success' : 'warn'"
+        />
+      </div>
+      <div class="status-line">
+        <span>PostgreSQL</span>
+        <p-tag
+          [value]="currentStatus.database"
+          [severity]="currentStatus.database === 'UP' ? 'success' : 'danger'"
+        />
+      </div>
+      <div class="status-line">
+        <span>PLC habilitado</span>
+        <strong>{{ currentStatus.plcEnabled ? 'Sí' : 'No' }}</strong>
+      </div>
+      <small>Última revisión: {{ currentStatus.timestamp | date: 'medium' }}</small>
+    } @else {
+      <p class="muted">
+        Presiona “Comprobar backend” para consultar <code>/api/system/status</code>.
+      </p>
+    }
+  </p-card>
+</section>

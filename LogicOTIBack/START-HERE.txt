@@ -1,0 +1,5 @@
+1. Abre el proyecto con IntelliJ IDEA o Spring Tool Suite.
+2. Confirma que el Project SDK sea JDK 21.
+3. Ejecuta: docker compose up -d
+4. Ejecuta en Windows: .\mvnw.cmd spring-boot:run
+5. Abre: http://localhost:3210/swagger-ui.html

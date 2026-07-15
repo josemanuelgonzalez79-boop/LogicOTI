@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/industrial_app}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 8
+      connection-timeout: 30000
+      validation-timeout: 5000
+      pool-name: IndustrialHikariPool
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    com.icap.template: DEBUG
+    org.hibernate.SQL: INFO
