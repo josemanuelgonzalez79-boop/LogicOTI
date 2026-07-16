@@ -1,17 +1,10 @@
 import { Component } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { ToastModule } from 'primeng/toast';
-import { ToolbarModule } from 'primeng/toolbar';
+import { Shell } from './layout/shell/shell';
 
 @Component({
   selector: 'app-root',
-  imports: [ButtonModule, RouterLink, RouterOutlet, ToastModule, ToolbarModule],
+  imports: [Shell],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
-  protected toggleDarkMode(): void {
-    document.documentElement.classList.toggle('app-dark');
-  }
-}
+export class App {}

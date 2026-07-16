@@ -1,0 +1,34 @@
+<aside class="sidebar">
+  <div class="sidebar__heading">
+    <span class="sidebar__heading-icon">
+      <i class="pi pi-sitemap"></i>
+    </span>
+
+    <div>
+      <strong>Navegación</strong>
+      <small>Edificio OTI</small>
+    </div>
+  </div>
+
+  <nav aria-label="Navegación principal">
+    <ul class="sidebar__menu">
+      @for (item of menuItems; track item.route) {
+        <li>
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+          >
+            <i [class]="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="sidebar__footer">
+    <span>Versión 0.1</span>
+    <small>Arquitectura inicial</small>
+  </div>
+</aside>
