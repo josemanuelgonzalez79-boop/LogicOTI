@@ -1,4 +1,4 @@
-package com.icap.template.config;
+package com.icap.logicoti.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

@@ -1,9 +1,10 @@
-package com.icap.template.system;
+package com.icap.logicoti.system;
 
-import com.icap.template.config.PlcProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+
+import com.icap.logicoti.config.PlcProperties;
 
 import java.time.Instant;
 

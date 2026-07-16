@@ -1,4 +1,4 @@
-package com.icap.template.system;
+package com.icap.logicoti.system;
 
 import java.time.Instant;
 

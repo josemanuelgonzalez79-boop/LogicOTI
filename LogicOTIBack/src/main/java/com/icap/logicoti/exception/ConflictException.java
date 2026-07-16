@@ -1,4 +1,4 @@
-package com.icap.template.exception;
+package com.icap.logicoti.exception;
 
 public class ConflictException extends RuntimeException {
     public ConflictException(String message) {

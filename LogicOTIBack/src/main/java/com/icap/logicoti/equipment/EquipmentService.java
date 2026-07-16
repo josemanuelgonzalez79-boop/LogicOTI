@@ -1,10 +1,11 @@
-package com.icap.template.equipment;
+package com.icap.logicoti.equipment;
 
-import com.icap.template.exception.ConflictException;
-import com.icap.template.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.icap.logicoti.exception.ConflictException;
+import com.icap.logicoti.exception.ResourceNotFoundException;
 
 import java.util.List;
 
