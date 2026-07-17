@@ -1,0 +1,15 @@
+<section class="empty-state">
+  <i class="empty-state__icon" [class]="icon()"></i>
+
+  <h3 class="empty-state__title">
+    {{ title() }}
+  </h3>
+
+  <p class="empty-state__message">
+    {{ message() }}
+  </p>
+
+  <div class="empty-state__actions">
+    <ng-content />
+  </div>
+</section>

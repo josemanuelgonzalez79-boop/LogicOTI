@@ -1,0 +1,149 @@
+<main class="login-page">
+  <section class="login-page__visual">
+    <div class="visual-grid"></div>
+
+    <div class="brand">
+      <div class="brand__icon">
+        <i class="pi pi-building"></i>
+      </div>
+
+      <div>
+        <strong>LogicOTI</strong>
+        <span>Automatización inteligente del edificio</span>
+      </div>
+    </div>
+
+    <div class="visual-content">
+      <span class="visual-content__eyebrow">
+        Plataforma de supervisión y control
+      </span>
+
+      <h1>Control centralizado para un edificio más seguro y eficiente.</h1>
+
+      <p>
+        Supervisa sensores, alarmas, iluminación, climatización y estados
+        operativos desde una sola plataforma.
+      </p>
+
+      <div class="visual-features">
+        <article>
+          <i class="pi pi-shield"></i>
+          <div>
+            <strong>Seguridad</strong>
+            <span>Monitoreo de alarmas y eventos críticos.</span>
+          </div>
+        </article>
+
+        <article>
+          <i class="pi pi-bolt"></i>
+          <div>
+            <strong>Operación</strong>
+            <span>Control rápido de dispositivos y sistemas.</span>
+          </div>
+        </article>
+
+        <article>
+          <i class="pi pi-chart-line"></i>
+          <div>
+            <strong>Diagnóstico</strong>
+            <span>Históricos y análisis del comportamiento del edificio.</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div class="visual-status">
+      <span class="visual-status__dot"></span>
+      Sistema preparado para operación
+    </div>
+  </section>
+
+  <section class="login-page__access">
+    <div class="login-card">
+      <div class="login-card__header">
+        <span class="login-card__badge">
+          <i class="pi pi-lock"></i>
+        </span>
+
+        <div>
+          <span class="login-card__eyebrow">Acceso seguro</span>
+          <h2>Iniciar sesión</h2>
+          <p>Ingresa tus credenciales para acceder a LogicOTI.</p>
+        </div>
+      </div>
+
+      <form class="login-form" (ngSubmit)="login()">
+        <div class="form-field">
+          <label for="username">Usuario</label>
+
+          <div class="input-wrapper">
+            <i class="pi pi-user"></i>
+
+            <input
+              id="username"
+              name="username"
+              type="text"
+              pInputText
+              [(ngModel)]="username"
+              placeholder="Ingresa tu usuario"
+              autocomplete="username"
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="password">Contraseña</label>
+
+          <p-password
+            inputId="password"
+            name="password"
+            [(ngModel)]="password"
+            placeholder="Ingresa tu contraseña"
+            [feedback]="false"
+            [toggleMask]="true"
+            autocomplete="current-password"
+            styleClass="login-password"
+            inputStyleClass="login-password__input"
+          />
+        </div>
+
+        <div class="login-form__options">
+          <label class="remember-option">
+            <p-checkbox
+              name="rememberSession"
+              [(ngModel)]="rememberSession"
+              [binary]="true"
+              inputId="rememberSession"
+            />
+
+            <span>Mantener sesión iniciada</span>
+          </label>
+
+          <button type="button" class="forgot-password">
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+
+        <p-button
+          type="submit"
+          label="Ingresar al sistema"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          [loading]="loading"
+          [disabled]="!username.trim() || !password.trim()"
+          styleClass="login-button"
+        />
+      </form>
+
+      <div class="login-card__footer">
+        <i class="pi pi-info-circle"></i>
+        <span>Acceso exclusivo para personal autorizado.</span>
+      </div>
+    </div>
+
+    <footer class="access-footer">
+      <strong>ICAP</strong>
+      <span>LogicOTI · Sistema de automatización del edificio</span>
+    </footer>
+  </section>
+</main>

@@ -1,4 +1,6 @@
-<app-navbar />
+<app-navbar
+  (menuToggle)="openMobileMenu()"
+/>
 
 <div class="app-shell">
   <app-sidebar />
@@ -7,3 +9,17 @@
     <router-outlet />
   </main>
 </div>
+
+<p-drawer
+  [(visible)]="mobileMenuVisible"
+  position="left"
+  header="Navegación"
+  [modal]="true"
+  [dismissible]="true"
+  [blockScroll]="true"
+  styleClass="mobile-navigation-drawer"
+>
+  <app-sidebar
+    (navigationSelected)="closeMobileMenu()"
+  />
+</p-drawer>

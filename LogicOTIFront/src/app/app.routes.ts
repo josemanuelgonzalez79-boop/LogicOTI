@@ -3,8 +3,18 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'dashboard',
+    redirectTo: 'login',
     pathMatch: 'full',
+  },
+
+  // ==========================
+  // Autenticación
+  // ==========================
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./features/auth/login/login').then((c) => c.Login),
+    title: 'Iniciar sesión | LogicOTI',
   },
 
   // ==========================
@@ -15,6 +25,18 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/dashboard/dashboard').then((c) => c.Dashboard),
     title: 'Dashboard | OTI',
+  },
+
+  // ==========================
+  // UI Showcase (Desarrollo)
+  // ==========================
+  {
+    path: 'ui-showcase',
+    loadComponent: () =>
+      import('./features/ui-showcase/ui-showcase').then(
+        (c) => c.UiShowcase
+      ),
+    title: 'UI Showcase | OTI',
   },
 
   // ==========================
@@ -75,7 +97,9 @@ export const routes: Routes = [
   {
     path: 'diagnostics',
     loadComponent: () =>
-      import('./features/diagnostics/diagnostics').then((c) => c.Diagnostics),
+      import('./features/diagnostics/diagnostics').then(
+        (c) => c.Diagnostics
+      ),
     title: 'Diagnóstico | OTI',
   },
 
@@ -85,7 +109,9 @@ export const routes: Routes = [
   {
     path: 'administration',
     loadComponent: () =>
-      import('./features/administration/administration').then((c) => c.Administration),
+      import('./features/administration/administration').then(
+        (c) => c.Administration
+      ),
     title: 'Administración | OTI',
   },
 

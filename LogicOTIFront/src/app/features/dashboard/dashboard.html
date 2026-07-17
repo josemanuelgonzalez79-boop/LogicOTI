@@ -1,1 +1,231 @@
-<p>dashboard works!</p>
+<section class="dashboard-page">
+  <header class="dashboard-header">
+    <div>
+      <span class="dashboard-header__eyebrow">Resumen operativo</span>
+      <h1>Dashboard del edificio</h1>
+      <p>
+        Monitorea el estado general del edificio, revisa eventos recientes y
+        accede rápidamente a cada nivel.
+      </p>
+    </div>
+
+    <div class="dashboard-header__status">
+      <span class="dashboard-header__status-dot"></span>
+
+      <div>
+        <strong>Sistema conectado</strong>
+        <span>Última actualización: hace unos segundos</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="summary-grid" aria-label="Resumen del sistema">
+    @for (card of summaryCards; track card.label) {
+      <article class="summary-card">
+        <div
+          class="summary-card__icon"
+          [class]="'summary-card__icon summary-card__icon--' + card.status"
+        >
+          <i [class]="card.icon"></i>
+        </div>
+
+        <div class="summary-card__content">
+          <span>{{ card.label }}</span>
+          <strong>{{ card.value }}</strong>
+          <small>{{ card.detail }}</small>
+        </div>
+      </article>
+    }
+  </section>
+
+  <section class="dashboard-main-grid">
+    <article class="dashboard-panel dashboard-panel--floors">
+      <header class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Navegación principal</span>
+          <h2>Niveles del edificio</h2>
+        </div>
+
+        <a routerLink="/building" class="panel-header__link">
+          Ver edificio
+          <i class="pi pi-arrow-right"></i>
+        </a>
+      </header>
+
+      <div class="floor-grid">
+        @for (floor of floors; track floor.name) {
+          <a
+            [routerLink]="floor.route"
+            class="floor-card"
+            [class]="'floor-card floor-card--' + floor.health"
+          >
+            <div class="floor-card__status-bar"></div>
+
+            <div class="floor-card__header">
+              <div class="floor-card__identity">
+                <span class="floor-card__icon">
+                  <i [class]="floor.icon"></i>
+                </span>
+
+                <div>
+                  <h3>{{ floor.name }}</h3>
+                  <span
+                    class="floor-card__health"
+                    [class]="'floor-card__health floor-card__health--' + floor.health"
+                  >
+                    <span class="floor-card__health-dot"></span>
+                    {{ floor.healthLabel }}
+                  </span>
+                </div>
+              </div>
+
+              <i class="pi pi-arrow-up-right floor-card__arrow"></i>
+            </div>
+
+            <p class="floor-card__description">
+              {{ floor.description }}
+            </p>
+
+            <div class="floor-card__metrics">
+              <div class="floor-metric">
+                <i class="pi pi-link"></i>
+
+                <div>
+                  <strong>{{ floor.devices }}</strong>
+                  <span>Dispositivos</span>
+                </div>
+              </div>
+
+              <div class="floor-metric">
+                <i class="pi pi-broadcast-tower"></i>
+
+                <div>
+                  <strong>{{ floor.sensors }}</strong>
+                  <span>Sensores</span>
+                </div>
+              </div>
+
+              <div class="floor-metric">
+                <i class="pi pi-video"></i>
+
+                <div>
+                  <strong>{{ floor.cameras }}</strong>
+                  <span>Cámaras</span>
+                </div>
+              </div>
+
+              <div class="floor-metric">
+                <i class="pi pi-bell"></i>
+
+                <div>
+                  <strong>{{ floor.alarms }}</strong>
+                  <span>Alarmas</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="floor-card__footer">
+              <span>{{ floor.status }}</span>
+
+              <strong>
+                Entrar al nivel
+                <i class="pi pi-arrow-right"></i>
+              </strong>
+            </div>
+          </a>
+        }
+      </div>
+    </article>
+
+    <article class="dashboard-panel dashboard-panel--events">
+      <header class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Actividad reciente</span>
+          <h2>Últimos eventos</h2>
+        </div>
+
+        <a routerLink="/history" class="panel-header__link">
+          Ver historial
+        </a>
+      </header>
+
+      <div class="event-list">
+        @for (event of recentEvents; track event.time + event.title) {
+          <article class="event-item">
+            <span
+              class="event-item__icon"
+              [class]="'event-item__icon event-item__icon--' + event.severity"
+            >
+              <i [class]="event.icon"></i>
+            </span>
+
+            <div class="event-item__content">
+              <div>
+                <strong>{{ event.title }}</strong>
+                <time>{{ event.time }}</time>
+              </div>
+
+              <span>{{ event.location }}</span>
+            </div>
+          </article>
+        }
+      </div>
+
+      <a routerLink="/alarms" class="events-action">
+        <span>
+          <i class="pi pi-bell"></i>
+          Revisar alarmas activas
+        </span>
+
+        <i class="pi pi-chevron-right"></i>
+      </a>
+    </article>
+  </section>
+
+  <section class="quick-actions">
+    <header class="panel-header">
+      <div>
+        <span class="panel-header__eyebrow">Accesos directos</span>
+        <h2>Operación del sistema</h2>
+      </div>
+    </header>
+
+    <div class="quick-actions__grid">
+      <a routerLink="/control" class="quick-action">
+        <i class="pi pi-sliders-h"></i>
+
+        <div>
+          <strong>Control</strong>
+          <span>Iluminación, clima y dispositivos</span>
+        </div>
+      </a>
+
+      <a routerLink="/alarms" class="quick-action">
+        <i class="pi pi-bell"></i>
+
+        <div>
+          <strong>Alarmas</strong>
+          <span>Eventos críticos y prioridades</span>
+        </div>
+      </a>
+
+      <a routerLink="/diagnostics" class="quick-action">
+        <i class="pi pi-wrench"></i>
+
+        <div>
+          <strong>Diagnóstico</strong>
+          <span>Estado y revisión de sensores</span>
+        </div>
+      </a>
+
+      <a routerLink="/administration" class="quick-action">
+        <i class="pi pi-cog"></i>
+
+        <div>
+          <strong>Administración</strong>
+          <span>Usuarios, permisos y configuración</span>
+        </div>
+      </a>
+    </div>
+  </section>
+</section>

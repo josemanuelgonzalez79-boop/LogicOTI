@@ -1,0 +1,99 @@
+<div class="showcase">
+
+  <app-page-header
+    title="Biblioteca de Componentes"
+    subtitle="Componentes reutilizables del proyecto LogicOTI"
+    icon="pi pi-palette">
+  </app-page-header>
+
+  <section class="section">
+
+    <h2>KPI Cards</h2>
+
+    <div class="grid">
+
+      <app-kpi-card
+        title="Sensores"
+        [value]="128"
+        icon="pi pi-microchip"
+        description="Registrados">
+      </app-kpi-card>
+
+      <app-kpi-card
+        title="Alarmas"
+        [value]="3"
+        icon="pi pi-bell"
+        description="Activas">
+      </app-kpi-card>
+
+      <app-kpi-card
+        title="Áreas"
+        [value]="22"
+        icon="pi pi-building"
+        description="Configuradas">
+      </app-kpi-card>
+
+    </div>
+
+  </section>
+
+  <section class="section">
+
+    <h2>Status Chips</h2>
+
+    <div class="chips">
+
+      <app-status-chip status="ACTIVE"></app-status-chip>
+
+      <app-status-chip status="INACTIVE"></app-status-chip>
+
+      <app-status-chip status="ALARM"></app-status-chip>
+
+      <app-status-chip status="OFFLINE"></app-status-chip>
+
+      <app-status-chip status="MAINTENANCE"></app-status-chip>
+
+    </div>
+
+  </section>
+
+  <section class="section">
+
+    <h2>App Card</h2>
+
+    <app-card
+      title="Información"
+      subtitle="Ejemplo de tarjeta">
+
+      <p>
+        Este componente servirá para agrupar información en las
+        diferentes pantallas del sistema.
+      </p>
+
+    </app-card>
+
+  </section>
+
+  <section class="section">
+
+    <h2>Loading</h2>
+
+    <app-loading
+      message="Consultando dispositivos del edificio...">
+    </app-loading>
+
+  </section>
+
+  <section class="section">
+
+    <h2>Empty State</h2>
+
+    <app-empty-state
+      title="Sin dispositivos"
+      message="No existen dispositivos registrados en esta área."
+      icon="pi pi-inbox">
+    </app-empty-state>
+
+  </section>
+
+</div>

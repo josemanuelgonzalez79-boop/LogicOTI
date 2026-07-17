@@ -1,0 +1,11 @@
+<span
+    class="status-chip"
+    [class.active]="status() === 'ACTIVE'"
+    [class.inactive]="status() === 'INACTIVE'"
+    [class.alarm]="status() === 'ALARM'"
+    [class.offline]="status() === 'OFFLINE'"
+    [class.maintenance]="status() === 'MAINTENANCE'">
+
+    {{ label() }}
+
+</span>

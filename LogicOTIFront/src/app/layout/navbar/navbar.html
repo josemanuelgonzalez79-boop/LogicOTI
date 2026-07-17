@@ -1,12 +1,23 @@
 <header class="navbar">
-  <div class="navbar__brand">
-    <span class="navbar__logo">
-      <i class="pi pi-building"></i>
-    </span>
+  <div class="navbar__left">
+    <button
+      type="button"
+      class="navbar__menu-button"
+      aria-label="Abrir menú de navegación"
+      (click)="openMobileMenu()"
+    >
+      <i class="pi pi-bars"></i>
+    </button>
 
-    <div>
-      <strong>Automatización OTI</strong>
-      <small>Sistema de supervisión del edificio</small>
+    <div class="navbar__brand">
+      <span class="navbar__logo">
+        <i class="pi pi-building"></i>
+      </span>
+
+      <div>
+        <strong>Automatización OTI</strong>
+        <small>Sistema de supervisión del edificio</small>
+      </div>
     </div>
   </div>
 
@@ -18,7 +29,7 @@
 
     <button type="button" class="navbar__user">
       <i class="pi pi-user"></i>
-      Daniel Ontiveros
+      <span>Daniel Ontiveros</span>
     </button>
   </div>
 </header>

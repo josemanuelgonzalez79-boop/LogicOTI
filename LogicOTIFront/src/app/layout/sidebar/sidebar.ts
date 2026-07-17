@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface MenuItem {
@@ -14,6 +14,8 @@ interface MenuItem {
   styleUrl: './sidebar.scss',
 })
 export class Sidebar {
+  navigationSelected = output<void>();
+
   protected readonly menuItems: MenuItem[] = [
     {
       label: 'Dashboard',
@@ -51,4 +53,8 @@ export class Sidebar {
       route: '/administration',
     },
   ];
+
+  protected onNavigation(): void {
+    this.navigationSelected.emit();
+  }
 }

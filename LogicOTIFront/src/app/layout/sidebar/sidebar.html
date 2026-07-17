@@ -18,6 +18,7 @@
             [routerLink]="item.route"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"
+            (click)="onNavigation()"
           >
             <i [class]="item.icon"></i>
             <span>{{ item.label }}</span>
