@@ -1,4 +1,4 @@
-package com.icap.template.equipment;
+package com.icap.logicoti.equipment;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

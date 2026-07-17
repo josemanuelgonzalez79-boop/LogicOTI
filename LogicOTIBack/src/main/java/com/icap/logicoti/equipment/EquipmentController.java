@@ -1,4 +1,4 @@
-package com.icap.template.equipment;
+package com.icap.logicoti.equipment;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

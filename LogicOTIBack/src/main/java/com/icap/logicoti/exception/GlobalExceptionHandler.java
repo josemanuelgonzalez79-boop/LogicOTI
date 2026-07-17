@@ -1,4 +1,4 @@
-package com.icap.template.exception;
+package com.icap.logicoti.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;

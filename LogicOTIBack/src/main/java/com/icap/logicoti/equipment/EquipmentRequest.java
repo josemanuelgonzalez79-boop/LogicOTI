@@ -1,4 +1,4 @@
-package com.icap.template.equipment;
+package com.icap.logicoti.equipment;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
