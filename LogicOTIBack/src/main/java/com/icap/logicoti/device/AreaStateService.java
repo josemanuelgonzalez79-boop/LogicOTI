@@ -11,6 +11,11 @@ import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.icap.logicoti.exception.ConflictException;
+import com.icap.logicoti.exception.PlcUnavailableException;
+
+import org.apache.plc4x.java.api.messages.PlcWriteRequest;
+import org.apache.plc4x.java.api.messages.PlcWriteResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -50,6 +55,21 @@ public class AreaStateService {
               AND device.active = TRUE
             ORDER BY device.display_order
             """;
+
+            private static final String DEVICE_COMMAND_QUERY = """
+                SELECT
+                        device.code,
+                        area.code AS area_code,
+                        device.controllable,
+                        device.plc_data_type,
+                        device.plc_command_tag
+                FROM building_device device
+                INNER JOIN building_area area
+                        ON area.id = device.area_id
+                WHERE UPPER(device.code) = ?
+                AND device.active = TRUE
+                AND area.active = TRUE
+                """;
 
     private final JdbcTemplate jdbcTemplate;
     private final PlcProperties plcProperties;
@@ -319,4 +339,126 @@ public class AreaStateService {
             String faultTag
     ) {
     }
+
+    public synchronized AreaStateResponse commandDevice(
+        String requestedDeviceCode,
+        boolean on) 
+        {
+                String deviceCode = requestedDeviceCode.trim().toUpperCase();
+
+                CommandDevice device = findCommandDevice(deviceCode);
+
+                if (!device.controllable() || device.commandTag() == null) {
+                        throw new ConflictException(
+                        "El dispositivo " + deviceCode + " no admite comandos."
+                        );
+                }
+
+                if (!"BOOL".equalsIgnoreCase(device.dataType())) {
+                        throw new ConflictException(
+                        "El dispositivo " + deviceCode
+                                + " no admite comandos de encendido y apagado."
+                        );
+                }
+
+                if (!plcProperties.isEnabled()) {
+                throw new PlcUnavailableException(
+                        "No se pudo ejecutar el comando porque la comunicación "
+                        + "con el PLC está deshabilitada."
+                );
+                }
+
+                if (plcProperties.getConnectionString() == null
+                || plcProperties.getConnectionString().isBlank()) {
+
+                throw new PlcUnavailableException(
+                        "No se pudo ejecutar el comando porque no está configurada "
+                        + "la dirección de conexión del PLC."
+                );
+                }
+
+                try (var connection = PlcDriverManager
+                        .getDefault()
+                        .getConnectionManager()
+                        .getConnection(plcProperties.getConnectionString())) {
+
+                        if (!connection.getMetadata().isWriteSupported()) {
+                        throw new IllegalStateException(
+                                "La conexión configurada no permite escribir tags."
+                        );
+                        }
+
+                        PlcWriteRequest.Builder builder = connection.writeRequestBuilder();
+
+                        builder.addTagAddress(
+                        "deviceCommand",
+                        device.commandTag() + ":" + device.dataType(),
+                        on
+                        );
+
+                        PlcWriteResponse response = builder
+                        .build()
+                        .execute()
+                        .get(
+                                plcProperties.getTimeout().toMillis(),
+                                java.util.concurrent.TimeUnit.MILLISECONDS
+                        );
+
+                        var responseCode = response.getResponseCode("deviceCommand");
+
+                        if (responseCode
+                        != org.apache.plc4x.java.api.types.PlcResponseCode.OK) {
+
+                        throw new IllegalStateException(
+                                "El PLC respondió " + responseCode
+                                + " al escribir " + device.commandTag()
+                        );
+                        }
+
+                } catch (Exception exception) {
+
+                        if (exception instanceof InterruptedException) {
+                                Thread.currentThread().interrupt();
+                        }
+
+                        throw new PlcUnavailableException(
+                                "No se pudo enviar el comando al PLC: "
+                                + exception.getMessage(),
+                                exception
+                        );
+                }
+
+                return getAreaState(device.areaCode());
+        }
+        private CommandDevice findCommandDevice(String deviceCode) {
+
+                List<CommandDevice> devices = jdbcTemplate.query(
+                        DEVICE_COMMAND_QUERY,
+                        (resultSet, rowNumber) -> new CommandDevice(
+                        resultSet.getString("code"),
+                        resultSet.getString("area_code"),
+                        resultSet.getBoolean("controllable"),
+                        resultSet.getString("plc_data_type"),
+                        resultSet.getString("plc_command_tag")
+                        ),
+                        deviceCode
+                );
+
+                if (devices.isEmpty()) {
+                        throw new ResourceNotFoundException(
+                        "No se encontró el dispositivo " + deviceCode + "."
+                        );
+                }
+
+                return devices.get(0);
+        }
+
+        private record CommandDevice(
+                String code,
+                String areaCode,
+                boolean controllable,
+                String dataType,
+                String commandTag
+                ) {
+        }
 }
