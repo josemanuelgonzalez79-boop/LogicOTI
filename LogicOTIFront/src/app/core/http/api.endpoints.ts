@@ -1,4 +1,8 @@
 export const API_ENDPOINTS = {
+  auth: {
+    login: '/auth/login',
+  },
+
   plc: {
     status: '/plc/status',
     test: '/plc/test',

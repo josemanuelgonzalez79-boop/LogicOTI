@@ -124,6 +124,15 @@
           </button>
         </div>
 
+        <!-- Mensaje de error -->
+        <div
+          class="login-form__error"
+          *ngIf="errorMessage"
+        >
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
         <p-button
           type="submit"
           label="Ingresar al sistema"

@@ -49,3 +49,8 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:LogicOTI-JWT-Secret-Key-2026-ICAP-Seguridad}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
