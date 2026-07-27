@@ -3,8 +3,6 @@ package com.icap.logicoti.device;
 import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.device.AreaStateResponse.DeviceStateResponse;
 import com.icap.logicoti.exception.ResourceNotFoundException;
-import org.apache.plc4x.java.api.PlcConnection;
-import org.apache.plc4x.java.api.PlcDriverManager;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
@@ -16,15 +14,20 @@ import com.icap.logicoti.exception.PlcUnavailableException;
 
 import org.apache.plc4x.java.api.messages.PlcWriteRequest;
 import org.apache.plc4x.java.api.messages.PlcWriteResponse;
+import com.icap.logicoti.plc.PlcCommunicationService;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+
 @Service
 @Transactional(readOnly = true)
+
 public class AreaStateService {
+        
+    private final PlcCommunicationService plcCommunicationService;
 
     private static final String AREA_QUERY = """
             SELECT
@@ -76,10 +79,12 @@ public class AreaStateService {
 
     public AreaStateService(
             JdbcTemplate jdbcTemplate,
-            PlcProperties plcProperties
+            PlcProperties plcProperties,
+            PlcCommunicationService plcCommunicationService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.plcProperties = plcProperties;
+         this.plcCommunicationService = plcCommunicationService;
     }
 
     public synchronized AreaStateResponse getAreaState(
@@ -118,100 +123,118 @@ public class AreaStateService {
             );
         }
 
-        try (PlcConnection connection = PlcDriverManager.getDefault()
-                .getConnectionManager()
-                .getConnection(plcProperties.getConnectionString())) {
+                try {
+                        return readAreaState(area, devices);
 
-            if (!connection.getMetadata().isReadSupported()) {
-                throw new IllegalStateException(
-                        "La conexión no permite leer tags."
-                );
-            }
+                } catch (PlcUnavailableException exception) {
 
-            PlcReadRequest.Builder builder =
-                    connection.readRequestBuilder();
-
-            for (DeviceDefinition device : devices) {
-
-                if (device.commandTag() != null) {
-                    builder.addTagAddress(
-                            commandAlias(device),
-                            device.commandTag()
-                    );
+                        return unavailableResponse(
+                                area,
+                                devices,
+                                exception.getMessage()
+                        );
                 }
 
-                builder.addTagAddress(
-                        stateAlias(device),
-                        device.stateTag()
-                );
-
-                if (device.faultTag() != null) {
-                    builder.addTagAddress(
-                            faultAlias(device),
-                            device.faultTag()
-                    );
-                }
-            }
-
-            PlcReadResponse response = builder
-                    .build()
-                    .execute()
-                    .get(
-                            plcProperties.getTimeout().toMillis(),
-                            TimeUnit.MILLISECONDS
-                    );
-
-            List<DeviceStateResponse> states = devices.stream()
-                    .map(device -> new DeviceStateResponse(
-                            device.id(),
-                            device.code(),
-                            device.name(),
-                            device.type(),
-                            device.number(),
-                            device.controllable(),
-
-                            device.commandTag() == null
-                                    ? null
-                                    : readBoolean(
-                                            response,
-                                            commandAlias(device)
-                                    ),
-
-                            readBoolean(
-                                    response,
-                                    stateAlias(device)
-                            ),
-
-                            device.faultTag() == null
-                                    ? null
-                                    : readBoolean(
-                                            response,
-                                            faultAlias(device)
-                                    )
-                    ))
-                    .toList();
-
-            return new AreaStateResponse(
-                    area.code(),
-                    area.name(),
-                    true,
-                    true,
-                    states,
-                    "Estados leídos correctamente.",
-                    Instant.now()
-            );
-
-        } catch (Exception exception) {
-
-            return unavailableResponse(
-                    area,
-                    devices,
-                    exception.getClass().getSimpleName()
-                            + ": "
-                            + exception.getMessage()
-            );
-        }
     }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private AreaStateResponse readAreaState(
+        AreaInfo area,
+        List<DeviceDefinition> devices
+        ) {
+                return plcCommunicationService.read(connection -> {
+
+                        if (!connection.getMetadata().isReadSupported()) {
+                        throw new IllegalStateException(
+                                "La conexión no permite leer tags."
+                        );
+                        }
+
+                        PlcReadRequest.Builder builder =
+                                connection.readRequestBuilder();
+
+                        for (DeviceDefinition device : devices) {
+
+                        if (hasText(device.commandTag())) {
+                                builder.addTagAddress(
+                                        commandAlias(device),
+                                        device.commandTag()
+                                );
+                        }
+
+                        if (!hasText(device.stateTag())) {
+                                throw new IllegalStateException(
+                                        "El dispositivo "
+                                                + device.code()
+                                                + " no tiene plc_state_tag configurado."
+                                );
+                        }
+
+                        builder.addTagAddress(
+                                stateAlias(device),
+                                device.stateTag()
+                        );
+
+                        if (hasText(device.faultTag())) {
+                                builder.addTagAddress(
+                                        faultAlias(device),
+                                        device.faultTag()
+                                );
+                        }
+                        }
+
+                        PlcReadResponse response = builder
+                                .build()
+                                .execute()
+                                .get(
+                                        plcProperties.getTimeout().toMillis(),
+                                        TimeUnit.MILLISECONDS
+                                );
+
+                        List<DeviceStateResponse> states = devices.stream()
+                                .map(device -> new DeviceStateResponse(
+                                        device.id(),
+                                        device.code(),
+                                        device.name(),
+                                        device.type(),
+                                        device.number(),
+                                        device.controllable(),
+
+                                        hasText(device.commandTag())
+                                                ? readBoolean(
+                                                        response,
+                                                        commandAlias(device)
+                                                )
+                                                : null,
+
+                                        readBoolean(
+                                                response,
+                                                stateAlias(device)
+                                        ),
+
+                                        hasText(device.faultTag())
+                                                ? readBoolean(
+                                                        response,
+                                                        faultAlias(device)
+                                                )
+                                                : null
+                                ))
+                                .toList();
+
+                        return new AreaStateResponse(
+                                area.code(),
+                                area.name(),
+                                true,
+                                true,
+                                states,
+                                "Estados leídos correctamente.",
+                                Instant.now()
+                        );
+                });
+        }
 
     private AreaInfo findArea(String areaCode) {
 
@@ -377,58 +400,64 @@ public class AreaStateService {
                 );
                 }
 
-                try (var connection = PlcDriverManager
-                        .getDefault()
-                        .getConnectionManager()
-                        .getConnection(plcProperties.getConnectionString())) {
+                plcCommunicationService.write(connection -> {
 
-                        if (!connection.getMetadata().isWriteSupported()) {
+                if (!connection.getMetadata().isWriteSupported()) {
                         throw new IllegalStateException(
                                 "La conexión configurada no permite escribir tags."
                         );
-                        }
+                }
 
-                        PlcWriteRequest.Builder builder = connection.writeRequestBuilder();
+                PlcWriteRequest.Builder builder =
+                        connection.writeRequestBuilder();
 
-                        builder.addTagAddress(
+                builder.addTagAddress(
                         "deviceCommand",
-                        device.commandTag() + ":" + device.dataType(),
+                        device.commandTag()
+                                + ":"
+                                + device.dataType(),
                         on
-                        );
+                );
 
-                        PlcWriteResponse response = builder
+                PlcWriteResponse response = builder
                         .build()
                         .execute()
                         .get(
                                 plcProperties.getTimeout().toMillis(),
-                                java.util.concurrent.TimeUnit.MILLISECONDS
+                                TimeUnit.MILLISECONDS
                         );
 
-                        var responseCode = response.getResponseCode("deviceCommand");
+                PlcResponseCode responseCode =
+                        response.getResponseCode("deviceCommand");
 
-                        if (responseCode
-                        != org.apache.plc4x.java.api.types.PlcResponseCode.OK) {
-
+                if (responseCode != PlcResponseCode.OK) {
                         throw new IllegalStateException(
-                                "El PLC respondió " + responseCode
-                                + " al escribir " + device.commandTag()
+                                "El PLC respondió "
+                                        + responseCode
+                                        + " al escribir "
+                                        + device.commandTag()
                         );
-                        }
+                }
 
-                } catch (Exception exception) {
+                return null;
+                });
 
-                        if (exception instanceof InterruptedException) {
-                                Thread.currentThread().interrupt();
-                        }
+                try {
+                        Thread.sleep(100);
+                } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
 
                         throw new PlcUnavailableException(
-                                "No se pudo enviar el comando al PLC: "
-                                + exception.getMessage(),
+                                "La espera de confirmación del PLC fue interrumpida.",
                                 exception
                         );
                 }
 
-                return getAreaState(device.areaCode());
+                AreaInfo area = findArea(device.areaCode());
+                List<DeviceDefinition> devices =
+                        findDevices(device.areaCode());
+
+                return readAreaState(area, devices);
         }
         private CommandDevice findCommandDevice(String deviceCode) {
 
