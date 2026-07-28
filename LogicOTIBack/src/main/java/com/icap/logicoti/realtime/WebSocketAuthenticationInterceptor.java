@@ -1,0 +1,155 @@
+package com.icap.logicoti.realtime;
+
+import com.icap.logicoti.auth.JwtService;
+import com.icap.logicoti.user.AppUser;
+import com.icap.logicoti.user.AppUserRepository;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.regex.Pattern;
+
+@Component
+public class WebSocketAuthenticationInterceptor
+        implements ChannelInterceptor {
+
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    private static final Pattern AREA_TOPIC_PATTERN = Pattern.compile(
+            "^/topic/areas/[A-Z0-9_]+/state$"
+    );
+
+    private final JwtService jwtService;
+    private final AppUserRepository userRepository;
+
+    public WebSocketAuthenticationInterceptor(
+            JwtService jwtService,
+            AppUserRepository userRepository
+    ) {
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public Message<?> preSend(
+            Message<?> message,
+            MessageChannel channel
+    ) {
+        StompHeaderAccessor accessor =
+                MessageHeaderAccessor.getAccessor(
+                        message,
+                        StompHeaderAccessor.class
+                );
+
+        if (accessor == null || accessor.getCommand() == null) {
+            return message;
+        }
+
+        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+            authenticate(accessor);
+        }
+
+        if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+            authorizeSubscription(accessor);
+        }
+
+        /*
+         * Los comandos hacia el PLC se seguirán enviando por REST:
+         * PUT /api/devices/{deviceCode}/command
+         *
+         * Por eso ningún usuario necesita enviar mensajes mediante STOMP.
+         */
+        if (StompCommand.SEND.equals(accessor.getCommand())) {
+            throw new AccessDeniedException(
+                    "El cliente no puede enviar mensajes por WebSocket."
+            );
+        }
+
+        return message;
+    }
+
+    private void authenticate(StompHeaderAccessor accessor) {
+        String authorizationHeader =
+                accessor.getFirstNativeHeader(AUTHORIZATION_HEADER);
+
+        if (authorizationHeader == null
+                || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+            throw new BadCredentialsException(
+                    "Falta el token de acceso del WebSocket."
+            );
+        }
+
+        String token = authorizationHeader
+                .substring(BEARER_PREFIX.length())
+                .trim();
+
+        if (token.isBlank() || !jwtService.isTokenValid(token)) {
+            throw new BadCredentialsException(
+                    "El token del WebSocket no es válido o ya venció."
+            );
+        }
+
+        String username = jwtService.extractUsername(token);
+
+        AppUser user = userRepository
+                .findByUsernameIgnoreCase(username)
+                .filter(AppUser::isActive)
+                .orElseThrow(() ->
+                        new BadCredentialsException(
+                                "El usuario no existe o está inactivo."
+                        )
+                );
+
+        SimpleGrantedAuthority authority =
+                new SimpleGrantedAuthority(
+                        "ROLE_" + user.getRole()
+                );
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        user.getUsername(),
+                        null,
+                        List.of(authority)
+                );
+
+        /*
+         * Spring conservará este usuario durante toda la conexión
+         * WebSocket y lo asociará con las suscripciones posteriores.
+         */
+        accessor.setUser(authentication);
+    }
+
+    private void authorizeSubscription(
+            StompHeaderAccessor accessor
+    ) {
+        if (accessor.getUser() == null) {
+            throw new BadCredentialsException(
+                    "La conexión WebSocket no está autenticada."
+            );
+        }
+
+        String destination = accessor.getDestination();
+
+        /*
+         * Únicamente permitimos suscripciones como:
+         * /topic/areas/P1_A01/state
+         * /topic/areas/PB_A02/state
+         */
+        if (destination == null
+                || !AREA_TOPIC_PATTERN.matcher(destination).matches()) {
+            throw new AccessDeniedException(
+                    "La suscripción solicitada no está permitida."
+            );
+        }
+    }
+}
