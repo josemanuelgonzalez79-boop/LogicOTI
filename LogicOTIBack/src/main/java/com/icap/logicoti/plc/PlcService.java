@@ -1,26 +1,29 @@
 package com.icap.logicoti.plc;
 
 import com.icap.logicoti.config.PlcProperties;
-import org.apache.plc4x.java.api.PlcDriverManager;
-import org.apache.plc4x.java.api.PlcConnection;
-import org.springframework.stereotype.Service;
+import com.icap.logicoti.exception.PlcUnavailableException;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
-import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.apache.plc4x.java.api.messages.PlcWriteRequest;
 import org.apache.plc4x.java.api.messages.PlcWriteResponse;
-
-import java.util.concurrent.TimeUnit;
+import org.apache.plc4x.java.api.types.PlcResponseCode;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class PlcService {
 
     private final PlcProperties plcProperties;
+    private final PlcCommunicationService plcCommunicationService;
 
-    public PlcService(PlcProperties plcProperties) {
+    public PlcService(
+            PlcProperties plcProperties,
+            PlcCommunicationService plcCommunicationService
+    ) {
         this.plcProperties = plcProperties;
+        this.plcCommunicationService = plcCommunicationService;
     }
 
     public PlcConnectionResponse getConnectionStatus() {
@@ -34,36 +37,21 @@ public class PlcService {
             );
         }
 
-        if (plcProperties.getConnectionString() == null
-                || plcProperties.getConnectionString().isBlank()) {
+        try {
+            return plcCommunicationService.read(connection ->
+                    new PlcConnectionResponse(
+                            true,
+                            connection.isConnected(),
+                            "Conexión establecida correctamente con el PLC.",
+                            Instant.now()
+                    )
+            );
 
+        } catch (PlcUnavailableException exception) {
             return new PlcConnectionResponse(
                     true,
                     false,
-                    "No se configuró PLC_CONNECTION_STRING.",
-                    Instant.now()
-            );
-        }
-
-        try (PlcConnection ignored = PlcDriverManager.getDefault()
-                .getConnectionManager()
-                .getConnection(plcProperties.getConnectionString())) {
-
-            return new PlcConnectionResponse(
-                    true,
-                    true,
-                    "Conexión establecida correctamente con el PLC.",
-                    Instant.now()
-            );
-
-        } catch (Exception exception) {
-
-            return new PlcConnectionResponse(
-                    true,
-                    false,
-                    exception.getClass().getSimpleName()
-                            + ": "
-                            + exception.getMessage(),
+                    exception.getMessage(),
                     Instant.now()
             );
         }
@@ -72,212 +60,181 @@ public class PlcService {
     public PlcTestResponse readTestTags() {
 
         if (!plcProperties.isEnabled()) {
-            return new PlcTestResponse(
+            return unavailableTestResponse(
                     false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    "La comunicación con el PLC está deshabilitada.",
-                    Instant.now()
+                    "La comunicación con el PLC está deshabilitada."
             );
         }
 
-        if (plcProperties.getConnectionString() == null
-                || plcProperties.getConnectionString().isBlank()) {
+        try {
+            return plcCommunicationService.read(connection -> {
 
-            return new PlcTestResponse(
+                if (!connection.getMetadata().isReadSupported()) {
+                    throw new IllegalStateException(
+                            "La conexión no permite leer tags."
+                    );
+                }
+
+                PlcReadRequest.Builder builder =
+                        connection.readRequestBuilder();
+
+                builder.addTagAddress(
+                        "lightCommand",
+                        "OTI_TEST_LIGHT_CMD"
+                );
+
+                builder.addTagAddress(
+                        "lightFeedback",
+                        "OTI_TEST_LIGHT_FB"
+                );
+
+                builder.addTagAddress(
+                        "motion",
+                        "OTI_TEST_MOTION"
+                );
+
+                builder.addTagAddress(
+                        "smoke",
+                        "OTI_TEST_SMOKE"
+                );
+
+                PlcReadResponse response = builder
+                        .build()
+                        .execute()
+                        .get(
+                                plcProperties.getTimeout().toMillis(),
+                                TimeUnit.MILLISECONDS
+                        );
+
+                return new PlcTestResponse(
+                        true,
+                        true,
+                        readBoolean(response, "lightCommand"),
+                        readBoolean(response, "lightFeedback"),
+                        readBoolean(response, "motion"),
+                        readBoolean(response, "smoke"),
+                        "Tags leídos correctamente.",
+                        Instant.now()
+                );
+            });
+
+        } catch (PlcUnavailableException exception) {
+            return unavailableTestResponse(
                     true,
+                    exception.getMessage()
+            );
+        }
+    }
+
+    public PlcTestResponse writeLightCommand(boolean on) {
+
+        if (!plcProperties.isEnabled()) {
+            return unavailableTestResponse(
                     false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    "No se configuró PLC_CONNECTION_STRING.",
-                    Instant.now()
+                    "La comunicación con el PLC está deshabilitada."
             );
         }
 
-        try (PlcConnection connection = PlcDriverManager.getDefault()
-                .getConnectionManager()
-                .getConnection(plcProperties.getConnectionString())) {
+        try {
+            plcCommunicationService.write(connection -> {
 
-            if (!connection.getMetadata().isReadSupported()) {
-                throw new IllegalStateException(
-                        "El controlador o el driver no permite leer tags."
+                if (!connection.getMetadata().isWriteSupported()) {
+                    throw new IllegalStateException(
+                            "La conexión no permite escribir tags."
+                    );
+                }
+
+                PlcWriteRequest.Builder builder =
+                        connection.writeRequestBuilder();
+
+                builder.addTagAddress(
+                        "lightCommand",
+                        "OTI_TEST_LIGHT_CMD:BOOL",
+                        on
+                );
+
+                PlcWriteResponse response = builder
+                        .build()
+                        .execute()
+                        .get(
+                                plcProperties.getTimeout().toMillis(),
+                                TimeUnit.MILLISECONDS
+                        );
+
+                PlcResponseCode responseCode =
+                        response.getResponseCode("lightCommand");
+
+                if (responseCode != PlcResponseCode.OK) {
+                    throw new IllegalStateException(
+                            "No se pudo escribir OTI_TEST_LIGHT_CMD. "
+                                    + "Respuesta: "
+                                    + responseCode
+                    );
+                }
+
+                return null;
+            });
+
+            try {
+                Thread.sleep(100);
+
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+
+                throw new PlcUnavailableException(
+                        "La espera de confirmación fue interrumpida.",
+                        exception
                 );
             }
 
-            PlcReadRequest.Builder builder = connection.readRequestBuilder();
+            return readTestTags();
 
-            builder.addTagAddress(
-                    "lightCommand",
-                    "OTI_TEST_LIGHT_CMD"
-            );
-
-            builder.addTagAddress(
-                    "lightFeedback",
-                    "OTI_TEST_LIGHT_FB"
-            );
-
-            builder.addTagAddress(
-                    "motion",
-                    "OTI_TEST_MOTION"
-            );
-
-            builder.addTagAddress(
-                    "smoke",
-                    "OTI_TEST_SMOKE"
-            );
-
-            PlcReadRequest request = builder.build();
-
-            PlcReadResponse response = request.execute().get(
-                    plcProperties.getTimeout().toMillis(),
-                    TimeUnit.MILLISECONDS
-            );
-
-            return new PlcTestResponse(
+        } catch (PlcUnavailableException exception) {
+            return unavailableTestResponse(
                     true,
-                    true,
-                    readBoolean(response, "lightCommand"),
-                    readBoolean(response, "lightFeedback"),
-                    readBoolean(response, "motion"),
-                    readBoolean(response, "smoke"),
-                    "Tags leídos correctamente.",
-                    Instant.now()
-            );
-
-        } catch (Exception exception) {
-
-            return new PlcTestResponse(
-                    true,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    exception.getClass().getSimpleName()
-                            + ": "
-                            + exception.getMessage(),
-                    Instant.now()
+                    exception.getMessage()
             );
         }
     }
 
     private Boolean readBoolean(
             PlcReadResponse response,
-            String tagName
+            String alias
     ) {
-
         PlcResponseCode responseCode =
-                response.getResponseCode(tagName);
+                response.getResponseCode(alias);
 
         if (responseCode != PlcResponseCode.OK) {
             throw new IllegalStateException(
                     "No se pudo leer "
-                            + tagName
-                            + ". Respuesta del PLC: "
+                            + alias
+                            + ". Respuesta: "
                             + responseCode
             );
         }
 
-        if (!response.isValidBoolean(tagName)) {
+        if (!response.isValidBoolean(alias)) {
             throw new IllegalStateException(
-                    "El tag "
-                            + tagName
-                            + " no devolvió un valor BOOL."
+                    alias + " no devolvió un valor BOOL."
             );
         }
 
-        return response.getBoolean(tagName);
+        return response.getBoolean(alias);
     }
 
-    public PlcTestResponse writeLightCommand(boolean on) {
-
-        if (!plcProperties.isEnabled()) {
-            return new PlcTestResponse(
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    "La comunicación con el PLC está deshabilitada.",
-                    Instant.now()
-            );
-        }
-
-        if (plcProperties.getConnectionString() == null
-                || plcProperties.getConnectionString().isBlank()) {
-
-            return new PlcTestResponse(
-                    true,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    "No se configuró PLC_CONNECTION_STRING.",
-                    Instant.now()
-            );
-        }
-
-        try (PlcConnection connection = PlcDriverManager.getDefault()
-                .getConnectionManager()
-                .getConnection(plcProperties.getConnectionString())) {
-
-            if (!connection.getMetadata().isWriteSupported()) {
-                throw new IllegalStateException(
-                        "El controlador o el driver no permite escribir tags."
-                );
-            }
-
-            PlcWriteRequest.Builder builder =
-                    connection.writeRequestBuilder();
-
-            builder.addTagAddress(
-                    "lightCommand",
-                    "OTI_TEST_LIGHT_CMD:BOOL",
-                    on
-            );
-
-            PlcWriteRequest request = builder.build();
-
-            PlcWriteResponse response = request.execute().get(
-                    plcProperties.getTimeout().toMillis(),
-                    TimeUnit.MILLISECONDS
-            );
-
-            PlcResponseCode responseCode =
-                    response.getResponseCode("lightCommand");
-
-            if (responseCode != PlcResponseCode.OK) {
-                throw new IllegalStateException(
-                        "No se pudo escribir OTI_TEST_LIGHT_CMD. "
-                                + "Respuesta del PLC: "
-                                + responseCode
-                );
-            }
-
-        } catch (Exception exception) {
-
-            return new PlcTestResponse(
-                    true,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    exception.getClass().getSimpleName()
-                            + ": "
-                            + exception.getMessage(),
-                    Instant.now()
-            );
-        }
-
-        // Después de escribir, vuelve a leer los cuatro tags.
-        return readTestTags();
+    private PlcTestResponse unavailableTestResponse(
+            boolean enabled,
+            String message
+    ) {
+        return new PlcTestResponse(
+                enabled,
+                false,
+                null,
+                null,
+                null,
+                null,
+                message,
+                Instant.now()
+        );
     }
 }
