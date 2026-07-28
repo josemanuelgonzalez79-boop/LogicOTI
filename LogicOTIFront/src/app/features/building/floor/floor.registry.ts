@@ -8,7 +8,7 @@ export const LEVEL_REGISTRY: Record<string, LevelDefinition> = {
     order: 1,
     type: 'floor',
     icon: 'pi pi-home',
-    mapPath: 'assets/buildings/oti/levels/pb/map.svg',
+    mapPath: 'assets/buildings/oti/levels/pb/base.svg',
   },
 
   P1: {

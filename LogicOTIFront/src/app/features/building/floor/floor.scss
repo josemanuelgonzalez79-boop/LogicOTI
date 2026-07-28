@@ -1,11 +1,25 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
 .floor-page {
   display: grid;
-  gap: 1.5rem;
+  grid-template-rows: auto auto;
+  align-content: start;
+
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.floor-page__header {
+  width: 100%;
 }
 
 .floor-page__header span {
   display: block;
   margin-bottom: 0.35rem;
+
   color: var(--text-color-secondary);
   font-size: 0.85rem;
   font-weight: 600;
@@ -22,10 +36,25 @@
   color: var(--text-color-secondary);
 }
 
+/*
+ * Contenedor del componente BuildingLayout.
+ * Evita que el mapa se estire verticalmente.
+ */
+app-building-layout {
+  display: block;
+  width: 100%;
+  align-self: start;
+}
+
+/*
+ * Estas clases pueden conservarse si todavía se utilizan
+ * en alguna parte del HTML.
+ */
 .floor-map-shell {
   width: 100%;
   overflow: auto;
   padding: 1rem;
+
   border: 1px solid var(--surface-border);
   border-radius: 1rem;
   background: var(--surface-card);
