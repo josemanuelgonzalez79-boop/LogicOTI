@@ -1,0 +1,34 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.building-layout {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.building-layout__svg {
+  width: 100%;
+  overflow: auto;
+}
+
+.building-layout__svg :deep(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.building-layout__state {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+  border: 1px dashed var(--surface-border);
+  border-radius: 18px;
+  color: var(--text-color-secondary);
+}
+
+.building-layout__state--error {
+  color: var(--red-500);
+}

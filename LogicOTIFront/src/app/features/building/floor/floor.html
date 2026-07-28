@@ -1,1 +1,28 @@
-<p>floor works!</p>
+<section class="floor-page">
+  @if (level) {
+    <header class="floor-page__header">
+      <span>Edificio OTI</span>
+
+      <h1>{{ level.name }}</h1>
+
+      <p>Selecciona un área para consultar sus equipos y sensores.</p>
+    </header>
+
+    <div class="floor-map-shell">
+      <app-building-layout
+        [mapPath]="level.mapPath"
+        [mapName]="'Mapa interactivo de ' + level.name"
+        (areaSelected)="onAreaSelected($event)"
+      />
+    </div>
+  } @else {
+    <div class="floor-not-found">
+      <h1>Nivel no encontrado</h1>
+
+      <p>
+        El nivel solicitado no está registrado en la configuración del
+        edificio.
+      </p>
+    </div>
+  }
+</section>

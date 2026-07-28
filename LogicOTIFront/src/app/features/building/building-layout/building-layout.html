@@ -1,0 +1,27 @@
+<div
+  class="building-layout"
+  [attr.aria-label]="mapName"
+>
+  @if (loading()) {
+    <div class="building-layout__state">
+      Cargando mapa...
+    </div>
+  } @else if (errorMessage()) {
+    <div
+      class="building-layout__state building-layout__state--error"
+    >
+      {{ errorMessage() }}
+    </div>
+  } @else if (svgContent()) {
+    <div
+      #svgContainer
+      class="building-layout__svg"
+      [innerHTML]="svgContent()"
+      (click)="onMapClick($event)"
+    ></div>
+  } @else {
+    <div class="building-layout__state">
+      No hay un mapa disponible.
+    </div>
+  }
+</div>

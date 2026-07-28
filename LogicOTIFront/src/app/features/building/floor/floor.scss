@@ -1,0 +1,45 @@
+.floor-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.floor-page__header span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floor-page__header h1 {
+  margin: 0;
+}
+
+.floor-page__header p {
+  margin: 0.5rem 0 0;
+  color: var(--text-color-secondary);
+}
+
+.floor-map-shell {
+  width: 100%;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+  background: var(--surface-card);
+}
+
+.floor-map {
+  display: block;
+  width: 100%;
+  min-width: 900px;
+  height: auto;
+}
+
+.floor-map__background {
+  fill: var(--surface-ground);
+  stroke: var(--surface-border);
+  stroke-width: 2;
+}
