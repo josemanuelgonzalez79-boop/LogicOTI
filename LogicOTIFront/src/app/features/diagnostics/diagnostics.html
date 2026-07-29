@@ -1,1 +1,311 @@
-<p>diagnostics works!</p>
+<section class="integration-tests">
+  <header class="integration-tests__header">
+    <div>
+      <span class="integration-tests__eyebrow">
+        Pruebas temporales
+      </span>
+
+      <h1>Integración Backend</h1>
+
+      <p>
+        Consumo de endpoints REST y comunicación WebSocket
+        proporcionados por el backend.
+      </p>
+    </div>
+
+    <span
+      class="connection-badge"
+      [class.connection-badge--online]="
+        websocketConnected()
+      "
+    >
+      {{ websocketStatus() }}
+    </span>
+  </header>
+
+  <div class="integration-tests__grid">
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-key"></i>
+
+        <div>
+          <strong>Autenticación</strong>
+          <small>POST /api/auth/login</small>
+        </div>
+      </div>
+
+      <p>
+        Consumido al iniciar sesión. El JWT se envía mediante
+        el interceptor.
+      </p>
+
+      <span class="test-card__validated">
+        <i class="pi pi-check-circle"></i>
+        Sesión autenticada
+      </span>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-server"></i>
+
+        <div>
+          <strong>Estado del sistema</strong>
+          <small>GET /api/system/status</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testSystemStatus()"
+      >
+        Consultar
+      </button>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-building"></i>
+
+        <div>
+          <strong>Estructura del edificio</strong>
+          <small>GET /api/building</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testBuilding()"
+      >
+        Consultar
+      </button>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-map-marker"></i>
+
+        <div>
+          <strong>Estado del área</strong>
+          <small>GET /api/areas/P1_A01/state</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testAreaState()"
+      >
+        Consultar P1_A01
+      </button>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-power-off"></i>
+
+        <div>
+          <strong>Comando de dispositivo</strong>
+          <small>
+            PUT /api/devices/P1_A01_MS02/command
+          </small>
+        </div>
+      </div>
+
+      <div class="test-card__actions">
+        <button
+          type="button"
+          (click)="turnOnDevice()"
+        >
+          Encender
+        </button>
+
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="turnOffDevice()"
+        >
+          Apagar
+        </button>
+      </div>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-history"></i>
+
+        <div>
+          <strong>Histórico de comandos</strong>
+          <small>GET /api/history/commands</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testHistory()"
+      >
+        Consultar histórico
+      </button>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-wifi"></i>
+
+        <div>
+          <strong>Diagnóstico tiempo real</strong>
+          <small>GET /api/realtime/status</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testRealtimeStatus()"
+      >
+        Consultar
+      </button>
+    </article>
+
+    <article class="test-card">
+      <div class="test-card__heading">
+        <i class="pi pi-cog"></i>
+
+        <div>
+          <strong>Prueba del PLC</strong>
+          <small>GET /api/plc/test</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="testPlc()"
+      >
+        Ejecutar prueba
+      </button>
+    </article>
+
+    <article class="test-card">
+        <div class="test-card__heading">
+            <i class="pi pi-lightbulb"></i>
+
+            <div>
+            <strong>Prueba de luz</strong>
+            <small>PUT /api/plc/test/light</small>
+            </div>
+        </div>
+
+        <div class="test-card__actions">
+            <button
+            type="button"
+            (click)="turnOnPlcLight()"
+            >
+            Encender
+            </button>
+
+            <button
+            type="button"
+            class="button-secondary"
+            (click)="turnOffPlcLight()"
+            >
+            Apagar
+            </button>
+        </div>
+    </article>
+
+    <article class="test-card test-card--websocket">
+      <div class="test-card__heading">
+        <i class="pi pi-bolt"></i>
+
+        <div>
+          <strong>WebSocket STOMP</strong>
+          <small>
+            /topic/areas/P1_A01/state
+          </small>
+        </div>
+      </div>
+
+      <p>
+        Estado:
+        <strong>{{ websocketStatus() }}</strong>
+      </p>
+
+      <div class="test-card__actions">
+        <button
+          type="button"
+          (click)="connectWebSocket()"
+          [disabled]="websocketConnected()"
+        >
+          Conectar
+        </button>
+
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="disconnectWebSocket()"
+          [disabled]="!websocketConnected()"
+        >
+          Desconectar
+        </button>
+
+        <button
+          type="button"
+          class="button-secondary"
+          (click)="clearWebSocketMessages()"
+        >
+          Limpiar WS
+        </button>
+      </div>
+
+      <small>
+        Mensajes recibidos:
+        {{ websocketMessages().length }}
+      </small>
+
+      @if (websocketError()) {
+        <div class="websocket-result websocket-result--error">
+          <span>Error WebSocket</span>
+          <pre>{{ websocketError() }}</pre>
+        </div>
+      }
+
+      @if (websocketLastMessage()) {
+        <div class="websocket-result">
+          <span>Último mensaje recibido</span>
+          <pre>{{ websocketLastMessage() }}</pre>
+        </div>
+      }
+    </article>
+  </div>
+
+  <section class="response-panel">
+    <header class="response-panel__header">
+      <div>
+        <span>Resultado de la prueba REST</span>
+
+        <strong>
+          {{ activeTest() || 'Ninguna prueba ejecutada' }}
+        </strong>
+      </div>
+
+      <button
+        type="button"
+        class="button-secondary"
+        (click)="clearResponse()"
+      >
+        Limpiar
+      </button>
+    </header>
+
+    <div class="response-panel__status">
+      @if (loading()) {
+        Procesando solicitud...
+      } @else {
+        {{ responseStatus() || 'Sin respuesta' }}
+      }
+    </div>
+
+    <pre>{{
+      responseBody() ||
+        'La respuesta JSON del endpoint REST aparecerá aquí.'
+    }}</pre>
+  </section>
+</section>
