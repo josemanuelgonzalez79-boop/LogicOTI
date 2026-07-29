@@ -1,0 +1,113 @@
+:host {
+  display: block;
+}
+
+.building-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.building-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.building-page__eyebrow {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.building-page h1 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+}
+
+.building-page p {
+  max-width: 620px;
+  margin: 0.5rem 0 0;
+  color: var(--text-color-secondary);
+}
+
+.building-page__levels {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.building-level-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+
+  width: 100%;
+  padding: 1.15rem;
+
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+
+  background: var(--surface-card);
+  color: var(--text-color);
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.building-level-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 8%);
+}
+
+.building-level-card:focus-visible {
+  outline: 3px solid color-mix(
+    in srgb,
+    var(--primary-color) 28%,
+    transparent
+  );
+  outline-offset: 2px;
+}
+
+.building-level-card__icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+
+  border-radius: 0.85rem;
+
+  background: color-mix(
+    in srgb,
+    var(--primary-color) 12%,
+    transparent
+  );
+
+  color: var(--primary-color);
+  font-size: 1.25rem;
+}
+
+.building-level-card__content {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.building-level-card__content strong {
+  font-size: 1rem;
+}
+
+.building-level-card__content small {
+  color: var(--text-color-secondary);
+}

@@ -1,1 +1,37 @@
-<p>building works!</p>
+<section class="building-page">
+  <header class="building-page__header">
+    <div>
+      <span class="building-page__eyebrow">
+        Supervisión del edificio
+      </span>
+
+      <h1>Edificio OTI</h1>
+
+      <p>
+        Selecciona un nivel para consultar sus áreas y
+        dispositivos.
+      </p>
+    </div>
+  </header>
+
+  <div class="building-page__levels">
+    @for (level of levels; track level.id) {
+      <button
+        type="button"
+        class="building-level-card"
+        (click)="openLevel(level)"
+      >
+        <span class="building-level-card__icon">
+          <i [class]="level.icon"></i>
+        </span>
+
+        <span class="building-level-card__content">
+          <strong>{{ level.name }}</strong>
+          <small>Código: {{ level.id }}</small>
+        </span>
+
+        <i class="pi pi-angle-right"></i>
+      </button>
+    }
+  </div>
+</section>

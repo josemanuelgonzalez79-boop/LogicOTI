@@ -1,1 +1,13 @@
-<p>area works!</p>
+@if (loading()) {
+  <p>Cargando área...</p>
+} @else if (errorMessage()) {
+  <p>{{ errorMessage() }}</p>
+} @else if (areaState(); as area) {
+  <h2>{{ area.areaName }}</h2>
+
+  <p>Código: {{ area.areaCode }}</p>
+  <p>PLC habilitado: {{ area.plcEnabled }}</p>
+  <p>Conectado: {{ area.connected }}</p>
+  <p>Dispositivos: {{ area.devices.length }}</p>
+  <p>{{ area.message }}</p>
+}
