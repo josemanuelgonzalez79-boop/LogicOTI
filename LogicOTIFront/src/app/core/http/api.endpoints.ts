@@ -20,6 +20,10 @@ export const API_ENDPOINTS = {
     events: '/history/events',
   },
 
+  alarms: {
+    active: '/alarms/active',
+  },
+
   realtime: {
     websocket: '/ws',
     status: '/realtime/status',

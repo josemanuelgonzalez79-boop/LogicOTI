@@ -11,6 +11,12 @@ export interface HistoryPage<T> {
   offset: number;
 }
 
+export interface ActiveAlarmList {
+  items: SensorEventHistoryItem[];
+  total: number;
+  timestamp: string;
+}
+
 export interface CommandHistoryItem {
   id: number;
   deviceCode: string;

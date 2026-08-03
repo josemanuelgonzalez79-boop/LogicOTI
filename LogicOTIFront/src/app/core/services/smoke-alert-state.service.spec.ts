@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
 import { SensorEventHistoryItem } from '../models/history.model';
-import { HistoryApiService } from './history-api.service';
+import { AlarmApiService } from './alarm-api.service';
 import { SmokeAlertStateService } from './smoke-alert-state.service';
 import {
   RealtimeConnectionStatus,
@@ -36,13 +36,12 @@ const clearedEvent: SensorEventHistoryItem = {
   detectedAt: '2026-08-03T18:05:00Z',
 };
 
-class HistoryApiServiceMock {
-  readonly getSensorEventHistory = vi.fn(() =>
+class AlarmApiServiceMock {
+  readonly getActiveAlarms = vi.fn(() =>
     of({
       items: [activatedEvent],
       total: 1,
-      limit: 200,
-      offset: 0,
+      timestamp: '2026-08-03T18:00:01Z',
     }),
   );
 }
@@ -63,7 +62,7 @@ class SmokeAlertRealtimeServiceMock {
 
 describe('SmokeAlertStateService', () => {
   let service: SmokeAlertStateService;
-  let historyApi: HistoryApiServiceMock;
+  let alarmApi: AlarmApiServiceMock;
   let realtime: SmokeAlertRealtimeServiceMock;
 
   beforeEach(() => {
@@ -71,8 +70,8 @@ describe('SmokeAlertStateService', () => {
       providers: [
         SmokeAlertStateService,
         {
-          provide: HistoryApiService,
-          useClass: HistoryApiServiceMock,
+          provide: AlarmApiService,
+          useClass: AlarmApiServiceMock,
         },
         {
           provide: SmokeAlertRealtimeService,
@@ -82,7 +81,7 @@ describe('SmokeAlertStateService', () => {
     });
 
     service = TestBed.inject(SmokeAlertStateService);
-    historyApi = TestBed.inject(HistoryApiService) as unknown as HistoryApiServiceMock;
+    alarmApi = TestBed.inject(AlarmApiService) as unknown as AlarmApiServiceMock;
     realtime = TestBed.inject(
       SmokeAlertRealtimeService,
     ) as unknown as SmokeAlertRealtimeServiceMock;
@@ -94,7 +93,7 @@ describe('SmokeAlertStateService', () => {
 
     expect(service.activeCount()).toBe(1);
     expect(service.activeAlerts()[0].deviceCode).toBe('P1_A01_HUM01');
-    expect(historyApi.getSensorEventHistory).toHaveBeenCalledTimes(1);
+    expect(alarmApi.getActiveAlarms).toHaveBeenCalledTimes(1);
     expect(realtime.connect).toHaveBeenCalledTimes(1);
   });
 
@@ -108,5 +107,22 @@ describe('SmokeAlertStateService', () => {
     expect(service.activeCount()).toBe(0);
     expect(service.latestEvent()?.id).toBe(11);
     expect(notifications).toEqual([clearedEvent]);
+  });
+
+  it('actualiza la lista completa cuando se solicita una recarga', () => {
+    service.start();
+
+    alarmApi.getActiveAlarms.mockReturnValue(
+      of({
+        items: [],
+        total: 0,
+        timestamp: '2026-08-03T18:10:00Z',
+      }),
+    );
+
+    service.refreshActiveAlarms();
+
+    expect(service.activeCount()).toBe(0);
+    expect(alarmApi.getActiveAlarms).toHaveBeenCalledTimes(2);
   });
 });

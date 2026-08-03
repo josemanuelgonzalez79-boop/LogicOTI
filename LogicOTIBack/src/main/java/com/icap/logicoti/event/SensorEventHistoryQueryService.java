@@ -114,6 +114,34 @@ public class SensorEventHistoryQueryService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<SensorEventHistoryResponse> findActiveSmokeAlarms() {
+        String query = HISTORY_COLUMNS
+                + """
+                FROM (
+                    SELECT DISTINCT ON (history.device_id)
+                        history.*
+                    FROM device_event_history history
+                    WHERE history.device_type = 'SMOKE'
+                    ORDER BY
+                        history.device_id,
+                        history.detected_at DESC,
+                        history.id DESC
+                ) history
+                INNER JOIN building_device device
+                    ON device.id = history.device_id
+                INNER JOIN building_area area
+                    ON area.id = device.area_id
+                WHERE history.current_state = TRUE
+                ORDER BY history.detected_at DESC, history.id DESC
+                """;
+
+        return jdbcTemplate.query(
+                query,
+                this::mapEvent
+        );
+    }
+
     private EventFilter buildFilter(
             String requestedAreaCode,
             String requestedDeviceCode,

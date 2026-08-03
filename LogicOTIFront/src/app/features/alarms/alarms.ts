@@ -33,19 +33,7 @@ export class Alarms implements OnInit {
   readonly searchText = signal('');
   readonly eventFilter = signal<EventFilter>('');
 
-  readonly activeAlerts = computed(() => {
-    const latestByDevice = new Map<string, SensorEventHistoryItem>();
-
-    this.events().forEach((event) => {
-      if (!latestByDevice.has(event.deviceCode)) {
-        latestByDevice.set(event.deviceCode, event);
-      }
-    });
-
-    return [...latestByDevice.values()]
-      .filter((event) => event.currentState)
-      .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
-  });
+  readonly activeAlerts = this.smokeAlerts.activeAlerts;
 
   readonly criticalEventsLast24Hours = computed(() => {
     const minimumDate = Date.now() - 24 * 60 * 60 * 1000;
@@ -90,6 +78,7 @@ export class Alarms implements OnInit {
 
   refresh(): void {
     this.loadEvents();
+    this.smokeAlerts.refreshActiveAlarms();
 
     if (
       this.connectionStatus() === 'DISCONNECTED' ||

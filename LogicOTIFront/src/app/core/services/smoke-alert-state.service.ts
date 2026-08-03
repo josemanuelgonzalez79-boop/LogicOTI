@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 
 import { SensorEventHistoryItem } from '../models/history.model';
-import { HistoryApiService } from './history-api.service';
+import { AlarmApiService } from './alarm-api.service';
 import {
   RealtimeConnectionStatus,
   SmokeAlertRealtimeService,
@@ -10,7 +10,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class SmokeAlertStateService {
-  private readonly historyApi = inject(HistoryApiService);
+  private readonly alarmApi = inject(AlarmApiService);
   private readonly realtime = inject(SmokeAlertRealtimeService);
 
   private readonly latestByDevice = new Map<string, SensorEventHistoryItem>();
@@ -21,6 +21,7 @@ export class SmokeAlertStateService {
 
   private subscriptions = new Subscription();
   private started = false;
+  private realtimeRevision = 0;
 
   readonly activeAlerts = this.activeAlertsState.asReadonly();
   readonly activeCount = computed(() => this.activeAlerts().length);
@@ -56,6 +57,15 @@ export class SmokeAlertStateService {
     this.realtime.connect();
   }
 
+  refreshActiveAlarms(): void {
+    if (!this.started) {
+      this.start();
+      return;
+    }
+
+    this.loadInitialState();
+  }
+
   async stop(): Promise<void> {
     if (!this.started) {
       return;
@@ -67,27 +77,28 @@ export class SmokeAlertStateService {
     this.latestByDevice.clear();
     this.activeAlertsState.set([]);
     this.latestEventState.set(null);
+    this.realtimeRevision = 0;
 
     await this.realtime.disconnect();
   }
 
   private loadInitialState(): void {
+    const revisionAtRequest = this.realtimeRevision;
+
     this.subscriptions.add(
-      this.historyApi
-        .getSensorEventHistory({
-          deviceType: 'SMOKE',
-          limit: 200,
-          offset: 0,
-        })
-        .subscribe({
-          next: (response) => {
-            response.items.forEach((event) => this.keepNewestEvent(event));
-            this.updateActiveAlerts();
-          },
-          error: () => {
-            // El WebSocket continúa funcionando aunque no cargue el histórico.
-          },
-        }),
+      this.alarmApi.getActiveAlarms().subscribe({
+        next: (response) => {
+          if (revisionAtRequest === this.realtimeRevision) {
+            this.latestByDevice.clear();
+          }
+
+          response.items.forEach((event) => this.keepNewestEvent(event));
+          this.updateActiveAlerts();
+        },
+        error: () => {
+          // El WebSocket continúa funcionando aunque no cargue las alarmas iniciales.
+        },
+      }),
     );
   }
 
@@ -96,6 +107,7 @@ export class SmokeAlertStateService {
       return;
     }
 
+    this.realtimeRevision += 1;
     this.latestEventState.set(event);
     this.updateActiveAlerts();
     this.notificationSubject.next(event);
