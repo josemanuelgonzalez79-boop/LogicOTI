@@ -4,17 +4,29 @@
       <span class="dashboard-header__eyebrow">Resumen operativo</span>
       <h1>Dashboard del edificio</h1>
       <p>
-        Monitorea el estado general del edificio, revisa eventos recientes y
-        accede rápidamente a cada nivel.
+        Monitorea el estado general del edificio, revisa eventos recientes y accede rápidamente a
+        cada nivel.
       </p>
     </div>
 
-    <div class="dashboard-header__status">
+    <div
+      class="dashboard-header__status"
+      [class.dashboard-header__status--offline]="!systemConnected || !databaseConnected"
+    >
       <span class="dashboard-header__status-dot"></span>
 
       <div>
-        <strong>Sistema conectado</strong>
-        <span>Última actualización: hace unos segundos</span>
+        <strong>
+          {{ systemConnected && databaseConnected ? 'Sistema conectado' : 'Sistema sin conexión' }}
+        </strong>
+        <span>
+          @if (lastUpdated) {
+            Última actualización:
+            {{ lastUpdated.toLocaleTimeString('es-MX') }}
+          } @else {
+            Esperando información del servidor
+          }
+        </span>
       </div>
     </div>
   </header>
@@ -144,9 +156,7 @@
           <h2>Últimos eventos</h2>
         </div>
 
-        <a routerLink="/history" class="panel-header__link">
-          Ver historial
-        </a>
+        <a routerLink="/history" class="panel-header__link"> Ver historial </a>
       </header>
 
       <div class="event-list">
@@ -168,6 +178,11 @@
               <span>{{ event.location }}</span>
             </div>
           </article>
+        } @empty {
+          <div class="event-list__empty">
+            <i class="pi pi-inbox"></i>
+            <span>No hay eventos recientes para mostrar.</span>
+          </div>
         }
       </div>
 
