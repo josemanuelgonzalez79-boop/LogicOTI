@@ -1,1 +1,273 @@
-<p>control works!</p>
+<section class="control-page">
+  <header class="control-header">
+    <div>
+      <span class="control-header__eyebrow">Operación del edificio</span>
+      <h1>Control de oficinas</h1>
+      <p>
+        Selecciona un piso y una oficina para consultar sus sensores y controlar la iluminación o
+        los minisplits disponibles.
+      </p>
+    </div>
+
+    <div class="connection-status" [attr.data-status]="connectionStatus()">
+      <span class="connection-status__dot"></span>
+      <div>
+        <strong>{{ connectionLabel() }}</strong>
+        <span>
+          @if (selectedAreaCode()) {
+            Área {{ selectedAreaCode() }}
+          } @else {
+            Esperando selección
+          }
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <section class="location-panel" aria-label="Selección de oficina">
+    <div class="location-panel__heading">
+      <span class="location-panel__icon">
+        <i class="pi pi-building"></i>
+      </span>
+      <div>
+        <strong>{{ building()?.name ?? 'Edificio OTI' }}</strong>
+        <span>Elige la ubicación que deseas supervisar</span>
+      </div>
+    </div>
+
+    @if (loadingBuilding()) {
+      <div class="location-loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        Cargando estructura del edificio...
+      </div>
+    } @else {
+      <div class="location-selectors">
+        <label>
+          <span>Piso</span>
+          <select [ngModel]="selectedFloorCode()" (ngModelChange)="selectFloor($event)">
+            @for (floor of floors(); track floor.code) {
+              <option [value]="floor.code">{{ floor.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>Oficina o área</span>
+          <select
+            [ngModel]="selectedAreaCode()"
+            (ngModelChange)="selectArea($event)"
+            [disabled]="areas().length === 0"
+          >
+            @for (area of areas(); track area.code) {
+              <option [value]="area.code">{{ area.name }} · {{ area.code }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    }
+  </section>
+
+  @if (!canControl) {
+    <div class="permission-notice">
+      <i class="pi pi-eye"></i>
+      <div>
+        <strong>Acceso de solo lectura</strong>
+        <span>
+          Tu usuario puede revisar los estados, pero no puede encender ni apagar equipos.
+        </span>
+      </div>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="page-message page-message--error" role="alert">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+      @if (selectedAreaCode()) {
+        <button type="button" (click)="refreshArea()">Reintentar</button>
+      }
+    </div>
+  }
+
+  @if (loadingArea() && !areaState()) {
+    <div class="area-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <strong>Consultando {{ selectedArea()?.name ?? 'el área' }}...</strong>
+      <span>Se están leyendo los estados actuales del PLC.</span>
+    </div>
+  } @else if (areaState(); as state) {
+    <section class="area-summary">
+      <div class="area-summary__identity">
+        <span class="area-summary__icon">
+          <i class="pi pi-map-marker"></i>
+        </span>
+        <div>
+          <span>{{ selectedFloor()?.name }}</span>
+          <h2>{{ state.areaName }}</h2>
+          <small>{{ state.areaCode }}</small>
+        </div>
+      </div>
+
+      <div class="area-summary__metrics">
+        <div>
+          <span>Equipos controlables</span>
+          <strong>{{ controllableDevices().length }}</strong>
+        </div>
+        <div>
+          <span>Sensores</span>
+          <strong>{{ sensorDevices().length }}</strong>
+        </div>
+        <div>
+          <span>Sensores activos</span>
+          <strong [class.metric-danger]="activeSensors() > 0">
+            {{ activeSensors() }}
+          </strong>
+        </div>
+      </div>
+
+      <div class="plc-status" [class.plc-status--offline]="!state.plcEnabled || !state.connected">
+        <span class="plc-status__dot"></span>
+        <div>
+          <strong>
+            {{ state.plcEnabled && state.connected ? 'PLC conectado' : 'PLC no disponible' }}
+          </strong>
+          <span>{{ state.message }}</span>
+        </div>
+      </div>
+    </section>
+
+    @if (!state.plcEnabled || !state.connected) {
+      <div class="page-message page-message--warning">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Los estados pueden mostrarse sin información y los controles permanecerán bloqueados hasta
+          recuperar la comunicación con el PLC.
+        </span>
+      </div>
+    }
+
+    <section class="device-section">
+      <header class="section-header">
+        <div>
+          <span class="section-header__eyebrow">Acciones disponibles</span>
+          <h2>Iluminación y climatización</h2>
+        </div>
+        <span>{{ controllableDevices().length }} equipos</span>
+      </header>
+
+      <div class="device-grid">
+        @for (device of controllableDevices(); track device.code) {
+          <article
+            class="device-card device-card--control"
+            [attr.data-state]="deviceStateClass(device)"
+          >
+            <div class="device-card__top">
+              <span class="device-card__icon">
+                <i [class]="deviceIcon(device)"></i>
+              </span>
+              <span class="device-card__type">{{ deviceTypeLabel(device) }}</span>
+            </div>
+
+            <div class="device-card__body">
+              <span>{{ device.code }}</span>
+              <h3>{{ device.name }}</h3>
+              <strong class="device-state">
+                <span class="device-state__dot"></span>
+                {{ deviceStateLabel(device) }}
+              </strong>
+            </div>
+
+            <div class="device-confirmation">
+              <span>
+                Orden
+                <strong>
+                  {{
+                    device.command === null ? 'Sin dato' : device.command ? 'Encender' : 'Apagar'
+                  }}
+                </strong>
+              </span>
+              <span>
+                Confirmación
+                <strong>
+                  {{ device.state === null ? 'Sin dato' : device.state ? 'Encendido' : 'Apagado' }}
+                </strong>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="control-button"
+              [class.control-button--on]="device.command === true"
+              [disabled]="commandDisabled(device)"
+              [attr.aria-pressed]="device.command === true"
+              (click)="sendCommand(device, device.command !== true)"
+            >
+              @if (isPending(device.code)) {
+                <i class="pi pi-spin pi-spinner"></i>
+                Esperando confirmación...
+              } @else if (!canControl) {
+                <i class="pi pi-lock"></i>
+                Solo lectura
+              } @else {
+                <span class="control-button__switch">
+                  <span></span>
+                </span>
+                {{ device.command === true ? 'Apagar' : 'Encender' }}
+              }
+            </button>
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <i class="pi pi-sliders-h"></i>
+            <strong>No hay equipos controlables en esta área</strong>
+            <span>Esta oficina solamente contiene sensores de monitoreo.</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="device-section">
+      <header class="section-header">
+        <div>
+          <span class="section-header__eyebrow">Monitoreo en tiempo real</span>
+          <h2>Sensores instalados</h2>
+        </div>
+        <span>{{ sensorDevices().length }} sensores</span>
+      </header>
+
+      <div class="sensor-grid">
+        @for (device of sensorDevices(); track device.code) {
+          <article
+            class="device-card device-card--sensor"
+            [attr.data-state]="deviceStateClass(device)"
+            [attr.data-type]="device.type"
+          >
+            <span class="device-card__icon">
+              <i [class]="deviceIcon(device)"></i>
+            </span>
+            <div class="device-card__body">
+              <span>{{ deviceTypeLabel(device) }} · {{ device.code }}</span>
+              <h3>{{ device.name }}</h3>
+              <strong class="device-state">
+                <span class="device-state__dot"></span>
+                {{ deviceStateLabel(device) }}
+              </strong>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <i class="pi pi-broadcast-tower"></i>
+            <strong>No hay sensores registrados</strong>
+            <span>El levantamiento no asignó sensores a esta área.</span>
+          </div>
+        }
+      </div>
+    </section>
+  } @else if (!loadingBuilding() && !selectedAreaCode()) {
+    <div class="empty-state empty-state--page">
+      <i class="pi pi-map"></i>
+      <strong>No hay un área disponible para controlar</strong>
+      <span>Revisa el catálogo del edificio y vuelve a intentarlo.</span>
+    </div>
+  }
+</section>

@@ -1,10 +1,4 @@
-export type DeviceType =
-  | 'LIGHT'
-  | 'MOTION'
-  | 'SMOKE'
-  | 'DOOR'
-  | 'MINISPLIT'
-  | string;
+export type DeviceType = 'LIGHT' | 'MOTION' | 'SMOKE' | 'MINISPLIT' | string;
 
 export interface AreaState {
   areaCode: string;

@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     websocket: '/ws',
     status: '/realtime/status',
     smokeAlerts: '/topic/alerts/smoke',
+    areaState: (areaCode: string) => `/topic/areas/${areaCode}/state`,
   },
 
   plc: {
