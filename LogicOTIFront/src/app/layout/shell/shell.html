@@ -1,6 +1,27 @@
-<app-navbar
-  (menuToggle)="openMobileMenu()"
-/>
+<app-navbar [activeAlarmCount]="activeAlarmCount()" (menuToggle)="openMobileMenu()" />
+
+<p-toast key="global-smoke-alert" position="top-right" styleClass="global-smoke-toast" />
+
+@if (activeAlarmCount() > 0) {
+  <a routerLink="/alarms" class="global-alarm-banner">
+    <span class="global-alarm-banner__icon">
+      <i class="pi pi-exclamation-triangle"></i>
+    </span>
+
+    <div>
+      <strong>
+        {{ activeAlarmCount() }}
+        {{ activeAlarmCount() === 1 ? 'alarma de humo activa' : 'alarmas de humo activas' }}
+      </strong>
+      <span>Se requiere revisar las áreas afectadas.</span>
+    </div>
+
+    <span class="global-alarm-banner__action">
+      Abrir alarmas
+      <i class="pi pi-arrow-right"></i>
+    </span>
+  </a>
+}
 
 <div class="app-shell">
   <app-sidebar />
@@ -19,7 +40,5 @@
   [blockScroll]="true"
   styleClass="mobile-navigation-drawer"
 >
-  <app-sidebar
-    (navigationSelected)="closeMobileMenu()"
-  />
+  <app-sidebar (navigationSelected)="closeMobileMenu()" />
 </p-drawer>

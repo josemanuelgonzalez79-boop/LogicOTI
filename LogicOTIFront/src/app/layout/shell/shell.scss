@@ -15,6 +15,56 @@
   background: var(--surface-ground);
 }
 
+.global-alarm-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 54px;
+  padding: 0.65rem 1.25rem;
+  border-bottom: 1px solid #b91c1c;
+  color: #fff;
+  background: #dc2626;
+  text-decoration: none;
+
+  > div {
+    display: grid;
+    flex: 1;
+    gap: 0.12rem;
+  }
+
+  strong {
+    font-size: 0.88rem;
+  }
+
+  div > span {
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 0.73rem;
+  }
+}
+
+.global-alarm-banner__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.global-alarm-banner__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .global-smoke-toast {
+  width: min(390px, calc(100vw - 2rem));
+}
+
 /* Drawer móvil */
 
 :host ::ng-deep .mobile-navigation-drawer {
@@ -53,6 +103,18 @@
 @media (max-width: 600px) {
   .app-shell__content {
     padding: 0.75rem;
+  }
+
+  .global-alarm-banner {
+    padding: 0.65rem 0.8rem;
+  }
+
+  .global-alarm-banner__action {
+    font-size: 0;
+  }
+
+  .global-alarm-banner__action i {
+    font-size: 0.8rem;
   }
 }
 

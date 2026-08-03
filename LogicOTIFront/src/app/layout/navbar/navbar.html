@@ -22,6 +22,26 @@
   </div>
 
   <div class="navbar__actions">
+    <a
+      routerLink="/alarms"
+      class="navbar__alarm-button"
+      [class.navbar__alarm-button--active]="activeAlarmCount() > 0"
+      [attr.aria-label]="
+        activeAlarmCount() > 0
+          ? 'Revisar ' + activeAlarmCount() + ' alarmas activas'
+          : 'No hay alarmas activas'
+      "
+      title="Abrir alarmas"
+    >
+      <i class="pi pi-bell"></i>
+
+      @if (activeAlarmCount() > 0) {
+        <span class="navbar__alarm-count">
+          {{ activeAlarmCount() > 99 ? '99+' : activeAlarmCount() }}
+        </span>
+      }
+    </a>
+
     <span class="navbar__status">
       <i class="pi pi-circle-fill"></i>
       Sistema en línea

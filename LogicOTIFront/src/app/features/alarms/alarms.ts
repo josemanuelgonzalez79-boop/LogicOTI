@@ -1,15 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 import { SensorEventHistoryItem, SensorEventType } from '../../core/models/history.model';
 import { HistoryApiService } from '../../core/services/history-api.service';
-import {
-  RealtimeConnectionStatus,
-  SmokeAlertRealtimeService,
-} from '../../core/services/smoke-alert-realtime.service';
+import { SmokeAlertStateService } from '../../core/services/smoke-alert-state.service';
+import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
 
 type EventFilter = '' | SensorEventType;
 
@@ -20,17 +18,17 @@ type EventFilter = '' | SensorEventType;
   templateUrl: './alarms.html',
   styleUrl: './alarms.scss',
 })
-export class Alarms implements OnInit, OnDestroy {
+export class Alarms implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly historyApi = inject(HistoryApiService);
-  private readonly realtime = inject(SmokeAlertRealtimeService);
+  private readonly smokeAlerts = inject(SmokeAlertStateService);
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');
-  readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
+  readonly connectionStatus = this.smokeAlerts.connectionStatus;
   readonly events = signal<SensorEventHistoryItem[]>([]);
   readonly totalEvents = signal(0);
-  readonly lastRealtimeEvent = signal<SensorEventHistoryItem | null>(null);
+  readonly lastRealtimeEvent = this.smokeAlerts.latestEvent;
 
   readonly searchText = signal('');
   readonly eventFilter = signal<EventFilter>('');
@@ -83,20 +81,11 @@ export class Alarms implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.realtime.connectionStatus$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((status) => this.connectionStatus.set(status));
-
-    this.realtime.alerts$
+    this.smokeAlerts.notifications$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => this.receiveRealtimeEvent(event));
 
     this.loadEvents();
-    this.realtime.connect();
-  }
-
-  ngOnDestroy(): void {
-    void this.realtime.disconnect();
   }
 
   refresh(): void {
@@ -107,7 +96,7 @@ export class Alarms implements OnInit, OnDestroy {
       this.connectionStatus() === 'ERROR' ||
       this.connectionStatus() === 'UNAUTHORIZED'
     ) {
-      this.realtime.connect();
+      this.smokeAlerts.ensureConnected();
     }
   }
 
@@ -153,8 +142,6 @@ export class Alarms implements OnInit, OnDestroy {
 
   private receiveRealtimeEvent(event: SensorEventHistoryItem): void {
     const alreadyExists = this.events().some((currentEvent) => currentEvent.id === event.id);
-
-    this.lastRealtimeEvent.set(event);
 
     if (!alreadyExists) {
       this.totalEvents.update((total) => total + 1);

@@ -17,7 +17,8 @@
 .navbar__brand,
 .navbar__actions,
 .navbar__user,
-.navbar__status {
+.navbar__status,
+.navbar__alarm-button {
   display: flex;
   align-items: center;
 }
@@ -85,6 +86,63 @@
 
 .navbar__actions {
   gap: 1rem;
+}
+
+.navbar__alarm-button {
+  position: relative;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  color: var(--text-color-secondary);
+  background: var(--surface-card);
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.navbar__alarm-button:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 45%, var(--surface-border));
+  color: var(--primary-color);
+  background: var(--surface-hover);
+}
+
+.navbar__alarm-button--active {
+  border-color: color-mix(in srgb, #dc2626 40%, var(--surface-border));
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 8%, var(--surface-card));
+  animation: alarm-pulse 2s infinite;
+}
+
+.navbar__alarm-count {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.4rem;
+  display: grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  place-items: center;
+  border: 2px solid var(--surface-card);
+  border-radius: 999px;
+  color: #fff;
+  background: #dc2626;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+@keyframes alarm-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, #dc2626 24%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 0.35rem transparent;
+  }
 }
 
 .navbar__status {
