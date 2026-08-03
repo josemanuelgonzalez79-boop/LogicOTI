@@ -1,1 +1,285 @@
-<p>alarms works!</p>
+<section class="alarms-page">
+  <header class="alarms-header">
+    <div>
+      <span class="alarms-header__eyebrow">Monitoreo de seguridad</span>
+      <h1>Alarmas de humo</h1>
+      <p>
+        Revisa las alarmas activas y los cambios recibidos desde los sensores de humo del edificio
+        OTI.
+      </p>
+    </div>
+
+    <div class="connection-status" [attr.data-status]="connectionStatus()">
+      <span class="connection-status__dot"></span>
+      <div>
+        <strong>{{ connectionLabel() }}</strong>
+        <span>Actualización automática por WebSocket</span>
+      </div>
+    </div>
+  </header>
+
+  @if (lastRealtimeEvent(); as latestEvent) {
+    <article
+      class="realtime-notice"
+      [class.realtime-notice--active]="latestEvent.currentState"
+      [class.realtime-notice--cleared]="!latestEvent.currentState"
+      aria-live="polite"
+    >
+      <span class="realtime-notice__icon">
+        <i
+          class="pi"
+          [class.pi-exclamation-triangle]="latestEvent.currentState"
+          [class.pi-check-circle]="!latestEvent.currentState"
+        ></i>
+      </span>
+
+      <div class="realtime-notice__content">
+        <span>Último cambio recibido en tiempo real</span>
+        <strong>{{ latestEvent.message }}</strong>
+        <small>
+          {{ latestEvent.areaName }} ·
+          {{ latestEvent.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+        </small>
+      </div>
+    </article>
+  }
+
+  <section class="summary-grid" aria-label="Resumen de alarmas">
+    <article class="summary-card summary-card--danger">
+      <span class="summary-card__icon">
+        <i class="pi pi-exclamation-triangle"></i>
+      </span>
+      <div>
+        <span>Alarmas activas</span>
+        <strong>{{ activeAlerts().length }}</strong>
+        <small>Requieren revisión</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--warning">
+      <span class="summary-card__icon">
+        <i class="pi pi-clock"></i>
+      </span>
+      <div>
+        <span>Críticas en 24 horas</span>
+        <strong>{{ criticalEventsLast24Hours() }}</strong>
+        <small>Activaciones recientes</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--success">
+      <span class="summary-card__icon">
+        <i class="pi pi-check-circle"></i>
+      </span>
+      <div>
+        <span>Restablecimientos</span>
+        <strong>{{ clearedEvents() }}</strong>
+        <small>Dentro de los últimos 200 registros</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--info">
+      <span class="summary-card__icon">
+        <i class="pi pi-database"></i>
+      </span>
+      <div>
+        <span>Histórico total</span>
+        <strong>{{ totalEvents() }}</strong>
+        <small>Eventos de sensores de humo</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="active-panel">
+    <header class="panel-header">
+      <div>
+        <span class="panel-header__eyebrow">Atención inmediata</span>
+        <h2>Alarmas activas</h2>
+      </div>
+
+      <span class="active-count" [class.active-count--clear]="activeAlerts().length === 0">
+        {{ activeAlerts().length }} activas
+      </span>
+    </header>
+
+    @if (loading() && events().length === 0) {
+      <div class="panel-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Consultando alarmas...</span>
+      </div>
+    } @else if (activeAlerts().length === 0) {
+      <div class="healthy-state">
+        <span class="healthy-state__icon">
+          <i class="pi pi-shield"></i>
+        </span>
+        <div>
+          <strong>No hay alarmas de humo activas</strong>
+          <span>Los últimos estados registrados se encuentran restablecidos.</span>
+        </div>
+      </div>
+    } @else {
+      <div class="active-alert-grid">
+        @for (alarm of activeAlerts(); track alarm.deviceCode) {
+          <article class="active-alert-card">
+            <div class="active-alert-card__top">
+              <span class="active-alert-card__icon">
+                <i class="pi pi-exclamation-triangle"></i>
+              </span>
+              <span class="critical-badge">Crítica</span>
+            </div>
+
+            <div class="active-alert-card__content">
+              <span>{{ alarm.areaCode }}</span>
+              <h3>{{ alarm.areaName }}</h3>
+              <p>{{ alarm.message }}</p>
+            </div>
+
+            <footer class="active-alert-card__footer">
+              <span>
+                <i class="pi pi-bell"></i>
+                {{ alarm.deviceName }}
+              </span>
+              <time>
+                {{ alarm.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+              </time>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="history-panel">
+    <header class="panel-header history-panel__header">
+      <div>
+        <span class="panel-header__eyebrow">Actividad registrada</span>
+        <h2>Eventos recientes de humo</h2>
+      </div>
+
+      <button type="button" class="refresh-button" [disabled]="loading()" (click)="refresh()">
+        <i
+          class="pi"
+          [class.pi-refresh]="!loading()"
+          [class.pi-spin]="loading()"
+          [class.pi-spinner]="loading()"
+        ></i>
+        Actualizar
+      </button>
+    </header>
+
+    <div class="history-filters">
+      <label class="search-field">
+        <span class="sr-only">Buscar eventos</span>
+        <i class="pi pi-search"></i>
+        <input
+          type="search"
+          placeholder="Buscar por área, sensor o mensaje"
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+        />
+      </label>
+
+      <label class="select-field">
+        <span>Mostrar</span>
+        <select [ngModel]="eventFilter()" (ngModelChange)="eventFilter.set($event)">
+          <option value="">Todos los eventos</option>
+          <option value="ACTIVATED">Solo activaciones</option>
+          <option value="CLEARED">Solo restablecimientos</option>
+        </select>
+      </label>
+
+      @if (searchText() || eventFilter()) {
+        <button type="button" class="clear-button" (click)="clearFilters()">
+          <i class="pi pi-filter-slash"></i>
+          Limpiar filtros
+        </button>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <div class="panel-message panel-message--error">
+        <i class="pi pi-exclamation-circle"></i>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (loading() && events().length === 0) {
+      <div class="panel-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Consultando el histórico de alarmas...</span>
+      </div>
+    } @else if (filteredEvents().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-inbox"></i>
+        <strong>No hay eventos para mostrar</strong>
+        <span>Cambia los filtros o espera un nuevo evento de humo.</span>
+      </div>
+    } @else {
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Área</th>
+              <th>Sensor</th>
+              <th>Evento</th>
+              <th>Severidad</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of filteredEvents(); track event.id) {
+              <tr [class.history-table__critical]="event.currentState">
+                <td class="history-table__date">
+                  {{ event.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                </td>
+                <td>
+                  <strong>{{ event.areaName }}</strong>
+                  <small>{{ event.areaCode }}</small>
+                </td>
+                <td>
+                  <strong>{{ event.deviceName }}</strong>
+                  <small>{{ event.deviceCode }}</small>
+                </td>
+                <td>
+                  <span
+                    class="event-badge"
+                    [class.event-badge--active]="event.eventType === 'ACTIVATED'"
+                    [class.event-badge--cleared]="event.eventType === 'CLEARED'"
+                  >
+                    {{ event.eventType === 'ACTIVATED' ? 'Activada' : 'Restablecida' }}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    class="severity-badge"
+                    [class.severity-badge--critical]="event.severity === 'CRITICAL'"
+                    [class.severity-badge--warning]="event.severity === 'WARNING'"
+                    [class.severity-badge--info]="event.severity === 'INFO'"
+                  >
+                    @switch (event.severity) {
+                      @case ('CRITICAL') {
+                        Crítica
+                      }
+                      @case ('WARNING') {
+                        Advertencia
+                      }
+                      @default {
+                        Información
+                      }
+                    }
+                  </span>
+                </td>
+                <td class="history-table__message">{{ event.message }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <footer class="history-panel__footer">
+      Mostrando {{ filteredEvents().length }} de {{ totalEvents() }} registros
+    </footer>
+  </section>
+</section>

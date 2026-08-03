@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   realtime: {
     websocket: '/ws',
     status: '/realtime/status',
+    smokeAlerts: '/topic/alerts/smoke',
   },
 
   plc: {
