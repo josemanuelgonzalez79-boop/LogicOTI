@@ -1,1 +1,380 @@
-<p>history works!</p>
+<section class="history-page">
+  <header class="history-page__header">
+    <div>
+      <span class="history-page__eyebrow">Trazabilidad del sistema</span>
+      <h1>Históricos</h1>
+      <p>Consulta los cambios de sensores y las órdenes enviadas a luces y minisplits.</p>
+    </div>
+
+    <div class="history-page__summary">
+      <i class="pi pi-database"></i>
+      <div>
+        <strong>
+          {{ activeTab() === 'events' ? eventTotal() : commandTotal() }}
+        </strong>
+        <span>registros encontrados</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="history-tabs" aria-label="Tipos de histórico">
+    <button
+      type="button"
+      class="history-tabs__button"
+      [class.history-tabs__button--active]="activeTab() === 'events'"
+      (click)="selectTab('events')"
+    >
+      <i class="pi pi-bell"></i>
+      Eventos de sensores
+    </button>
+
+    <button
+      type="button"
+      class="history-tabs__button"
+      [class.history-tabs__button--active]="activeTab() === 'commands'"
+      (click)="selectTab('commands')"
+    >
+      <i class="pi pi-send"></i>
+      Comandos
+    </button>
+  </nav>
+
+  @if (activeTab() === 'events') {
+    <section class="history-panel">
+      <div class="filter-grid">
+        <label>
+          <span>Área</span>
+          <input type="text" [(ngModel)]="eventFilters.areaCode" placeholder="Ej. P1_A01" />
+        </label>
+
+        <label>
+          <span>Dispositivo</span>
+          <input type="text" [(ngModel)]="eventFilters.deviceCode" placeholder="Ej. P1_A01_HUM01" />
+        </label>
+
+        <label>
+          <span>Sensor</span>
+          <select [(ngModel)]="eventFilters.deviceType">
+            <option value="">Todos</option>
+            <option value="SMOKE">Humo</option>
+            <option value="MOTION">Movimiento</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Evento</span>
+          <select [(ngModel)]="eventFilters.eventType">
+            <option value="">Todos</option>
+            <option value="ACTIVATED">Activado</option>
+            <option value="CLEARED">Restablecido</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Severidad</span>
+          <select [(ngModel)]="eventFilters.severity">
+            <option value="">Todas</option>
+            <option value="CRITICAL">Crítico</option>
+            <option value="WARNING">Advertencia</option>
+            <option value="INFO">Información</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Desde</span>
+          <input type="datetime-local" [(ngModel)]="eventFilters.from" />
+        </label>
+
+        <label>
+          <span>Hasta</span>
+          <input type="datetime-local" [(ngModel)]="eventFilters.to" />
+        </label>
+
+        <div class="filter-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="loading()"
+            (click)="clearEventFilters()"
+          >
+            <i class="pi pi-filter-slash"></i>
+            Limpiar
+          </button>
+
+          <button
+            type="button"
+            class="button button--primary"
+            [disabled]="loading()"
+            (click)="searchEvents()"
+          >
+            <i class="pi pi-search"></i>
+            Consultar
+          </button>
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="history-message history-message--error">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="history-message">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Consultando eventos...</span>
+        </div>
+      } @else if (events().length === 0) {
+        <div class="history-empty">
+          <i class="pi pi-inbox"></i>
+          <strong>No hay eventos para mostrar</strong>
+          <span>Modifica los filtros o espera un cambio en los sensores.</span>
+        </div>
+      } @else {
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Área</th>
+                <th>Sensor</th>
+                <th>Tipo</th>
+                <th>Evento</th>
+                <th>Severidad</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (event of events(); track event.id) {
+                <tr [class.history-table__critical]="event.severity === 'CRITICAL'">
+                  <td class="history-table__date">
+                    {{ event.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  </td>
+                  <td>
+                    <strong>{{ event.areaName }}</strong>
+                    <small>{{ event.areaCode }}</small>
+                  </td>
+                  <td>
+                    <strong>{{ event.deviceName }}</strong>
+                    <small>{{ event.deviceCode }}</small>
+                  </td>
+                  <td>{{ deviceTypeLabel(event.deviceType) }}</td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      [class.status-badge--active]="event.eventType === 'ACTIVATED'"
+                      [class.status-badge--cleared]="event.eventType === 'CLEARED'"
+                    >
+                      {{ eventTypeLabel(event.eventType) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="severity-badge"
+                      [class.severity-badge--critical]="event.severity === 'CRITICAL'"
+                      [class.severity-badge--warning]="event.severity === 'WARNING'"
+                      [class.severity-badge--info]="event.severity === 'INFO'"
+                    >
+                      {{ severityLabel(event.severity) }}
+                    </span>
+                  </td>
+                  <td class="history-table__message">{{ event.message }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="history-pagination">
+          <span>
+            Página {{ eventPage() }} de {{ eventPageCount() }} · {{ eventTotal() }} registros
+          </span>
+
+          <div>
+            <button
+              type="button"
+              class="pagination-button"
+              [disabled]="eventOffset() === 0 || loading()"
+              (click)="previousEventPage()"
+            >
+              <i class="pi pi-angle-left"></i>
+              Anterior
+            </button>
+            <button
+              type="button"
+              class="pagination-button"
+              [disabled]="eventOffset() + pageSize >= eventTotal() || loading()"
+              (click)="nextEventPage()"
+            >
+              Siguiente
+              <i class="pi pi-angle-right"></i>
+            </button>
+          </div>
+        </footer>
+      }
+    </section>
+  } @else {
+    <section class="history-panel">
+      <div class="filter-grid">
+        <label>
+          <span>Área</span>
+          <input type="text" [(ngModel)]="commandFilters.areaCode" placeholder="Ej. P1_A01" />
+        </label>
+
+        <label>
+          <span>Dispositivo</span>
+          <input
+            type="text"
+            [(ngModel)]="commandFilters.deviceCode"
+            placeholder="Ej. P1_A01_MS02"
+          />
+        </label>
+
+        <label>
+          <span>Estado</span>
+          <select [(ngModel)]="commandFilters.status">
+            <option value="">Todos</option>
+            <option value="CONFIRMED">Confirmado</option>
+            <option value="PENDING">Pendiente</option>
+            <option value="NOT_CONFIRMED">Sin confirmar</option>
+            <option value="FAILED">Fallido</option>
+            <option value="REJECTED">Rechazado</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Usuario</span>
+          <input type="text" [(ngModel)]="commandFilters.requestedBy" placeholder="Ej. admin" />
+        </label>
+
+        <label>
+          <span>Desde</span>
+          <input type="datetime-local" [(ngModel)]="commandFilters.from" />
+        </label>
+
+        <label>
+          <span>Hasta</span>
+          <input type="datetime-local" [(ngModel)]="commandFilters.to" />
+        </label>
+
+        <div class="filter-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="loading()"
+            (click)="clearCommandFilters()"
+          >
+            <i class="pi pi-filter-slash"></i>
+            Limpiar
+          </button>
+
+          <button
+            type="button"
+            class="button button--primary"
+            [disabled]="loading()"
+            (click)="searchCommands()"
+          >
+            <i class="pi pi-search"></i>
+            Consultar
+          </button>
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="history-message history-message--error">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="history-message">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Consultando comandos...</span>
+        </div>
+      } @else if (commands().length === 0) {
+        <div class="history-empty">
+          <i class="pi pi-inbox"></i>
+          <strong>No hay comandos para mostrar</strong>
+          <span>Modifica los filtros o ejecuta una orden de control.</span>
+        </div>
+      } @else {
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Área</th>
+                <th>Dispositivo</th>
+                <th>Orden</th>
+                <th>Confirmación</th>
+                <th>Estado</th>
+                <th>Usuario</th>
+                <th>Tiempo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (command of commands(); track command.id) {
+                <tr>
+                  <td class="history-table__date">
+                    {{ command.requestedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  </td>
+                  <td>
+                    <strong>{{ command.areaName }}</strong>
+                    <small>{{ command.areaCode }}</small>
+                  </td>
+                  <td>
+                    <strong>{{ command.deviceName }}</strong>
+                    <small>{{ command.deviceCode }}</small>
+                  </td>
+                  <td>{{ command.requestedValue ? 'Encender' : 'Apagar' }}</td>
+                  <td>{{ booleanLabel(command.feedbackValue) }}</td>
+                  <td>
+                    <span class="command-badge" [attr.data-status]="command.status">
+                      {{ commandStatusLabel(command.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{{ command.requestedBy }}</strong>
+                    <small>{{ command.requestedByRole }}</small>
+                  </td>
+                  <td>
+                    {{ command.durationMs === null ? 'Sin dato' : command.durationMs + ' ms' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="history-pagination">
+          <span>
+            Página {{ commandPage() }} de {{ commandPageCount() }} · {{ commandTotal() }} registros
+          </span>
+
+          <div>
+            <button
+              type="button"
+              class="pagination-button"
+              [disabled]="commandOffset() === 0 || loading()"
+              (click)="previousCommandPage()"
+            >
+              <i class="pi pi-angle-left"></i>
+              Anterior
+            </button>
+            <button
+              type="button"
+              class="pagination-button"
+              [disabled]="commandOffset() + pageSize >= commandTotal() || loading()"
+              (click)="nextCommandPage()"
+            >
+              Siguiente
+              <i class="pi pi-angle-right"></i>
+            </button>
+          </div>
+        </footer>
+      }
+    </section>
+  }
+</section>

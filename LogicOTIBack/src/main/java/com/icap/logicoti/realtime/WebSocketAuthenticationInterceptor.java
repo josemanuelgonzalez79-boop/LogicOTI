@@ -24,6 +24,8 @@ public class WebSocketAuthenticationInterceptor
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String SMOKE_ALERT_TOPIC =
+        "/topic/alerts/smoke";
 
     private static final Pattern AREA_TOPIC_PATTERN = Pattern.compile(
             "^/topic/areas/[A-Z0-9_]+/state$"
@@ -63,12 +65,6 @@ public class WebSocketAuthenticationInterceptor
             authorizeSubscription(accessor);
         }
 
-        /*
-         * Los comandos hacia el PLC se seguirán enviando por REST:
-         * PUT /api/devices/{deviceCode}/command
-         *
-         * Por eso ningún usuario necesita enviar mensajes mediante STOMP.
-         */
         if (StompCommand.SEND.equals(accessor.getCommand())) {
             throw new AccessDeniedException(
                     "El cliente no puede enviar mensajes por WebSocket."
@@ -122,10 +118,6 @@ public class WebSocketAuthenticationInterceptor
                         List.of(authority)
                 );
 
-        /*
-         * Spring conservará este usuario durante toda la conexión
-         * WebSocket y lo asociará con las suscripciones posteriores.
-         */
         accessor.setUser(authentication);
     }
 
@@ -140,16 +132,20 @@ public class WebSocketAuthenticationInterceptor
 
         String destination = accessor.getDestination();
 
-        /*
-         * Únicamente permitimos suscripciones como:
-         * /topic/areas/P1_A01/state
-         * /topic/areas/PB_A02/state
-         */
-        if (destination == null
-                || !AREA_TOPIC_PATTERN.matcher(destination).matches()) {
-            throw new AccessDeniedException(
-                    "La suscripción solicitada no está permitida."
-            );
-        }
+
+                boolean allowedAreaTopic =
+                        destination != null
+                        && AREA_TOPIC_PATTERN
+                                .matcher(destination)
+                                .matches();
+
+                boolean allowedSmokeAlertTopic =
+                        SMOKE_ALERT_TOPIC.equals(destination);
+
+                if (!allowedAreaTopic && !allowedSmokeAlertTopic) {
+                throw new AccessDeniedException(
+                        "La suscripción solicitada no está permitida."
+                );
+            }
     }
 }

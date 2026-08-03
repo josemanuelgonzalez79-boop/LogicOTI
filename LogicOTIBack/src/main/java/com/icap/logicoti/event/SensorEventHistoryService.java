@@ -61,6 +61,7 @@ public class SensorEventHistoryService {
                 message
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, detected_at
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -111,7 +112,7 @@ public class SensorEventHistoryService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveChange(
+    public SensorEventHistoryResponse saveChange(
             SensorDefinition sensor,
             Boolean previousState,
             boolean currentState
@@ -130,27 +131,48 @@ public class SensorEventHistoryService {
                 currentState
         );
 
-        int insertedRows = jdbcTemplate.update(
-                INSERT_EVENT_QUERY,
-                sensor.id(),
-                sensor.code(),
-                sensor.areaCode(),
-                sensor.type(),
-                sensor.stateTag(),
-                previousState,
-                currentState,
-                eventType,
-                severity,
-                message
-        );
+        SensorEventHistoryResponse savedEvent =
+                jdbcTemplate.queryForObject(
+                        INSERT_EVENT_QUERY,
+                        (resultSet, rowNumber) ->
+                                new SensorEventHistoryResponse(
+                                        resultSet.getLong("id"),
+                                        sensor.code(),
+                                        sensor.name(),
+                                        sensor.areaCode(),
+                                        sensor.areaName(),
+                                        sensor.type(),
+                                        sensor.stateTag(),
+                                        previousState,
+                                        currentState,
+                                        eventType,
+                                        severity,
+                                        message,
+                                        resultSet
+                                                .getTimestamp("detected_at")
+                                                .toInstant()
+                                ),
+                        sensor.id(),
+                        sensor.code(),
+                        sensor.areaCode(),
+                        sensor.type(),
+                        sensor.stateTag(),
+                        previousState,
+                        currentState,
+                        eventType,
+                        severity,
+                        message
+                );
 
-        if (insertedRows != 1) {
+        if (savedEvent == null) {
             throw new IllegalStateException(
                     "No se pudo guardar el evento de "
                             + sensor.code()
                             + "."
             );
         }
+
+        return savedEvent;
     }
 
     private String determineSeverity(

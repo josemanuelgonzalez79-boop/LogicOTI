@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +29,7 @@ public class SensorEventMonitor {
     private final PlcCommunicationService plcCommunicationService;
     private final PlcProperties plcProperties;
     private final boolean enabled;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -41,19 +42,21 @@ public class SensorEventMonitor {
 
     private boolean historyLoaded;
 
-    public SensorEventMonitor(
-            SensorEventHistoryService historyService,
-            PlcCommunicationService plcCommunicationService,
-            PlcProperties plcProperties,
+        public SensorEventMonitor(
+                SensorEventHistoryService historyService,
+                PlcCommunicationService plcCommunicationService,
+                PlcProperties plcProperties,
+                SimpMessagingTemplate messagingTemplate,
 
-            @Value("${sensor.monitor.enabled:true}")
-            boolean enabled
-    ) {
-        this.historyService = historyService;
-        this.plcCommunicationService = plcCommunicationService;
-        this.plcProperties = plcProperties;
-        this.enabled = enabled;
-    }
+                @Value("${sensor.monitor.enabled:true}")
+                boolean enabled
+        ) {
+                this.historyService = historyService;
+                this.plcCommunicationService = plcCommunicationService;
+                this.plcProperties = plcProperties;
+                this.messagingTemplate = messagingTemplate;
+                this.enabled = enabled;
+        }
 
     @Scheduled(
             initialDelayString =
@@ -251,24 +254,37 @@ public class SensorEventMonitor {
         );
     }
 
-    private void saveChange(
-            SensorDefinition sensor,
-            Boolean previousState,
-            boolean currentState
-    ) {
-        historyService.saveChange(
-                sensor,
-                previousState,
-                currentState
-        );
+        private void saveChange(
+                SensorDefinition sensor,
+                Boolean previousState,
+                boolean currentState
+        ) {
+                SensorEventHistoryResponse savedEvent =
+                        historyService.saveChange(
+                                sensor,
+                                previousState,
+                                currentState
+                        );
 
-        LOGGER.info(
-                "Evento guardado: {} cambió de {} a {}.",
-                sensor.code(),
-                previousState,
-                currentState
-        );
-    }
+                if ("SMOKE".equalsIgnoreCase(sensor.type())) {
+                        messagingTemplate.convertAndSend(
+                                "/topic/alerts/smoke",
+                                savedEvent
+                        );
+
+                        LOGGER.info(
+                                "Alerta de humo publicada por WebSocket para {}.",
+                                sensor.code()
+                        );
+                }
+
+                LOGGER.info(
+                        "Evento guardado: {} cambió de {} a {}.",
+                        sensor.code(),
+                        previousState,
+                        currentState
+                );
+        }
 
     private String createAlias(
             SensorDefinition sensor

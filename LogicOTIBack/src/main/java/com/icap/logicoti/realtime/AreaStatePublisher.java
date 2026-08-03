@@ -24,10 +24,7 @@ public class AreaStatePublisher {
     private final AreaSubscriptionRegistry subscriptionRegistry;
     private final SimpMessagingTemplate messagingTemplate;
 
-    /*
-     * Guarda el último estado enviado de cada área.
-     * No guarda el timestamp porque siempre cambia.
-     */
+ 
     private final ConcurrentMap<String, AreaSnapshot> lastSnapshots =
             new ConcurrentHashMap<>();
 
@@ -50,22 +47,15 @@ public class AreaStatePublisher {
         Set<String> activeAreas =
                 subscriptionRegistry.getActiveAreaCodes();
 
-        /*
-         * Elimina de memoria las áreas que ya no tienen usuarios.
-         */
+     
         removeInactiveSnapshots(activeAreas);
 
-        /*
-         * Sin usuarios conectados no se consulta el PLC.
-         */
+    
         if (activeAreas.isEmpty()) {
             return;
         }
 
-        /*
-         * Cada código aparece una sola vez aunque tenga
-         * varios usuarios conectados.
-         */
+     
         activeAreas.forEach(this::readAndPublishArea);
     }
 
@@ -84,9 +74,7 @@ public class AreaStatePublisher {
                             currentSnapshot
                     );
 
-            /*
-             * Publica la primera lectura o cuando algo cambió.
-             */
+          
             if (!currentSnapshot.equals(previousSnapshot)) {
 
                 messagingTemplate.convertAndSend(

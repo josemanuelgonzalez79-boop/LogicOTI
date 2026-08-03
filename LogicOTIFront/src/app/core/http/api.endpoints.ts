@@ -12,8 +12,12 @@ export const API_ENDPOINTS = {
   },
 
   devices: {
-    command: (deviceCode: string) =>
-      `/devices/${deviceCode}/command`,
+    command: (deviceCode: string) => `/devices/${deviceCode}/command`,
+  },
+
+  history: {
+    commands: '/history/commands',
+    events: '/history/events',
   },
 
   realtime: {

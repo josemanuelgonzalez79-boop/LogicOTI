@@ -24,7 +24,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'dashboard',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard').then((c) => c.Dashboard),
     title: 'Dashboard | OTI',
@@ -35,7 +35,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'ui-showcase',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/ui-showcase/ui-showcase').then(
         (c) => c.UiShowcase,
@@ -48,21 +48,21 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'building',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/building/building').then((c) => c.Building),
     title: 'Edificio | OTI',
   },
   {
     path: 'building/floor/:floorId',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/building/floor/floor').then((c) => c.Floor),
     title: 'Plano del piso | OTI',
   },
   {
     path: 'building/floor/:floorId/area/:areaId',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/building/area/area').then((c) => c.Area),
     title: 'Detalle del área | OTI',
@@ -73,7 +73,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'control',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/control/control').then((c) => c.Control),
     title: 'Control | OTI',
@@ -84,7 +84,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'alarms',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/alarms/alarms').then((c) => c.Alarms),
     title: 'Alarmas | OTI',
@@ -95,7 +95,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'history',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/history/history').then((c) => c.History),
     title: 'Históricos | OTI',
@@ -106,7 +106,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'diagnostics',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/diagnostics/diagnostics').then(
         (c) => c.Diagnostics,
@@ -119,7 +119,7 @@ export const routes: Routes = [
   // ==========================
   {
     path: 'administration',
-    canActivate: [authGuard],
+    //canActivate: [authGuard],
     loadComponent: () =>
       import('./features/administration/administration').then(
         (c) => c.Administration,

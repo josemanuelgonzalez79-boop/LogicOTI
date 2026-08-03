@@ -28,11 +28,6 @@ public class AreaSubscriptionRegistry {
     private static final String DESTINATION_SUFFIX =
             "/state";
 
-    /*
-     * sessionId
-     *      └── subscriptionId
-     *              └── areaCode
-     */
     private final ConcurrentMap<
             String,
             ConcurrentMap<String, String>
