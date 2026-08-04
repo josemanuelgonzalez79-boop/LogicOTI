@@ -33,6 +33,11 @@ export class Sidebar {
       route: '/control',
     },
     {
+      label: 'Cámaras',
+      icon: 'pi pi-video',
+      route: '/cameras',
+    },
+    {
       label: 'Alarmas',
       icon: 'pi pi-bell',
       route: '/alarms',

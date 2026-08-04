@@ -33,6 +33,10 @@ plc:
   connection-string: ${PLC_CONNECTION_STRING:}
   timeout: ${PLC_TIMEOUT:5s}
 
+cameras:
+  enabled: ${CAMERAS_ENABLED:false}
+  playback-base-url: ${CAMERA_PLAYBACK_BASE_URL:}
+
 management:
   endpoints:
     web:

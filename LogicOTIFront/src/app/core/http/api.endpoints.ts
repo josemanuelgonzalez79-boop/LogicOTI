@@ -24,6 +24,11 @@ export const API_ENDPOINTS = {
     active: '/alarms/active',
   },
 
+  cameras: {
+    list: '/cameras',
+    detail: (cameraCode: string) => `/cameras/${cameraCode}`,
+  },
+
   realtime: {
     websocket: '/ws',
     status: '/realtime/status',
