@@ -37,8 +37,7 @@
 
 .building-page__levels {
   display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
 
@@ -73,11 +72,7 @@
 }
 
 .building-level-card:focus-visible {
-  outline: 3px solid color-mix(
-    in srgb,
-    var(--primary-color) 28%,
-    transparent
-  );
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
   outline-offset: 2px;
 }
 
@@ -89,11 +84,7 @@
 
   border-radius: 0.85rem;
 
-  background: color-mix(
-    in srgb,
-    var(--primary-color) 12%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
 
   color: var(--primary-color);
   font-size: 1.25rem;
@@ -110,4 +101,23 @@
 
 .building-level-card__content small {
   color: var(--text-color-secondary);
+}
+
+.building-level-card__status {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  color: #047857;
+  background: color-mix(in srgb, #10b981 11%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.building-level-card__status--pending {
+  color: #92400e;
+  background: color-mix(in srgb, #f59e0b 13%, transparent);
 }

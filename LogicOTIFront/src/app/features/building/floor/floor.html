@@ -1,28 +1,94 @@
 <section class="floor-page">
-  @if (level) {
+  @if (level(); as currentLevel) {
     <header class="floor-page__header">
-      <span>Edificio OTI</span>
+      <div>
+        <span>Edificio OTI</span>
+        <h1>{{ currentLevel.name }}</h1>
+        <p>Selecciona una zona del plano o utiliza la lista de áreas para abrir su detalle.</p>
+      </div>
 
-      <h1>{{ level.name }}</h1>
-
-      <p>Selecciona un área para consultar sus equipos y sensores.</p>
+      <div class="floor-legend" aria-label="Significado de los colores">
+        <span><i class="floor-legend__normal"></i> Área disponible</span>
+        <span><i class="floor-legend__alarm"></i> Alarma de humo</span>
+      </div>
     </header>
 
-    <div class="floor-map-shell">
-      <app-building-layout
-        [mapPath]="level.mapPath"
-        [mapName]="'Mapa interactivo de ' + level.name"
-        (areaSelected)="onAreaSelected($event)"
-      />
-    </div>
+    @if (errorMessage()) {
+      <div class="floor-message floor-message--error" role="alert">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorMessage() }}
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="floor-loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        Cargando áreas del piso...
+      </div>
+    } @else {
+      <div class="floor-content">
+        <section class="floor-map-shell">
+          @if (currentLevel.mapAvailable) {
+            <app-building-layout
+              [mapPath]="currentLevel.mapPath"
+              [mapName]="'Mapa interactivo de ' + currentLevel.name"
+              [registeredAreaCodes]="registeredAreaCodes()"
+              [activeSmokeAreaCodes]="activeSmokeAreaCodes()"
+              (areaSelected)="onAreaSelected($event)"
+            />
+
+            <p class="floor-map-note">
+              El plano usa las alarmas globales para marcar humo. Los estados de movimiento,
+              iluminación y minisplit se consultan al abrir un área.
+            </p>
+          } @else {
+            <div class="floor-plan-pending">
+              <span><i class="pi pi-map"></i></span>
+              <h2>Plano pendiente</h2>
+              <p>
+                El plano de Planta Baja todavía no ha sido entregado. Mientras tanto puedes abrir
+                sus áreas desde la lista.
+              </p>
+            </div>
+          }
+        </section>
+
+        <aside class="floor-area-panel">
+          <header>
+            <div>
+              <span>Áreas registradas</span>
+              <h2>{{ areas().length }} áreas</h2>
+            </div>
+            <i class="pi pi-map-marker"></i>
+          </header>
+
+          <div class="floor-area-list">
+            @for (area of areas(); track area.code) {
+              <button
+                type="button"
+                class="floor-area-item"
+                [class.floor-area-item--alarm]="isSmokeActive(area.code)"
+                (click)="onAreaSelected(area.code)"
+              >
+                <span class="floor-area-item__status"></span>
+                <span class="floor-area-item__content">
+                  <strong>{{ area.name }}</strong>
+                  <small>{{ area.code }} · {{ areaSummary(area.code) }}</small>
+                </span>
+                <i class="pi pi-angle-right"></i>
+              </button>
+            } @empty {
+              <div class="floor-area-empty">No hay áreas activas registradas para este piso.</div>
+            }
+          </div>
+        </aside>
+      </div>
+    }
   } @else {
     <div class="floor-not-found">
+      <i class="pi pi-map"></i>
       <h1>Nivel no encontrado</h1>
-
-      <p>
-        El nivel solicitado no está registrado en la configuración del
-        edificio.
-      </p>
+      <p>El nivel solicitado no está registrado en la configuración del edificio.</p>
     </div>
   }
 </section>

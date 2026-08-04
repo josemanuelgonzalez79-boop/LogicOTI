@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1700"
+     height="548"
+     viewBox="0 0 1700 548"
+     role="img"
+     aria-labelledby="p1-title p1-description">
+  <title id="p1-title">Plano interactivo del Piso 1</title>
+  <desc id="p1-description">
+    Selecciona una zona marcada para abrir el estado de sus equipos y sensores.
+  </desc>
+
+  <style>
+    .map-area { cursor: pointer; outline: none; }
+    .area-shape {
+      fill: #0f766e;
+      fill-opacity: 0.08;
+      stroke: #0f766e;
+      stroke-width: 2;
+      stroke-opacity: 0.7;
+      vector-effect: non-scaling-stroke;
+      transition: fill-opacity .18s ease, stroke-width .18s ease;
+    }
+    .area-label {
+      fill: #0f172a;
+      font: 700 16px Arial, sans-serif;
+      text-anchor: middle;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: #ffffff;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+    .area-code {
+      fill: #475569;
+      font: 700 11px Arial, sans-serif;
+      text-anchor: middle;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: #ffffff;
+      stroke-width: 3px;
+    }
+    .map-area:hover .area-shape,
+    .map-area:focus .area-shape {
+      fill-opacity: 0.22;
+      stroke-width: 4;
+    }
+    .map-area[data-status="smoke"] .area-shape {
+      fill: #dc2626;
+      fill-opacity: 0.34;
+      stroke: #b91c1c;
+      stroke-width: 5;
+    }
+    .map-area[data-status="smoke"] .area-label,
+    .map-area[data-status="smoke"] .area-code { fill: #991b1b; }
+    .map-area[data-status="unknown"] .area-shape {
+      fill: #64748b;
+      fill-opacity: 0.06;
+      stroke: #94a3b8;
+      stroke-dasharray: 7 5;
+    }
+  </style>
+
+  <image href="/assets/buildings/oti/levels/p1/plan.png"
+         width="1700"
+         height="548"
+         preserveAspectRatio="none" />
+
+  <!-- Las zonas comunes se dibujan primero para que las oficinas queden encima. -->
+  <g class="map-area" data-area-code="P1_A03" data-status="available" tabindex="0">
+    <title>Pasillo principal · P1_A03</title>
+    <path class="area-shape" d="M145 220H835V310H278V313H145Z" />
+    <text class="area-label" x="515" y="272">Pasillo principal</text>
+    <text class="area-code" x="515" y="290">P1_A03</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A04" data-status="available" tabindex="0">
+    <title>Escalera principal · P1_A04</title>
+    <rect class="area-shape" x="1160" y="190" width="325" height="120" rx="8" />
+    <text class="area-label" x="1322" y="247">Escalera principal</text>
+    <text class="area-code" x="1322" y="267">P1_A04</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A16" data-status="available" tabindex="0">
+    <title>Escalera trasera · P1_A16</title>
+    <rect class="area-shape" x="385" y="313" width="120" height="162" rx="8" />
+    <text class="area-label" x="445" y="386">Escalera</text>
+    <text class="area-label" x="445" y="405">trasera</text>
+    <text class="area-code" x="445" y="426">P1_A16</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A17" data-status="available" tabindex="0">
+    <title>Baño · P1_A17</title>
+    <rect class="area-shape" x="323" y="313" width="62" height="162" rx="8" />
+    <text class="area-label" x="354" y="383" transform="rotate(-90 354 383)">Baño · P1_A17</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A10" data-status="available" tabindex="0">
+    <title>Sala de agua · P1_A10</title>
+    <rect class="area-shape" x="505" y="313" width="98" height="162" rx="8" />
+    <text class="area-label" x="554" y="382">Sala de agua</text>
+    <text class="area-code" x="554" y="403">P1_A10</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A11" data-status="available" tabindex="0">
+    <title>Recursos Humanos · P1_A11</title>
+    <rect class="area-shape" x="20" y="70" width="257" height="150" rx="8" />
+    <text class="area-label" x="148" y="135">Recursos Humanos</text>
+    <text class="area-code" x="148" y="157">P1_A11</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A13" data-status="available" tabindex="0">
+    <title>Ingeniería · P1_A13</title>
+    <rect class="area-shape" x="277" y="70" width="158" height="150" rx="8" />
+    <text class="area-label" x="356" y="136">Ingeniería</text>
+    <text class="area-code" x="356" y="158">P1_A13</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A12" data-status="available" tabindex="0">
+    <title>Gerencia de Operaciones · P1_A12</title>
+    <rect class="area-shape" x="435" y="70" width="166" height="150" rx="8" />
+    <text class="area-label" x="518" y="128">Gerencia de</text>
+    <text class="area-label" x="518" y="148">Operaciones</text>
+    <text class="area-code" x="518" y="169">P1_A12</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A14" data-status="available" tabindex="0">
+    <title>Gerencia de Ingeniería · P1_A14</title>
+    <rect class="area-shape" x="601" y="70" width="154" height="150" rx="8" />
+    <text class="area-label" x="678" y="128">Gerencia de</text>
+    <text class="area-label" x="678" y="148">Ingeniería</text>
+    <text class="area-code" x="678" y="169">P1_A14</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A02" data-status="available" tabindex="0">
+    <title>Sala de espera · P1_A02</title>
+    <rect class="area-shape" x="835" y="70" width="324" height="240" rx="8" />
+    <text class="area-label" x="997" y="177">Sala de espera</text>
+    <text class="area-code" x="997" y="199">P1_A02</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A01" data-status="available" tabindex="0">
+    <title>Dirección · P1_A01</title>
+    <rect class="area-shape" x="0" y="313" width="277" height="153" rx="8" />
+    <text class="area-label" x="139" y="382">Dirección</text>
+    <text class="area-code" x="139" y="404">P1_A01</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A15" data-status="available" tabindex="0">
+    <title>Compras · P1_A15</title>
+    <rect class="area-shape" x="603" y="313" width="149" height="162" rx="8" />
+    <text class="area-label" x="677" y="382">Compras</text>
+    <text class="area-code" x="677" y="404">P1_A15</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A06" data-status="available" tabindex="0">
+    <title>Operaciones · P1_A06</title>
+    <rect class="area-shape" x="752" y="313" width="150" height="162" rx="8" />
+    <text class="area-label" x="827" y="382">Operaciones</text>
+    <text class="area-code" x="827" y="404">P1_A06</text>
+  </g>
+
+  <g class="map-area" data-area-code="P1_A05" data-status="available" tabindex="0">
+    <title>Sala de juntas N1 · P1_A05</title>
+    <rect class="area-shape" x="902" y="313" width="257" height="162" rx="8" />
+    <text class="area-label" x="1030" y="382">Sala de juntas N1</text>
+    <text class="area-code" x="1030" y="404">P1_A05</text>
+  </g>
+</svg>

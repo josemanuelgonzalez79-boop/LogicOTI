@@ -1,9 +1,4 @@
-export type LevelType =
-  | 'floor'
-  | 'exterior'
-  | 'roof'
-  | 'basement'
-  | 'technical';
+export type LevelType = 'floor' | 'exterior' | 'roof' | 'basement' | 'technical';
 
 export interface LevelDefinition {
   id: string;
@@ -13,4 +8,5 @@ export interface LevelDefinition {
   type: LevelType;
   icon: string;
   mapPath: string;
+  mapAvailable: boolean;
 }

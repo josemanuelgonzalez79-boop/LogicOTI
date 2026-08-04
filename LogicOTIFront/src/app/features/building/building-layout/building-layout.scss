@@ -14,18 +14,14 @@
   align-items: flex-start;
 
   width: 100%;
-
-  margin-top: -3rem;
 }
 
 .building-layout__svg ::ng-deep svg {
   display: block;
 
-  /* Más grande */
-  width: min(1090px, 98vw);
+  width: 100%;
+  min-width: 980px;
   height: auto;
-
-  transform: none;
 }
 
 .building-layout__state {

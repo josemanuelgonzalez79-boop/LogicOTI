@@ -9,9 +9,7 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
 
-  // ==========================
   // Autenticación
-  // ==========================
   {
     path: 'login',
     loadComponent: () =>
@@ -19,9 +17,7 @@ export const routes: Routes = [
     title: 'Iniciar sesión | LogicOTI',
   },
 
-  // ==========================
   // Dashboard
-  // ==========================
   {
     path: 'dashboard',
     canActivate: [authGuard],
@@ -30,9 +26,7 @@ export const routes: Routes = [
     title: 'Dashboard | OTI',
   },
 
-  // ==========================
   // UI Showcase (Desarrollo)
-  // ==========================
   {
     path: 'ui-showcase',
     canActivate: [authGuard],
@@ -43,9 +37,7 @@ export const routes: Routes = [
     title: 'UI Showcase | OTI',
   },
 
-  // ==========================
   // Building
-  // ==========================
   {
     path: 'building',
     canActivate: [authGuard],
@@ -68,9 +60,7 @@ export const routes: Routes = [
     title: 'Detalle del área | OTI',
   },
 
-  // ==========================
   // Control
-  // ==========================
   {
     path: 'control',
     canActivate: [authGuard],
@@ -79,9 +69,7 @@ export const routes: Routes = [
     title: 'Control | OTI',
   },
 
-  // ==========================
   // Alarmas
-  // ==========================
   {
     path: 'alarms',
     canActivate: [authGuard],
@@ -90,9 +78,7 @@ export const routes: Routes = [
     title: 'Alarmas | OTI',
   },
 
-  // ==========================
   // Históricos
-  // ==========================
   {
     path: 'history',
     canActivate: [authGuard],
@@ -101,9 +87,7 @@ export const routes: Routes = [
     title: 'Históricos | OTI',
   },
 
-  // ==========================
   // Diagnóstico
-  // ==========================
   {
     path: 'diagnostics',
     canActivate: [authGuard],
@@ -114,9 +98,7 @@ export const routes: Routes = [
     title: 'Diagnóstico | OTI',
   },
 
-  // ==========================
   // Administración
-  // ==========================
   {
     path: 'administration',
     canActivate: [authGuard],
@@ -127,9 +109,7 @@ export const routes: Routes = [
     title: 'Administración | OTI',
   },
 
-  // ==========================
   // Página no encontrada
-  // ==========================
   {
     path: '**',
     loadComponent: () =>

@@ -1,26 +1,17 @@
 <section class="building-page">
   <header class="building-page__header">
     <div>
-      <span class="building-page__eyebrow">
-        Supervisión del edificio
-      </span>
+      <span class="building-page__eyebrow"> Supervisión del edificio </span>
 
       <h1>Edificio OTI</h1>
 
-      <p>
-        Selecciona un nivel para consultar sus áreas y
-        dispositivos.
-      </p>
+      <p>Selecciona un nivel para consultar sus áreas y dispositivos.</p>
     </div>
   </header>
 
   <div class="building-page__levels">
     @for (level of levels; track level.id) {
-      <button
-        type="button"
-        class="building-level-card"
-        (click)="openLevel(level)"
-      >
+      <button type="button" class="building-level-card" (click)="openLevel(level)">
         <span class="building-level-card__icon">
           <i [class]="level.icon"></i>
         </span>
@@ -28,6 +19,13 @@
         <span class="building-level-card__content">
           <strong>{{ level.name }}</strong>
           <small>Código: {{ level.id }}</small>
+          <span
+            class="building-level-card__status"
+            [class.building-level-card__status--pending]="!level.mapAvailable"
+          >
+            <i [class]="level.mapAvailable ? 'pi pi-check-circle' : 'pi pi-clock'"></i>
+            {{ level.mapAvailable ? 'Plano disponible' : 'Plano pendiente' }}
+          </span>
         </span>
 
         <i class="pi pi-angle-right"></i>

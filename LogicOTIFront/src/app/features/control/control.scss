@@ -9,6 +9,14 @@
   margin: 0 auto;
 }
 
+.control-page--compact {
+  width: 100%;
+
+  .control-header {
+    padding: 0.2rem 0;
+  }
+}
+
 .control-header {
   display: flex;
   align-items: flex-start;

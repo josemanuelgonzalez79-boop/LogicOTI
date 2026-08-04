@@ -1,13 +1,11 @@
-@if (loading()) {
-  <p>Cargando área...</p>
-} @else if (errorMessage()) {
-  <p>{{ errorMessage() }}</p>
-} @else if (areaState(); as area) {
-  <h2>{{ area.areaName }}</h2>
+<section class="area-page">
+  <nav class="area-page__breadcrumb" aria-label="Navegación del edificio">
+    <a routerLink="/building">Edificio</a>
+    <i class="pi pi-angle-right"></i>
+    <a [routerLink]="['/building', 'floor', floorCode]">{{ floorCode }}</a>
+    <i class="pi pi-angle-right"></i>
+    <span>{{ areaCode }}</span>
+  </nav>
 
-  <p>Código: {{ area.areaCode }}</p>
-  <p>PLC habilitado: {{ area.plcEnabled }}</p>
-  <p>Conectado: {{ area.connected }}</p>
-  <p>Dispositivos: {{ area.devices.length }}</p>
-  <p>{{ area.message }}</p>
-}
+  <app-control [compact]="true" [initialFloorCode]="floorCode" [initialAreaCode]="areaCode" />
+</section>

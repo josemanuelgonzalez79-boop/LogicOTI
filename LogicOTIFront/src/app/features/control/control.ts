@@ -1,4 +1,13 @@
-import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  Input,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
@@ -34,6 +43,23 @@ export class Control implements OnInit, OnDestroy {
   readonly errorMessage = signal('');
   readonly pendingDevices = signal<Set<string>>(new Set());
   readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
+
+  @Input() compact = false;
+
+  private requestedFloorCode = '';
+  private requestedAreaCode = '';
+
+  @Input()
+  set initialFloorCode(value: string) {
+    this.requestedFloorCode = value?.trim().toUpperCase() ?? '';
+    this.applyInitialLocation();
+  }
+
+  @Input()
+  set initialAreaCode(value: string) {
+    this.requestedAreaCode = value?.trim().toUpperCase() ?? '';
+    this.applyInitialLocation();
+  }
 
   readonly userRole = this.authService.getSession()?.user.role ?? 'MONITORING';
 
@@ -245,16 +271,7 @@ export class Control implements OnInit, OnDestroy {
       .subscribe({
         next: (building) => {
           this.building.set(building);
-
-          const firstFloor = [...building.floors].sort(
-            (a, b) => a.displayOrder - b.displayOrder,
-          )[0];
-          const firstArea = [...(firstFloor?.areas ?? [])].sort(
-            (a, b) => a.displayOrder - b.displayOrder,
-          )[0];
-
-          this.selectedFloorCode.set(firstFloor?.code ?? '');
-          this.selectArea(firstArea?.code ?? '');
+          this.applyInitialLocation();
         },
         error: () => {
           this.errorMessage.set('No fue posible cargar los pisos y oficinas del edificio.');
@@ -305,5 +322,24 @@ export class Control implements OnInit, OnDestroy {
     }
 
     this.pendingDevices.set(devices);
+  }
+
+  private applyInitialLocation(): void {
+    const building = this.building();
+
+    if (!building) {
+      return;
+    }
+
+    const floors = [...building.floors].sort((a, b) => a.displayOrder - b.displayOrder);
+    const floorFromArea = this.requestedAreaCode.split('_')[0];
+    const floor =
+      floors.find((item) => item.code === this.requestedFloorCode || item.code === floorFromArea) ??
+      floors[0];
+    const areas = [...(floor?.areas ?? [])].sort((a, b) => a.displayOrder - b.displayOrder);
+    const area = areas.find((item) => item.code === this.requestedAreaCode) ?? areas[0];
+
+    this.selectedFloorCode.set(floor?.code ?? '');
+    this.selectArea(area?.code ?? '');
   }
 }

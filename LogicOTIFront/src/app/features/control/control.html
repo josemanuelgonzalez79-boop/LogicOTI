@@ -1,11 +1,17 @@
-<section class="control-page">
+<section class="control-page" [class.control-page--compact]="compact">
   <header class="control-header">
     <div>
-      <span class="control-header__eyebrow">Operación del edificio</span>
-      <h1>Control de oficinas</h1>
+      <span class="control-header__eyebrow">
+        {{ compact ? 'Detalle del área' : 'Operación del edificio' }}
+      </span>
+      <h1>{{ compact ? 'Equipos y sensores' : 'Control de oficinas' }}</h1>
       <p>
-        Selecciona un piso y una oficina para consultar sus sensores y controlar la iluminación o
-        los minisplits disponibles.
+        @if (compact) {
+          Consulta los sensores y controla la iluminación o los minisplits disponibles en esta área.
+        } @else {
+          Selecciona un piso y una oficina para consultar sus sensores y controlar la iluminación o
+          los minisplits disponibles.
+        }
       </p>
     </div>
 
@@ -24,48 +30,50 @@
     </div>
   </header>
 
-  <section class="location-panel" aria-label="Selección de oficina">
-    <div class="location-panel__heading">
-      <span class="location-panel__icon">
-        <i class="pi pi-building"></i>
-      </span>
-      <div>
-        <strong>{{ building()?.name ?? 'Edificio OTI' }}</strong>
-        <span>Elige la ubicación que deseas supervisar</span>
+  @if (!compact) {
+    <section class="location-panel" aria-label="Selección de oficina">
+      <div class="location-panel__heading">
+        <span class="location-panel__icon">
+          <i class="pi pi-building"></i>
+        </span>
+        <div>
+          <strong>{{ building()?.name ?? 'Edificio OTI' }}</strong>
+          <span>Elige la ubicación que deseas supervisar</span>
+        </div>
       </div>
-    </div>
 
-    @if (loadingBuilding()) {
-      <div class="location-loading">
-        <i class="pi pi-spin pi-spinner"></i>
-        Cargando estructura del edificio...
-      </div>
-    } @else {
-      <div class="location-selectors">
-        <label>
-          <span>Piso</span>
-          <select [ngModel]="selectedFloorCode()" (ngModelChange)="selectFloor($event)">
-            @for (floor of floors(); track floor.code) {
-              <option [value]="floor.code">{{ floor.name }}</option>
-            }
-          </select>
-        </label>
+      @if (loadingBuilding()) {
+        <div class="location-loading">
+          <i class="pi pi-spin pi-spinner"></i>
+          Cargando estructura del edificio...
+        </div>
+      } @else {
+        <div class="location-selectors">
+          <label>
+            <span>Piso</span>
+            <select [ngModel]="selectedFloorCode()" (ngModelChange)="selectFloor($event)">
+              @for (floor of floors(); track floor.code) {
+                <option [value]="floor.code">{{ floor.name }}</option>
+              }
+            </select>
+          </label>
 
-        <label>
-          <span>Oficina o área</span>
-          <select
-            [ngModel]="selectedAreaCode()"
-            (ngModelChange)="selectArea($event)"
-            [disabled]="areas().length === 0"
-          >
-            @for (area of areas(); track area.code) {
-              <option [value]="area.code">{{ area.name }} · {{ area.code }}</option>
-            }
-          </select>
-        </label>
-      </div>
-    }
-  </section>
+          <label>
+            <span>Oficina o área</span>
+            <select
+              [ngModel]="selectedAreaCode()"
+              (ngModelChange)="selectArea($event)"
+              [disabled]="areas().length === 0"
+            >
+              @for (area of areas(); track area.code) {
+                <option [value]="area.code">{{ area.name }} · {{ area.code }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      }
+    </section>
+  }
 
   @if (!canControl) {
     <div class="permission-notice">
