@@ -30,6 +30,7 @@ const building: Building = {
       code: 'PB',
       name: 'Planta Baja',
       displayOrder: 1,
+      cameraCount: 13,
       areas: [
         {
           id: 1,
@@ -54,6 +55,7 @@ const building: Building = {
       code: 'P1',
       name: 'Piso 1',
       displayOrder: 2,
+      cameraCount: 5,
       areas: [
         {
           id: 2,

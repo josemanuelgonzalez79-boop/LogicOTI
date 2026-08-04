@@ -23,6 +23,7 @@ public class BuildingService {
                 floor.code AS floor_code,
                 floor.name AS floor_name,
                 floor.display_order AS floor_order,
+                COALESCE(camera_inventory.camera_count, 0) AS camera_count,
 
                 area.id AS area_id,
                 area.code AS area_code,
@@ -45,6 +46,17 @@ public class BuildingService {
 
             LEFT JOIN area_inventory inventory
                 ON inventory.area_id = area.id
+
+            LEFT JOIN (
+                SELECT
+                    camera.floor_code,
+                    COUNT(*) AS camera_count
+                FROM camera
+                WHERE camera.active = TRUE
+                  AND camera.floor_code IN ('PB', 'P1', 'P2')
+                GROUP BY camera.floor_code
+            ) camera_inventory
+                ON camera_inventory.floor_code = floor.code
 
             WHERE floor.active = TRUE
               AND area.active = TRUE
@@ -69,6 +81,7 @@ public class BuildingService {
                         resultSet.getString("floor_code"),
                         resultSet.getString("floor_name"),
                         resultSet.getInt("floor_order"),
+                        resultSet.getInt("camera_count"),
 
                         resultSet.getLong("area_id"),
                         resultSet.getString("area_code"),
@@ -104,7 +117,8 @@ public class BuildingService {
                             row.floorId(),
                             row.floorCode(),
                             row.floorName(),
-                            row.floorOrder()
+                            row.floorOrder(),
+                            row.cameraCount()
                     )
             );
 
@@ -168,6 +182,7 @@ public class BuildingService {
             String floorCode,
             String floorName,
             int floorOrder,
+            int cameraCount,
 
             Long areaId,
             String areaCode,
@@ -191,18 +206,21 @@ public class BuildingService {
         private final String code;
         private final String name;
         private final int displayOrder;
+        private final int cameraCount;
         private final List<AreaResponse> areas = new ArrayList<>();
 
         private FloorAccumulator(
                 Long id,
                 String code,
                 String name,
-                int displayOrder
+                int displayOrder,
+                int cameraCount
         ) {
             this.id = id;
             this.code = code;
             this.name = name;
             this.displayOrder = displayOrder;
+            this.cameraCount = cameraCount;
         }
 
         private FloorResponse toResponse() {
@@ -211,6 +229,7 @@ public class BuildingService {
                     code,
                     name,
                     displayOrder,
+                    cameraCount,
                     List.copyOf(areas)
             );
         }

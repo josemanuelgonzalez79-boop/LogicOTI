@@ -45,6 +45,7 @@ const building: Building = {
       code: 'PB',
       name: 'Planta Baja',
       displayOrder: 1,
+      cameraCount: 13,
       areas: [
         {
           id: 1,
@@ -133,6 +134,7 @@ describe('Dashboard', () => {
     expect(component.summaryCards[0].value).toBe('5');
     expect(component.summaryCards[0].detail).toBe('2 movimiento · 3 humo');
     expect(component.floors[0].sensors).toBe(5);
+    expect(component.floors[0].cameras).toBe(13);
   });
 
   it('muestra eventos reales y alarmas activas por piso', () => {

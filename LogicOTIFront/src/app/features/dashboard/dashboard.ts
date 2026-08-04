@@ -169,7 +169,7 @@ export class Dashboard implements OnInit {
           : 'Sin alarmas activas',
       devices,
       sensors,
-      cameras: 0,
+      cameras: floor.cameraCount,
       alarms,
       icon: this.getFloorIcon(floor.code),
       route: `/building/floor/${floor.code}`,

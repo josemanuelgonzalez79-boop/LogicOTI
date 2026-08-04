@@ -14,6 +14,7 @@ public record BuildingResponse(
             String code,
             String name,
             int displayOrder,
+            int cameraCount,
             List<AreaResponse> areas
     ) {
     }

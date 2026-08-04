@@ -10,6 +10,7 @@ export interface BuildingFloor {
   code: string;
   name: string;
   displayOrder: number;
+  cameraCount: number;
   areas: BuildingArea[];
 }
 
