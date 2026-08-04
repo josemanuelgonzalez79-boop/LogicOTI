@@ -16,7 +16,7 @@ const building: Building = {
   totals: {
     floors: 2,
     areas: 2,
-    lamps: 1,
+    lamps: 7,
     motionSensors: 1,
     doorSensors: 0,
     smokeSensors: 1,
@@ -64,7 +64,7 @@ const building: Building = {
           type: 'Oficina',
           displayOrder: 1,
           inventory: {
-            lamps: 0,
+            lamps: 6,
             motionSensors: 0,
             doorSensors: 0,
             smokeSensors: 1,
@@ -119,6 +119,17 @@ const directionState: AreaState = {
   devices: [
     {
       id: 3,
+      code: 'P1_A01_LUZ01',
+      name: 'Iluminación general',
+      type: 'LIGHT',
+      number: 1,
+      controllable: true,
+      command: false,
+      state: false,
+      fault: null,
+    },
+    {
+      id: 4,
       code: 'P1_A01_MS01',
       name: 'Minisplit 1',
       type: 'MINISPLIT',
@@ -129,7 +140,7 @@ const directionState: AreaState = {
       fault: null,
     },
     {
-      id: 4,
+      id: 5,
       code: 'P1_A01_HUM01',
       name: 'Sensor de humo 1',
       type: 'SMOKE',
@@ -242,6 +253,20 @@ describe('Control', () => {
     expect(fixture.componentInstance.selectedAreaCode()).toBe('P1_A01');
     expect(fixture.componentInstance.areaState()?.areaName).toBe('Dirección');
     expect(realtime.watchArea).toHaveBeenLastCalledWith('P1_A01');
+  });
+
+  it('muestra el control de iluminación fuera de Recepción', () => {
+    const fixture = TestBed.createComponent(Control);
+
+    fixture.detectChanges();
+    fixture.componentInstance.selectFloor('P1');
+
+    const light = fixture.componentInstance
+      .controllableDevices()
+      .find((device) => device.type === 'LIGHT');
+
+    expect(light?.code).toBe('P1_A01_LUZ01');
+    expect(light?.name).toBe('Iluminación general');
   });
 
   it('envía el comando y usa la respuesta para actualizar toda el área', () => {
