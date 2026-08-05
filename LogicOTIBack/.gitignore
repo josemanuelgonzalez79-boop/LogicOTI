@@ -27,7 +27,8 @@ target/
 /.nb-gradle/
 
 ### VS Code ###
-.vscode/
+.vscode/*
+!.vscode/launch.json
 
 ### Environment and logs ###
 .env

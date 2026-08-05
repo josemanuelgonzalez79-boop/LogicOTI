@@ -99,7 +99,9 @@ public class CameraService {
     ) throws SQLException {
         String streamKey = resultSet.getString("stream_key");
         boolean active = resultSet.getBoolean("active");
-        boolean videoAvailable = active && isPlaybackConfigured();
+        boolean videoAvailable = active
+                && isPlaybackConfigured()
+                && isStreamAvailable(streamKey);
 
         return new CameraResponse(
                 resultSet.getLong("id"),
@@ -135,6 +137,20 @@ public class CameraService {
         }
 
         return baseUrl + "/" + streamKey;
+    }
+
+    private boolean isStreamAvailable(String streamKey) {
+        List<String> availableStreams = cameraProperties
+                .getAvailableStreams();
+
+        if (availableStreams == null || availableStreams.isEmpty()) {
+            return false;
+        }
+
+        return availableStreams.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .anyMatch(value -> value.equalsIgnoreCase(streamKey));
     }
 
     private String normalize(String value) {

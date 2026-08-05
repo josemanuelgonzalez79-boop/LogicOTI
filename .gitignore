@@ -1,0 +1,6 @@
+# MediaMTX se instala y configura localmente. No versionar binarios,
+# certificados generados ni archivos que contengan credenciales del NVR.
+MediaMTX/mediamtx.exe
+MediaMTX/mediamtx.yml
+MediaMTX/auto.crt
+MediaMTX/auto.key

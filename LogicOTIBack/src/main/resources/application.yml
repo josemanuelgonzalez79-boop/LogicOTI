@@ -1,4 +1,8 @@
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:LogicOTIBack/.env[.properties]
   application:
     name: ${APP_NAME:industrial-backend-template}
   profiles:
@@ -36,6 +40,7 @@ plc:
 cameras:
   enabled: ${CAMERAS_ENABLED:false}
   playback-base-url: ${CAMERA_PLAYBACK_BASE_URL:}
+  available-streams: ${CAMERA_AVAILABLE_STREAMS:}
 
 management:
   endpoints:
