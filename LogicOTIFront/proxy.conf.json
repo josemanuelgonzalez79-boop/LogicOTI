@@ -1,14 +1,21 @@
 {
   "/api": {
-    "target": "http://192.168.10.13:3210",
+    "target": "http://localhost:3210",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/actuator": {
-    "target": "http://192.168.10.13:3210",
+    "target": "http://localhost:3210",
     "secure": false,
     "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/ws": {
+    "target": "http://localhost:3210",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
     "logLevel": "debug"
   }
 }

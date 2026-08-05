@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 
-import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
+import { getWebsocketUrl } from '../http/realtime-url';
 import { AreaState } from '../models/area-state.model';
 import { AuthService } from './auth.service';
 import { RealtimeConnectionStatus } from './smoke-alert-realtime.service';
@@ -84,7 +84,7 @@ export class AreaRealtimeService {
     this.connectionStatusSubject.next('CONNECTING');
 
     const client = new Client({
-      brokerURL: environment.websocketUrl,
+      brokerURL: getWebsocketUrl(),
       connectHeaders: {
         Authorization: `Bearer ${token}`,
       },

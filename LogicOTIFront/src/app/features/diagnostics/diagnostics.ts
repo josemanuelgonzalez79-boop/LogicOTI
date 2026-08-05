@@ -13,6 +13,7 @@ import {
 } from '@stomp/stompjs';
 
 import { environment } from '../../../environments/environment';
+import { getWebsocketUrl } from '../../core/http/realtime-url';
 import { AreaState } from '../../core/models/area-state.model';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -159,7 +160,7 @@ export class Diagnostics implements OnDestroy {
     this.websocketMessages.set([]);
 
     this.stompClient = new Client({
-      brokerURL: environment.websocketUrl,
+      brokerURL: getWebsocketUrl(),
 
       connectHeaders: {
         Authorization: `Bearer ${token}`,

@@ -18,7 +18,8 @@
 .navbar__actions,
 .navbar__user,
 .navbar__status,
-.navbar__alarm-button {
+.navbar__alarm-button,
+.navbar__theme-button {
   display: flex;
   align-items: center;
 }
@@ -79,13 +80,38 @@
 }
 
 .navbar__menu-button:focus-visible,
-.navbar__user:focus-visible {
+.navbar__user:focus-visible,
+.navbar__theme-button:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
 
 .navbar__actions {
   gap: 1rem;
+}
+
+.navbar__theme-button {
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  color: var(--text-color-secondary);
+  background: var(--surface-card);
+  cursor: pointer;
+  font-size: 1rem;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.navbar__theme-button:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 45%, var(--surface-border));
+  color: var(--primary-color);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
 }
 
 .navbar__alarm-button {
