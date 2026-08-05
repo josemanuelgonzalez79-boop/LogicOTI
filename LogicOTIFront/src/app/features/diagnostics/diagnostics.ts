@@ -166,8 +166,6 @@ export class Diagnostics implements OnDestroy {
         Authorization: `Bearer ${token}`,
       },
 
-      // Durante las pruebas no reconectamos automáticamente.
-      // Así un error STOMP no se repite continuamente.
       reconnectDelay: 0,
 
       heartbeatIncoming: 10000,

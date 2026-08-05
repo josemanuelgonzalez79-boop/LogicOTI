@@ -10,20 +10,23 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AreaDevice, AreaState } from '../../core/models/area-state.model';
 import { Building, BuildingArea, BuildingFloor } from '../../core/models/building.model';
+import { CameraItem } from '../../core/models/camera.model';
 import { AreaApiService } from '../../core/services/area-api.service';
 import { AreaRealtimeService } from '../../core/services/area-realtime.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CameraApiService } from '../../core/services/camera-api.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
 import { SystemApiService } from '../../core/services/system-api.service';
 
 @Component({
   selector: 'app-control',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './control.html',
   styleUrl: './control.scss',
 })
@@ -33,6 +36,7 @@ export class Control implements OnInit, OnDestroy {
   private readonly areaApi = inject(AreaApiService);
   private readonly realtime = inject(AreaRealtimeService);
   private readonly authService = inject(AuthService);
+  private readonly cameraApi = inject(CameraApiService);
 
   readonly building = signal<Building | null>(null);
   readonly areaState = signal<AreaState | null>(null);
@@ -41,6 +45,9 @@ export class Control implements OnInit, OnDestroy {
   readonly loadingBuilding = signal(true);
   readonly loadingArea = signal(false);
   readonly errorMessage = signal('');
+  readonly cameraErrorMessage = signal('');
+  readonly areaCameras = signal<CameraItem[]>([]);
+  readonly loadingCameras = signal(false);
   readonly pendingDevices = signal<Set<string>>(new Set());
   readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
 
@@ -136,10 +143,13 @@ export class Control implements OnInit, OnDestroy {
 
     this.selectedAreaCode.set(normalizedAreaCode);
     this.areaState.set(null);
+    this.areaCameras.set([]);
     this.errorMessage.set('');
+    this.cameraErrorMessage.set('');
 
     if (!normalizedAreaCode) {
       this.loadingArea.set(false);
+      this.loadingCameras.set(false);
       this.realtime.clearArea();
       return;
     }
@@ -288,6 +298,7 @@ export class Control implements OnInit, OnDestroy {
 
     this.loadingArea.set(true);
     this.realtime.watchArea(areaCode);
+    this.loadAreaCameras(areaCode);
 
     this.areaApi
       .getAreaState(areaCode)
@@ -307,6 +318,34 @@ export class Control implements OnInit, OnDestroy {
         error: () => {
           if (areaCode === this.selectedAreaCode()) {
             this.errorMessage.set('No fue posible consultar el estado de esta oficina.');
+          }
+        },
+      });
+  }
+
+  private loadAreaCameras(areaCode: string): void {
+    this.loadingCameras.set(true);
+    this.cameraErrorMessage.set('');
+
+    this.cameraApi
+      .getCameras(undefined, areaCode)
+      .pipe(
+        finalize(() => {
+          if (areaCode === this.selectedAreaCode()) {
+            this.loadingCameras.set(false);
+          }
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          if (areaCode === this.selectedAreaCode()) {
+            this.areaCameras.set(response.items);
+          }
+        },
+        error: () => {
+          if (areaCode === this.selectedAreaCode()) {
+            this.areaCameras.set([]);
+            this.cameraErrorMessage.set('No fue posible consultar las cámaras de esta oficina.');
           }
         },
       });

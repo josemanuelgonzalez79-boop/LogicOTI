@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { CameraListResponse } from '../../core/models/camera.model';
@@ -44,13 +45,27 @@ class CameraApiServiceMock {
 }
 
 describe('Cameras', () => {
+  let requestedCameraCode: string | null;
+
   beforeEach(async () => {
+    requestedCameraCode = null;
+
     await TestBed.configureTestingModule({
       imports: [Cameras],
       providers: [
         {
           provide: CameraApiService,
           useClass: CameraApiServiceMock,
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: {
+                get: (name: string) => (name === 'camera' ? requestedCameraCode : null),
+              },
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -72,5 +87,14 @@ describe('Cameras', () => {
 
     expect(fixture.componentInstance.filteredCameras()).toHaveLength(1);
     expect(fixture.componentInstance.filteredCameras()[0].code).toBe('CAM-025');
+  });
+
+  it('abre directamente la cámara solicitada en la dirección', () => {
+    requestedCameraCode = 'cam-025';
+
+    const fixture = TestBed.createComponent(Cameras);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedCamera()?.code).toBe('CAM-025');
   });
 });

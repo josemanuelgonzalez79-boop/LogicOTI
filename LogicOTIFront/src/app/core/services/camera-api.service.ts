@@ -10,8 +10,16 @@ import { CameraFloorCode, CameraItem, CameraListResponse } from '../models/camer
 export class CameraApiService {
   private readonly http = inject(HttpClient);
 
-  getCameras(floorCode?: CameraFloorCode): Observable<CameraListResponse> {
-    const params = floorCode ? new HttpParams().set('floorCode', floorCode) : undefined;
+  getCameras(floorCode?: CameraFloorCode, areaCode?: string): Observable<CameraListResponse> {
+    let params = new HttpParams();
+
+    if (floorCode) {
+      params = params.set('floorCode', floorCode);
+    }
+
+    if (areaCode?.trim()) {
+      params = params.set('areaCode', areaCode.trim().toUpperCase());
+    }
 
     return this.http.get<CameraListResponse>(
       `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.list}`,

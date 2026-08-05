@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -41,22 +42,36 @@ public class CameraService {
         this.cameraProperties = cameraProperties;
     }
 
-    public CameraListResponse findAll(String requestedFloorCode) {
+    public CameraListResponse findAll(
+            String requestedFloorCode,
+            String requestedAreaCode
+    ) {
         String floorCode = normalize(requestedFloorCode);
+        String areaCode = normalize(requestedAreaCode);
+        List<String> conditions = new ArrayList<>();
+        List<Object> parameters = new ArrayList<>();
+
+        if (floorCode != null) {
+            conditions.add("UPPER(camera.floor_code) = ?");
+            parameters.add(floorCode.toUpperCase(Locale.ROOT));
+        }
+
+        if (areaCode != null) {
+            conditions.add("UPPER(camera.area_code) = ?");
+            parameters.add(areaCode.toUpperCase(Locale.ROOT));
+        }
 
         String query = CAMERA_COLUMNS
-                + (floorCode == null
+                + (conditions.isEmpty()
                 ? ""
-                : " WHERE UPPER(camera.floor_code) = ?")
+                : " WHERE " + String.join(" AND ", conditions))
                 + " ORDER BY camera.display_order, camera.id";
 
-        List<CameraResponse> items = floorCode == null
-                ? jdbcTemplate.query(query, this::mapCamera)
-                : jdbcTemplate.query(
-                        query,
-                        this::mapCamera,
-                        floorCode.toUpperCase(Locale.ROOT)
-                );
+        List<CameraResponse> items = jdbcTemplate.query(
+                query,
+                this::mapCamera,
+                parameters.toArray()
+        );
 
         return new CameraListResponse(
                 items,

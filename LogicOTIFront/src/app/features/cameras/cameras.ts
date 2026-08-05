@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { CameraFloorCode, CameraItem } from '../../core/models/camera.model';
@@ -18,6 +19,7 @@ type CameraFloorFilter = '' | CameraFloorCode;
 export class Cameras implements OnInit {
   private readonly cameraApi = inject(CameraApiService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly route = inject(ActivatedRoute);
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');
@@ -103,6 +105,8 @@ export class Cameras implements OnInit {
 
   private loadCameras(): void {
     const selectedCode = this.selectedCamera()?.code;
+    const requestedCode =
+      this.route.snapshot.queryParamMap.get('camera')?.trim().toUpperCase() ?? '';
 
     this.loading.set(true);
     this.errorMessage.set('');
@@ -118,6 +122,7 @@ export class Cameras implements OnInit {
           this.lastUpdate.set(response.timestamp);
 
           const nextSelection =
+            response.items.find((camera) => camera.code === requestedCode) ??
             response.items.find((camera) => camera.code === selectedCode) ??
             response.items[0] ??
             null;

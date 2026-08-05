@@ -19,9 +19,11 @@ public class CameraController {
     @GetMapping
     public CameraListResponse findAll(
             @RequestParam(required = false)
-            String floorCode
+            String floorCode,
+            @RequestParam(required = false)
+            String areaCode
     ) {
-        return cameraService.findAll(floorCode);
+        return cameraService.findAll(floorCode, areaCode);
     }
 
     @GetMapping("/{cameraCode}")

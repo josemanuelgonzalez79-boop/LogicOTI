@@ -271,6 +271,65 @@
         }
       </div>
     </section>
+
+    <section class="device-section">
+      <header class="section-header">
+        <div>
+          <span class="section-header__eyebrow">Videovigilancia</span>
+          <h2>Cámaras del área</h2>
+        </div>
+        <span>{{ areaCameras().length }} cámaras</span>
+      </header>
+
+      @if (cameraErrorMessage()) {
+        <div class="page-message page-message--error" role="alert">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ cameraErrorMessage() }}</span>
+          <button type="button" (click)="refreshArea()">Reintentar</button>
+        </div>
+      }
+
+      @if (loadingCameras()) {
+        <div class="camera-loading">
+          <i class="pi pi-spin pi-spinner"></i>
+          Consultando cámaras asignadas a {{ state.areaName }}...
+        </div>
+      } @else {
+        <div class="area-camera-grid">
+          @for (camera of areaCameras(); track camera.code) {
+            <article class="area-camera-card">
+              <span class="area-camera-card__icon">
+                <i class="pi pi-video"></i>
+              </span>
+
+              <div class="area-camera-card__body">
+                <span>{{ camera.code }} · Canal {{ camera.channelNumber }}</span>
+                <h3>{{ camera.name }}</h3>
+                <strong [class.area-camera-card__available]="camera.videoAvailable">
+                  <i [class]="camera.videoAvailable ? 'pi pi-play-circle' : 'pi pi-clock'"></i>
+                  {{ camera.videoAvailable ? 'Video disponible' : 'Pendiente de configurar' }}
+                </strong>
+              </div>
+
+              <a
+                [routerLink]="['/cameras']"
+                [queryParams]="{ camera: camera.code }"
+                aria-label="Ver cámara {{ camera.name }}"
+              >
+                Ver cámara
+                <i class="pi pi-arrow-right"></i>
+              </a>
+            </article>
+          } @empty {
+            <div class="empty-state">
+              <i class="pi pi-video"></i>
+              <strong>No hay cámaras asignadas a esta área</strong>
+              <span>El inventario de CCTV no relaciona una cámara con esta oficina.</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
   } @else if (!loadingBuilding() && !selectedAreaCode()) {
     <div class="empty-state empty-state--page">
       <i class="pi pi-map"></i>

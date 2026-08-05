@@ -1,11 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 
 import { AreaState } from '../../core/models/area-state.model';
 import { Building } from '../../core/models/building.model';
+import { CameraListResponse } from '../../core/models/camera.model';
 import { AreaApiService } from '../../core/services/area-api.service';
 import { AreaRealtimeService } from '../../core/services/area-realtime.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CameraApiService } from '../../core/services/camera-api.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
 import { SystemApiService } from '../../core/services/system-api.service';
 import { Control } from './control';
@@ -155,6 +158,27 @@ const directionState: AreaState = {
   timestamp: '2026-08-03T22:00:00Z',
 };
 
+const receptionCameras: CameraListResponse = {
+  items: [
+    {
+      id: 8,
+      code: 'CAM-008',
+      channelNumber: 8,
+      name: 'Recepción',
+      floorCode: 'PB',
+      areaCode: 'PB_A01',
+      sourceName: 'NVR-1',
+      streamKey: 'oti-cam-08',
+      active: true,
+      videoAvailable: true,
+      viewUrl: 'http://video.local:8889/oti-cam-08/',
+    },
+  ],
+  total: 1,
+  playbackConfigured: true,
+  timestamp: '2026-08-05T18:00:00Z',
+};
+
 let authRole = 'ADMIN';
 
 class SystemApiServiceMock {
@@ -204,6 +228,20 @@ class AuthServiceMock {
   }
 }
 
+class CameraApiServiceMock {
+  readonly getCameras = vi.fn((_floorCode?: string, areaCode?: string) =>
+    of(
+      areaCode === 'PB_A01'
+        ? receptionCameras
+        : {
+            ...receptionCameras,
+            items: [],
+            total: 0,
+          },
+    ),
+  );
+}
+
 describe('Control', () => {
   beforeEach(async () => {
     authRole = 'ADMIN';
@@ -227,6 +265,11 @@ describe('Control', () => {
           provide: AuthService,
           useClass: AuthServiceMock,
         },
+        {
+          provide: CameraApiService,
+          useClass: CameraApiServiceMock,
+        },
+        provideRouter([]),
       ],
     }).compileComponents();
   });
@@ -267,6 +310,17 @@ describe('Control', () => {
 
     expect(light?.code).toBe('P1_A01_LUZ01');
     expect(light?.name).toBe('Iluminación general');
+  });
+
+  it('consulta y muestra solamente las cámaras relacionadas con el área', () => {
+    const fixture = TestBed.createComponent(Control);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+
+    fixture.detectChanges();
+
+    expect(cameraApi.getCameras).toHaveBeenCalledWith(undefined, 'PB_A01');
+    expect(fixture.componentInstance.areaCameras()).toHaveLength(1);
+    expect(fixture.componentInstance.areaCameras()[0].code).toBe('CAM-008');
   });
 
   it('envía el comando y usa la respuesta para actualizar toda el área', () => {
