@@ -136,7 +136,7 @@ public class CameraService {
             );
         }
 
-        return baseUrl + "/" + streamKey;
+        return baseUrl + "/" + streamKey + "/";
     }
 
     private boolean isStreamAvailable(String streamKey) {
