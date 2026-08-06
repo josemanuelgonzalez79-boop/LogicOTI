@@ -88,7 +88,7 @@ export const routes: Routes = [
   // Diagnóstico
   {
     path: 'diagnostics',
-    canActivate: [authGuard],
+    canActivate: [authGuard, adminGuard],
     loadComponent: () => import('./features/diagnostics/diagnostics').then((c) => c.Diagnostics),
     title: 'Diagnóstico | OTI',
   },

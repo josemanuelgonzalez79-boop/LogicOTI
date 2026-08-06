@@ -5,7 +5,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { UserRole } from '../../core/models/auth.model';
-import { AppUser, CreateUserRequest } from '../../core/models/user.model';
+import { AppUser, CreateUserRequest, UpdateUserRequest } from '../../core/models/user.model';
+import { AuthService } from '../../core/services/auth.service';
 import { UserApiService } from '../../core/services/user-api.service';
 
 interface RoleOption {
@@ -24,13 +25,20 @@ interface RoleOption {
 export class Administration implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly userApi = inject(UserApiService);
+  private readonly authService = inject(AuthService);
 
   readonly users = signal<AppUser[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly changingPassword = signal(false);
+  readonly deletingUser = signal(false);
   readonly showPassword = signal(false);
+  readonly showNewPassword = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
+  readonly passwordTarget = signal<AppUser | null>(null);
+  readonly deletionTarget = signal<AppUser | null>(null);
+  readonly currentUserId = this.authService.getSession()?.user.id ?? null;
 
   readonly activeUsers = computed(() => this.users().filter((user) => user.active).length);
   readonly adminUsers = computed(
@@ -64,6 +72,11 @@ export class Administration implements OnInit {
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
     role: this.formBuilder.nonNullable.control<UserRole>('MONITORING', Validators.required),
     active: [true],
+  });
+
+  readonly passwordForm = this.formBuilder.nonNullable.group({
+    password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
+    confirmation: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
   });
 
   ngOnInit(): void {
@@ -128,6 +141,123 @@ export class Administration implements OnInit {
     this.showPassword.update((visible) => !visible);
   }
 
+  openPasswordChange(user: AppUser): void {
+    this.clearMessages();
+    this.passwordForm.reset({ password: '', confirmation: '' });
+    this.showNewPassword.set(false);
+    this.passwordTarget.set(user);
+  }
+
+  closePasswordChange(): void {
+    if (!this.changingPassword()) {
+      this.passwordTarget.set(null);
+      this.passwordForm.reset({ password: '', confirmation: '' });
+    }
+  }
+
+  toggleNewPassword(): void {
+    this.showNewPassword.update((visible) => !visible);
+  }
+
+  changePassword(): void {
+    const user = this.passwordTarget();
+    this.clearMessages();
+
+    if (!user || this.passwordForm.invalid) {
+      this.passwordForm.markAllAsTouched();
+      this.errorMessage.set('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    const formValue = this.passwordForm.getRawValue();
+
+    if (formValue.password !== formValue.confirmation) {
+      this.errorMessage.set('La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+
+    const request: UpdateUserRequest = {
+      username: user.username,
+      fullName: user.fullName,
+      password: formValue.password,
+      role: user.role,
+      active: user.active,
+    };
+
+    this.changingPassword.set(true);
+
+    this.userApi
+      .updateUser(user.id, request)
+      .pipe(finalize(() => this.changingPassword.set(false)))
+      .subscribe({
+        next: (updatedUser) => {
+          this.replaceUser(updatedUser);
+          this.passwordTarget.set(null);
+          this.passwordForm.reset({ password: '', confirmation: '' });
+          this.successMessage.set(`La contraseña de ${updatedUser.username} se actualizó.`);
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'No fue posible cambiar la contraseña.'),
+          ),
+      });
+  }
+
+  requestDeletion(user: AppUser): void {
+    if (!this.canDelete(user)) {
+      return;
+    }
+
+    this.clearMessages();
+    this.deletionTarget.set(user);
+  }
+
+  cancelDeletion(): void {
+    if (!this.deletingUser()) {
+      this.deletionTarget.set(null);
+    }
+  }
+
+  confirmDeletion(): void {
+    const user = this.deletionTarget();
+
+    if (!user || !this.canDelete(user)) {
+      return;
+    }
+
+    this.clearMessages();
+    this.deletingUser.set(true);
+
+    this.userApi
+      .deleteUser(user.id)
+      .pipe(finalize(() => this.deletingUser.set(false)))
+      .subscribe({
+        next: () => {
+          this.users.update((users) => users.filter((item) => item.id !== user.id));
+          this.deletionTarget.set(null);
+          this.successMessage.set(`El usuario ${user.username} se eliminó correctamente.`);
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(this.getErrorMessage(error, 'No fue posible eliminar el usuario.')),
+      });
+  }
+
+  canDelete(user: AppUser): boolean {
+    return !user.protectedUser && user.id !== this.currentUserId;
+  }
+
+  deleteDisabledReason(user: AppUser): string {
+    if (user.protectedUser) {
+      return 'El administrador principal está protegido.';
+    }
+
+    if (user.id === this.currentUserId) {
+      return 'No puedes eliminar tu propia sesión.';
+    }
+
+    return 'Eliminar usuario';
+  }
+
   roleLabel(role: UserRole): string {
     return this.roleOptions.find((option) => option.value === role)?.label ?? role;
   }
@@ -158,7 +288,21 @@ export class Administration implements OnInit {
     });
   }
 
-  private getErrorMessage(error: HttpErrorResponse): string {
+  private replaceUser(updatedUser: AppUser): void {
+    this.users.update((users) =>
+      this.orderUsers(users.map((user) => (user.id === updatedUser.id ? updatedUser : user))),
+    );
+  }
+
+  private clearMessages(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  private getErrorMessage(
+    error: HttpErrorResponse,
+    fallback = 'No fue posible crear el usuario.',
+  ): string {
     const detail = error.error?.detail;
 
     if (typeof detail === 'string' && detail.trim()) {
@@ -173,6 +317,6 @@ export class Administration implements OnInit {
       return 'Tu sesión no tiene permiso para administrar usuarios.';
     }
 
-    return 'No fue posible crear el usuario. Intenta nuevamente.';
+    return fallback;
   }
 }

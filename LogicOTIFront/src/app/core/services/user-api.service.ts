@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
-import { AppUser, CreateUserRequest } from '../models/user.model';
+import { AppUser, CreateUserRequest, UpdateUserRequest } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserApiService {
@@ -17,5 +17,13 @@ export class UserApiService {
 
   createUser(request: CreateUserRequest): Observable<AppUser> {
     return this.http.post<AppUser>(`${this.baseUrl}${API_ENDPOINTS.users.create}`, request);
+  }
+
+  updateUser(userId: number, request: UpdateUserRequest): Observable<AppUser> {
+    return this.http.put<AppUser>(`${this.baseUrl}${API_ENDPOINTS.users.detail(userId)}`, request);
+  }
+
+  deleteUser(userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}${API_ENDPOINTS.users.detail(userId)}`);
   }
 }

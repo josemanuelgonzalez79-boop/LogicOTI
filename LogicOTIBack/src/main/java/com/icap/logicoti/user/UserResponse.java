@@ -9,18 +9,23 @@ public record UserResponse(
         String fullName,
         String role,
         boolean active,
-        Instant createdAt
+        Instant createdAt,
+        boolean protectedUser
 
 ) {
 
-    public static UserResponse from(AppUser user) {
+    public static UserResponse from(
+            AppUser user,
+            boolean protectedUser
+    ) {
         return new UserResponse(
                 user.getId(),
                 user.getUsername(),
                 user.getFullName(),
                 user.getRole(),
                 user.isActive(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                protectedUser
         );
     }
 }

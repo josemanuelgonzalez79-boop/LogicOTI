@@ -13,6 +13,8 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class UserService {
 
+    private static final String ADMIN_ROLE = "ADMIN";
+
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -25,14 +27,22 @@ public class UserService {
     }
 
     public List<UserResponse> findAll() {
+        Long protectedAdministratorId = findProtectedAdministratorId();
+
         return userRepository.findAll()
                 .stream()
-                .map(UserResponse::from)
+                .map(user -> toResponse(
+                        user,
+                        protectedAdministratorId
+                ))
                 .toList();
     }
 
     public UserResponse findById(Long id) {
-        return UserResponse.from(findUserById(id));
+        return toResponse(
+                findUserById(id),
+                findProtectedAdministratorId()
+        );
     }
 
     @Transactional
@@ -53,13 +63,38 @@ public class UserService {
                 request.active()
         );
 
-        return UserResponse.from(userRepository.save(user));
+        AppUser savedUser = userRepository.save(user);
+
+        return toResponse(
+                savedUser,
+                findProtectedAdministratorId()
+        );
     }
 
     @Transactional
-    public UserResponse update(Long id, UserUpdateRequest request) {
+    public UserResponse update(
+            Long id,
+            UserUpdateRequest request
+    ) {
         AppUser user = findUserById(id);
         String username = request.username().trim();
+        String normalizedRole = normalizeRole(request.role());
+        Long protectedAdministratorId =
+                findProtectedAdministratorId();
+
+        validateProtectedAdministratorUpdate(
+                user,
+                protectedAdministratorId,
+                username,
+                normalizedRole,
+                request.active()
+        );
+
+        validateLastActiveAdministratorUpdate(
+                user,
+                normalizedRole,
+                request.active()
+        );
 
         boolean usernameBelongsToAnotherUser =
                 userRepository.findByUsernameIgnoreCase(username)
@@ -82,17 +117,113 @@ public class UserService {
                 username,
                 passwordHash,
                 request.fullName().trim(),
-                normalizeRole(request.role()),
+                normalizedRole,
                 request.active()
         );
 
-        return UserResponse.from(userRepository.save(user));
+        AppUser savedUser = userRepository.save(user);
+
+        return toResponse(
+                savedUser,
+                protectedAdministratorId
+        );
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String requestedBy) {
         AppUser user = findUserById(id);
+
+        if (user.getUsername().equalsIgnoreCase(requestedBy)) {
+            throw new ConflictException(
+                    "No puedes eliminar la cuenta con la que tienes la sesión iniciada."
+            );
+        }
+
+        Long protectedAdministratorId =
+                findProtectedAdministratorId();
+
+        if (user.getId().equals(protectedAdministratorId)) {
+            throw new ConflictException(
+                    "El administrador principal no se puede eliminar."
+            );
+        }
+
+        if (isActiveAdministrator(user)
+                && activeAdministratorCount() <= 1) {
+            throw new ConflictException(
+                    "Debe permanecer al menos un administrador activo."
+            );
+        }
+
         userRepository.delete(user);
+    }
+
+    private void validateProtectedAdministratorUpdate(
+            AppUser user,
+            Long protectedAdministratorId,
+            String username,
+            String role,
+            boolean active
+    ) {
+        if (!user.getId().equals(protectedAdministratorId)) {
+            return;
+        }
+
+        if (!user.getUsername().equals(username)) {
+            throw new ConflictException(
+                    "El nombre de usuario del administrador principal no se puede cambiar."
+            );
+        }
+
+        if (!ADMIN_ROLE.equals(role) || !active) {
+            throw new ConflictException(
+                    "El administrador principal debe conservar el rol ADMIN y permanecer activo."
+            );
+        }
+    }
+
+    private void validateLastActiveAdministratorUpdate(
+            AppUser user,
+            String newRole,
+            boolean newActive
+    ) {
+        boolean stopsBeingActiveAdministrator =
+                isActiveAdministrator(user)
+                        && (!ADMIN_ROLE.equals(newRole) || !newActive);
+
+        if (stopsBeingActiveAdministrator
+                && activeAdministratorCount() <= 1) {
+            throw new ConflictException(
+                    "Debe permanecer al menos un administrador activo."
+            );
+        }
+    }
+
+    private boolean isActiveAdministrator(AppUser user) {
+        return ADMIN_ROLE.equalsIgnoreCase(user.getRole())
+                && user.isActive();
+    }
+
+    private long activeAdministratorCount() {
+        return userRepository
+                .countByRoleIgnoreCaseAndActiveTrue(ADMIN_ROLE);
+    }
+
+    private Long findProtectedAdministratorId() {
+        return userRepository
+                .findFirstByRoleIgnoreCaseOrderByIdAsc(ADMIN_ROLE)
+                .map(AppUser::getId)
+                .orElse(null);
+    }
+
+    private UserResponse toResponse(
+            AppUser user,
+            Long protectedAdministratorId
+    ) {
+        return UserResponse.from(
+                user,
+                user.getId().equals(protectedAdministratorId)
+        );
     }
 
     private AppUser findUserById(Long id) {

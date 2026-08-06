@@ -182,10 +182,34 @@
                 <span class="state" [class.state--inactive]="!user.active">{{
                   user.active ? 'Activo' : 'Inactivo'
                 }}</span>
+                @if (user.protectedUser) {
+                  <span class="protected-user"><i class="pi pi-lock"></i>Principal</span>
+                }
               </div>
               <time [attr.datetime]="user.createdAt"
                 >Creado {{ user.createdAt | date: 'dd/MM/yyyy' }}</time
               >
+              <div class="user-actions">
+                <button
+                  type="button"
+                  class="icon-button"
+                  title="Cambiar contraseña"
+                  [attr.aria-label]="'Cambiar contraseña de ' + user.username"
+                  (click)="openPasswordChange(user)"
+                >
+                  <i class="pi pi-key"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-button icon-button--danger"
+                  [disabled]="!canDelete(user)"
+                  [title]="deleteDisabledReason(user)"
+                  [attr.aria-label]="deleteDisabledReason(user)"
+                  (click)="requestDeletion(user)"
+                >
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
             </article>
           }
         </div>
@@ -193,3 +217,125 @@
     </section>
   </div>
 </section>
+
+@if (passwordTarget(); as user) {
+  <div class="dialog-backdrop" role="presentation" (click)="closePasswordChange()">
+    <section
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="password-dialog-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="dialog__header">
+        <span class="dialog__icon"><i class="pi pi-key"></i></span>
+        <div>
+          <h2 id="password-dialog-title">Cambiar contraseña</h2>
+          <p>{{ user.fullName }} · @{{ user.username }}</p>
+        </div>
+      </header>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+        <label class="field">
+          <span>Nueva contraseña</span>
+          <div class="password-field">
+            <input
+              [type]="showNewPassword() ? 'text' : 'password'"
+              formControlName="password"
+              maxlength="100"
+              autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres"
+            />
+            <button
+              type="button"
+              (click)="toggleNewPassword()"
+              [attr.aria-label]="showNewPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <i
+                class="pi"
+                [class.pi-eye]="!showNewPassword()"
+                [class.pi-eye-slash]="showNewPassword()"
+              ></i>
+            </button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Confirmar contraseña</span>
+          <input
+            [type]="showNewPassword() ? 'text' : 'password'"
+            formControlName="confirmation"
+            maxlength="100"
+            autocomplete="new-password"
+            placeholder="Vuelve a escribir la contraseña"
+          />
+        </label>
+
+        <div class="dialog__actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="changingPassword()"
+            (click)="closePasswordChange()"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="button button--primary" [disabled]="changingPassword()">
+            <i
+              class="pi"
+              [class.pi-spin]="changingPassword()"
+              [class.pi-spinner]="changingPassword()"
+              [class.pi-check]="!changingPassword()"
+            ></i>
+            {{ changingPassword() ? 'Guardando...' : 'Guardar contraseña' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (deletionTarget(); as user) {
+  <div class="dialog-backdrop" role="presentation" (click)="cancelDeletion()">
+    <section
+      class="dialog dialog--danger"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-dialog-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="dialog__header">
+        <span class="dialog__icon"><i class="pi pi-exclamation-triangle"></i></span>
+        <div>
+          <h2 id="delete-dialog-title">Eliminar usuario</h2>
+          <p>Se eliminará la cuenta @{{ user.username }} y ya no podrá iniciar sesión.</p>
+        </div>
+      </header>
+
+      <div class="dialog__actions dialog__actions--standalone">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="deletingUser()"
+          (click)="cancelDeletion()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="button button--danger"
+          [disabled]="deletingUser()"
+          (click)="confirmDeletion()"
+        >
+          <i
+            class="pi"
+            [class.pi-spin]="deletingUser()"
+            [class.pi-spinner]="deletingUser()"
+            [class.pi-trash]="!deletingUser()"
+          ></i>
+          {{ deletingUser() ? 'Eliminando...' : 'Sí, eliminar' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

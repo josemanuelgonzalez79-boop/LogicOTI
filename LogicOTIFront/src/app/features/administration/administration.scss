@@ -62,6 +62,10 @@
   color: var(--p-text-color);
   background: var(--p-content-background);
 }
+.button--danger {
+  color: #fff;
+  background: #dc2626;
+}
 
 .summary-grid {
   display: grid;
@@ -279,7 +283,7 @@ form {
 
 .user-row {
   display: grid;
-  grid-template-columns: auto minmax(150px, 1fr) auto auto;
+  grid-template-columns: auto minmax(150px, 1fr) auto auto auto;
   gap: 0.85rem;
   align-items: center;
   padding: 1rem 1.2rem;
@@ -328,7 +332,8 @@ form {
 }
 
 .role,
-.state {
+.state,
+.protected-user {
   padding: 0.35rem 0.55rem;
   border-radius: 999px;
   font-size: 0.7rem;
@@ -354,6 +359,119 @@ form {
 .state--inactive {
   color: #64748b;
   background: color-mix(in srgb, #94a3b8 15%, transparent);
+}
+
+.protected-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #6d28d9;
+  background: color-mix(in srgb, #8b5cf6 14%, transparent);
+}
+
+.user-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.icon-button {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 0.6rem;
+  place-items: center;
+  color: var(--p-text-color);
+  background: var(--p-content-background);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--p-primary-color);
+    color: var(--p-primary-color);
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.38;
+  }
+}
+
+.icon-button--danger:hover:not(:disabled) {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 8%, transparent);
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  padding: 1rem;
+  place-items: center;
+  background: color-mix(in srgb, #020617 58%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.dialog {
+  width: min(100%, 480px);
+  overflow: hidden;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 1rem;
+  background: var(--p-content-background);
+  box-shadow: 0 28px 70px rgb(2 6 23 / 32%);
+
+  form {
+    padding-top: 1rem;
+  }
+}
+
+.dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.2rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+
+  h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  p {
+    margin: 0.25rem 0 0;
+    color: var(--p-text-muted-color);
+    font-size: 0.82rem;
+  }
+}
+
+.dialog__icon {
+  display: grid;
+  flex: 0 0 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: var(--p-primary-color);
+  background: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+}
+
+.dialog--danger .dialog__icon {
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 11%, transparent);
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding-top: 0.35rem;
+}
+
+.dialog__actions--standalone {
+  padding: 1.1rem 1.2rem;
 }
 
 .empty {
@@ -385,7 +503,8 @@ form {
     grid-template-columns: auto 1fr;
   }
   .badges,
-  .user-row time {
+  .user-row time,
+  .user-actions {
     grid-column: 2;
     justify-content: flex-start;
   }

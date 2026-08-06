@@ -29,11 +29,6 @@ export class Sidebar {
       route: '/dashboard',
     },
     {
-      label: 'Edificio',
-      icon: 'pi pi-building',
-      route: '/building',
-    },
-    {
       label: 'Control',
       icon: 'pi pi-sliders-h',
       route: '/control',
@@ -52,11 +47,6 @@ export class Sidebar {
       label: 'Históricos',
       icon: 'pi pi-chart-line',
       route: '/history',
-    },
-    {
-      label: 'Diagnóstico',
-      icon: 'pi pi-wrench',
-      route: '/diagnostics',
     },
     {
       label: 'Usuarios',

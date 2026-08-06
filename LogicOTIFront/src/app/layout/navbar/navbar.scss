@@ -17,7 +17,7 @@
 .navbar__brand,
 .navbar__actions,
 .navbar__user,
-.navbar__status,
+.navbar__logout,
 .navbar__alarm-button,
 .navbar__theme-button {
   display: flex;
@@ -80,7 +80,7 @@
 }
 
 .navbar__menu-button:focus-visible,
-.navbar__user:focus-visible,
+.navbar__logout:focus-visible,
 .navbar__theme-button:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
@@ -171,23 +171,48 @@
   }
 }
 
-.navbar__status {
-  gap: 0.4rem;
-  color: var(--green-600);
-  font-size: 0.9rem;
-}
-
-.navbar__status .pi-circle-fill {
-  font-size: 0.55rem;
-}
-
 .navbar__user {
   gap: 0.5rem;
-  border: 0;
-  background: transparent;
   color: var(--text-color);
+
+  > span {
+    display: grid;
+    gap: 0.08rem;
+  }
+
+  strong {
+    max-width: 190px;
+    overflow: hidden;
+    font-size: 0.83rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    color: var(--text-color-secondary);
+    font-size: 0.68rem;
+  }
+}
+
+.navbar__logout {
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  color: var(--text-color-secondary);
+  background: var(--surface-card);
   cursor: pointer;
   font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.navbar__logout:hover {
+  border-color: color-mix(in srgb, #dc2626 42%, var(--surface-border));
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 7%, var(--surface-card));
 }
 
 @media (max-width: 900px) {
@@ -201,7 +226,6 @@
     padding: 0 0.75rem;
   }
 
-  .navbar__status,
   .navbar__brand small {
     display: none;
   }
@@ -218,7 +242,13 @@
     text-overflow: ellipsis;
   }
 
-  .navbar__user span {
+  .navbar__user > span,
+  .navbar__logout span {
     display: none;
+  }
+
+  .navbar__logout {
+    width: 40px;
+    padding: 0;
   }
 }

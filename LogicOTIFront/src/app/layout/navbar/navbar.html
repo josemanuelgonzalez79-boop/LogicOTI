@@ -52,14 +52,17 @@
       }
     </a>
 
-    <span class="navbar__status">
-      <i class="pi pi-circle-fill"></i>
-      Sistema en línea
-    </span>
-
-    <button type="button" class="navbar__user">
+    <div class="navbar__user" aria-label="Usuario con sesión iniciada">
       <i class="pi pi-user"></i>
-      <span>Daniel Ontiveros</span>
+      <span>
+        <strong>{{ currentUser?.fullName ?? 'Usuario' }}</strong>
+        <small>{{ roleLabel(currentUser?.role) }}</small>
+      </span>
+    </div>
+
+    <button type="button" class="navbar__logout" title="Cerrar sesión" (click)="logout()">
+      <i class="pi pi-sign-out"></i>
+      <span>Cerrar sesión</span>
     </button>
   </div>
 </header>
