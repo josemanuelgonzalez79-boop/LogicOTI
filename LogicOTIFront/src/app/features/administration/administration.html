@@ -32,7 +32,7 @@
     <article class="summary-card summary-card--active">
       <i class="pi pi-user-check"></i>
       <div>
-        <span>Activos</span><strong>{{ activeUsers() }}</strong>
+        <span>Cuentas habilitadas</span><strong>{{ activeUsers() }}</strong>
       </div>
     </article>
     <article class="summary-card summary-card--admin">
@@ -133,8 +133,10 @@
         <label class="active-option">
           <input type="checkbox" formControlName="active" />
           <span
-            ><strong>Usuario activo</strong
-            ><small>Podrá iniciar sesión inmediatamente.</small></span
+            ><strong>Habilitar acceso al crear la cuenta</strong
+            ><small>
+              Si está marcado podrá iniciar sesión; si lo desmarcas se guardará bloqueada.
+            </small></span
           >
         </label>
 
@@ -180,7 +182,7 @@
                   >{{ roleLabel(user.role) }}</span
                 >
                 <span class="state" [class.state--inactive]="!user.active">{{
-                  user.active ? 'Activo' : 'Inactivo'
+                  user.active ? 'Habilitada' : 'Bloqueada'
                 }}</span>
                 @if (user.protectedUser) {
                   <span class="protected-user"><i class="pi pi-lock"></i>Principal</span>
@@ -190,6 +192,23 @@
                 >Creado {{ user.createdAt | date: 'dd/MM/yyyy' }}</time
               >
               <div class="user-actions">
+                <button
+                  type="button"
+                  class="icon-button icon-button--access"
+                  [class.icon-button--blocked]="!user.active"
+                  [disabled]="!canChangeAccess(user) || updatingAccessUserId() === user.id"
+                  [title]="accessActionLabel(user)"
+                  [attr.aria-label]="accessActionLabel(user) + ' de ' + user.username"
+                  (click)="toggleUserAccess(user)"
+                >
+                  <i
+                    class="pi"
+                    [class.pi-spin]="updatingAccessUserId() === user.id"
+                    [class.pi-spinner]="updatingAccessUserId() === user.id"
+                    [class.pi-ban]="updatingAccessUserId() !== user.id && user.active"
+                    [class.pi-check-circle]="updatingAccessUserId() !== user.id && !user.active"
+                  ></i>
+                </button>
                 <button
                   type="button"
                   class="icon-button"

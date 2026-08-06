@@ -1,9 +1,10 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Subject, catchError, forkJoin, of, switchMap, takeUntil, timer } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { AreaInventory, BuildingFloor } from '../../core/models/building.model';
+import { DeviceSummary } from '../../core/models/device-summary.model';
 import { SensorEventHistoryItem } from '../../core/models/history.model';
 import { AlarmApiService } from '../../core/services/alarm-api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -47,12 +48,13 @@ interface RecentEvent {
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
   private readonly systemApiService = inject(SystemApiService);
   private readonly historyApiService = inject(HistoryApiService);
   private readonly alarmApiService = inject(AlarmApiService);
   private readonly authService = inject(AuthService);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
+  private readonly destroy$ = new Subject<void>();
 
   readonly isAdmin = this.authService.getSession()?.user.role === 'ADMIN';
 
@@ -72,6 +74,11 @@ export class Dashboard implements OnInit {
     this.loadDashboard();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadDashboard(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -79,6 +86,9 @@ export class Dashboard implements OnInit {
     forkJoin({
       systemStatus: this.systemApiService.getStatus(),
       building: this.systemApiService.getBuilding(),
+      deviceSummary: this.systemApiService
+        .getDeviceSummary()
+        .pipe(catchError(() => of(this.unavailableDeviceSummary()))),
       recentEvents: this.historyApiService.getSensorEventHistory({
         limit: 4,
         offset: 0,
@@ -92,7 +102,7 @@ export class Dashboard implements OnInit {
         }),
       )
       .subscribe({
-        next: ({ systemStatus, building, recentEvents, activeAlarms }) => {
+        next: ({ systemStatus, building, deviceSummary, recentEvents, activeAlarms }) => {
           this.systemConnected = systemStatus.status === 'UP';
           this.databaseConnected = systemStatus.database === 'UP';
           this.plcEnabled = systemStatus.plcEnabled;
@@ -131,6 +141,7 @@ export class Dashboard implements OnInit {
               icon: 'pi pi-sliders-h',
               status: 'info',
             },
+            this.mapDeviceSummaryToCard(deviceSummary),
           ];
 
           this.floors = building.floors
@@ -138,6 +149,7 @@ export class Dashboard implements OnInit {
             .map((floor) => this.mapFloorToCard(floor, activeAlarms.items));
 
           this.recentEvents = recentEvents.items.map((event) => this.mapRecentEvent(event));
+          this.startDeviceSummaryRefresh();
         },
         error: (error) => {
           console.error('Error al cargar el dashboard:', error);
@@ -149,6 +161,68 @@ export class Dashboard implements OnInit {
           this.recentEvents = [];
         },
       });
+  }
+
+  private startDeviceSummaryRefresh(): void {
+    timer(5000, 5000)
+      .pipe(
+        switchMap(() =>
+          this.systemApiService
+            .getDeviceSummary()
+            .pipe(catchError(() => of(this.unavailableDeviceSummary()))),
+        ),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((summary) => {
+        const cardIndex = this.summaryCards.findIndex(
+          (card) => card.label === 'Equipos encendidos',
+        );
+
+        if (cardIndex < 0) {
+          return;
+        }
+
+        this.summaryCards = this.summaryCards.map((card, index) =>
+          index === cardIndex ? this.mapDeviceSummaryToCard(summary) : card,
+        );
+        this.lastUpdated = new Date(summary.timestamp);
+        this.changeDetectorRef.detectChanges();
+      });
+  }
+
+  private mapDeviceSummaryToCard(summary: DeviceSummary): SummaryCard {
+    const available = summary.connected && summary.poweredOn !== null;
+
+    return {
+      label: 'Equipos encendidos',
+      value: available ? summary.poweredOn!.toString() : '—',
+      detail: available ? this.deviceSummaryDetail(summary) : 'Sin confirmación del PLC',
+      icon: 'pi pi-power-off',
+      status: available ? 'success' : 'danger',
+    };
+  }
+
+  private deviceSummaryDetail(summary: DeviceSummary): string {
+    const lightsOn = summary.lightsOn ?? 0;
+    const minisplitsOn = summary.minisplitsOn ?? 0;
+
+    return (
+      `${lightsOn} ${lightsOn === 1 ? 'luz' : 'luces'} · ` +
+      `${minisplitsOn} ${minisplitsOn === 1 ? 'minisplit' : 'minisplits'}`
+    );
+  }
+
+  private unavailableDeviceSummary(): DeviceSummary {
+    return {
+      plcEnabled: this.plcEnabled,
+      connected: false,
+      totalControllable: 0,
+      poweredOn: null,
+      lightsOn: null,
+      minisplitsOn: null,
+      message: 'No fue posible consultar los equipos encendidos.',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   private mapFloorToCard(floor: BuildingFloor, activeAlarms: SensorEventHistoryItem[]): FloorCard {

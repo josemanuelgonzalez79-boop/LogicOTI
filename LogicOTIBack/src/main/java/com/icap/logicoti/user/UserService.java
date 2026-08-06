@@ -74,7 +74,8 @@ public class UserService {
     @Transactional
     public UserResponse update(
             Long id,
-            UserUpdateRequest request
+            UserUpdateRequest request,
+            String requestedBy
     ) {
         AppUser user = findUserById(id);
         String username = request.username().trim();
@@ -95,6 +96,13 @@ public class UserService {
                 normalizedRole,
                 request.active()
         );
+
+        if (user.getUsername().equalsIgnoreCase(requestedBy)
+                && !request.active()) {
+            throw new ConflictException(
+                    "No puedes bloquear la cuenta con la que tienes la sesión iniciada."
+            );
+        }
 
         boolean usernameBelongsToAnotherUser =
                 userRepository.findByUsernameIgnoreCase(username)

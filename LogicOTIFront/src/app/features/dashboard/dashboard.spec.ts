@@ -80,6 +80,19 @@ class SystemApiServiceMock {
   );
 
   readonly getBuilding = vi.fn(() => of(building));
+
+  readonly getDeviceSummary = vi.fn(() =>
+    of({
+      plcEnabled: true,
+      connected: true,
+      totalControllable: 5,
+      poweredOn: 2,
+      lightsOn: 1,
+      minisplitsOn: 1,
+      message: 'Estados confirmados por el PLC.',
+      timestamp: '2026-08-03T18:01:00Z',
+    }),
+  );
 }
 
 class HistoryApiServiceMock {
@@ -135,6 +148,9 @@ describe('Dashboard', () => {
     expect(component.summaryCards[0].detail).toBe('2 movimiento · 3 humo');
     expect(component.floors[0].sensors).toBe(5);
     expect(component.floors[0].cameras).toBe(13);
+    expect(component.summaryCards[4].label).toBe('Equipos encendidos');
+    expect(component.summaryCards[4].value).toBe('2');
+    expect(component.summaryCards[4].detail).toBe('1 luz · 1 minisplit');
   });
 
   it('muestra eventos reales y alarmas activas por piso', () => {

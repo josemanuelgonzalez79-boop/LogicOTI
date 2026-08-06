@@ -111,6 +111,20 @@ describe('Administration', () => {
     );
   });
 
+  it('bloquea el acceso de una cuenta sin eliminarla', () => {
+    const fixture = TestBed.createComponent(Administration);
+    const component = fixture.componentInstance;
+    const api = TestBed.inject(UserApiService) as unknown as UserApiServiceMock;
+    api.updateUser.mockReturnValue(of({ ...existingUser, active: false }));
+    fixture.detectChanges();
+    component.toggleUserAccess(existingUser);
+    expect(api.updateUser).toHaveBeenCalledWith(
+      existingUser.id,
+      expect.objectContaining({ active: false, password: null }),
+    );
+    expect(component.users()[0].active).toBe(false);
+  });
+
   it('elimina un usuario que no está protegido', () => {
     const fixture = TestBed.createComponent(Administration);
     const component = fixture.componentInstance;

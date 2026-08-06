@@ -132,7 +132,7 @@ class UserServiceTests {
         when(userRepository.save(operator))
                 .thenReturn(operator);
 
-        service.update(8L, request);
+        service.update(8L, request, "admin");
 
         verify(passwordEncoder).encode("claveNueva123");
         verify(operator).update(
@@ -142,6 +142,42 @@ class UserServiceTests {
                 "OPERATOR",
                 true
         );
+    }
+
+    @Test
+    void doesNotBlockTheAccountThatOwnsTheCurrentSession() {
+        AppUser primaryAdministrator = user(
+                2L,
+                "admin",
+                "ADMIN",
+                true
+        );
+        AppUser currentOperator = user(
+                8L,
+                "operador2",
+                "OPERATOR",
+                true
+        );
+        UserUpdateRequest request = new UserUpdateRequest(
+                "operador2",
+                null,
+                "Operador 2",
+                "OPERATOR",
+                false
+        );
+
+        when(userRepository.findById(8L))
+                .thenReturn(Optional.of(currentOperator));
+        when(userRepository.findFirstByRoleIgnoreCaseOrderByIdAsc("ADMIN"))
+                .thenReturn(Optional.of(primaryAdministrator));
+
+        assertThatThrownBy(() ->
+                service.update(8L, request, "operador2")
+        )
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("sesión iniciada");
+
+        verify(userRepository, never()).save(any());
     }
 
     private AppUser user(

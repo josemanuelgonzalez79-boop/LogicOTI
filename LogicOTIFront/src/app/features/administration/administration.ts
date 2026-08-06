@@ -32,6 +32,7 @@ export class Administration implements OnInit {
   readonly saving = signal(false);
   readonly changingPassword = signal(false);
   readonly deletingUser = signal(false);
+  readonly updatingAccessUserId = signal<number | null>(null);
   readonly showPassword = signal(false);
   readonly showNewPassword = signal(false);
   readonly errorMessage = signal('');
@@ -244,6 +245,57 @@ export class Administration implements OnInit {
 
   canDelete(user: AppUser): boolean {
     return !user.protectedUser && user.id !== this.currentUserId;
+  }
+
+  toggleUserAccess(user: AppUser): void {
+    if (!this.canChangeAccess(user)) {
+      return;
+    }
+
+    this.clearMessages();
+    this.updatingAccessUserId.set(user.id);
+
+    const request: UpdateUserRequest = {
+      username: user.username,
+      fullName: user.fullName,
+      password: null,
+      role: user.role,
+      active: !user.active,
+    };
+
+    this.userApi
+      .updateUser(user.id, request)
+      .pipe(finalize(() => this.updatingAccessUserId.set(null)))
+      .subscribe({
+        next: (updatedUser) => {
+          this.replaceUser(updatedUser);
+          this.successMessage.set(
+            updatedUser.active
+              ? `La cuenta ${updatedUser.username} quedó habilitada.`
+              : `La cuenta ${updatedUser.username} quedó bloqueada.`,
+          );
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'No fue posible cambiar el acceso del usuario.'),
+          ),
+      });
+  }
+
+  canChangeAccess(user: AppUser): boolean {
+    return !user.protectedUser && user.id !== this.currentUserId;
+  }
+
+  accessActionLabel(user: AppUser): string {
+    if (user.protectedUser) {
+      return 'El administrador principal siempre debe permanecer habilitado.';
+    }
+
+    if (user.id === this.currentUserId) {
+      return 'No puedes bloquear la cuenta con la que tienes la sesión iniciada.';
+    }
+
+    return user.active ? 'Bloquear acceso' : 'Habilitar acceso';
   }
 
   deleteDisabledReason(user: AppUser): string {

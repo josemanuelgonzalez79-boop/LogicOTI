@@ -405,6 +405,22 @@ form {
   background: color-mix(in srgb, #dc2626 8%, transparent);
 }
 
+.icon-button--access:hover:not(:disabled) {
+  border-color: #d97706;
+  color: #d97706;
+  background: color-mix(in srgb, #d97706 8%, transparent);
+}
+
+.icon-button--blocked {
+  color: #047857;
+}
+
+.icon-button--blocked:hover:not(:disabled) {
+  border-color: #059669;
+  color: #047857;
+  background: color-mix(in srgb, #10b981 9%, transparent);
+}
+
 .dialog-backdrop {
   position: fixed;
   z-index: 1100;

@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
 
   building: {
     get: '/building',
+    deviceSummary: '/building/device-summary',
   },
 
   areas: {
