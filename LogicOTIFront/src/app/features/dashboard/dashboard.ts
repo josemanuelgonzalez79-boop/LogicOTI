@@ -6,6 +6,7 @@ import { finalize } from 'rxjs/operators';
 import { AreaInventory, BuildingFloor } from '../../core/models/building.model';
 import { SensorEventHistoryItem } from '../../core/models/history.model';
 import { AlarmApiService } from '../../core/services/alarm-api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { HistoryApiService } from '../../core/services/history-api.service';
 import { SystemApiService } from '../../core/services/system-api.service';
 
@@ -50,7 +51,10 @@ export class Dashboard implements OnInit {
   private readonly systemApiService = inject(SystemApiService);
   private readonly historyApiService = inject(HistoryApiService);
   private readonly alarmApiService = inject(AlarmApiService);
+  private readonly authService = inject(AuthService);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
+
+  readonly isAdmin = this.authService.getSession()?.user.role === 'ADMIN';
 
   isLoading = true;
   errorMessage = '';

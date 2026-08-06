@@ -1,1 +1,195 @@
-<p>administration works!</p>
+<section class="users-page">
+  <header class="users-page__header">
+    <div>
+      <span class="eyebrow">Acceso exclusivo de administrador</span>
+      <h1>Administración de usuarios</h1>
+      <p>Crea las cuentas que podrán entrar al sistema y asigna el permiso correspondiente.</p>
+    </div>
+
+    <button
+      type="button"
+      class="button button--secondary"
+      [disabled]="loading()"
+      (click)="loadUsers()"
+    >
+      <i
+        class="pi"
+        [class.pi-spin]="loading()"
+        [class.pi-spinner]="loading()"
+        [class.pi-refresh]="!loading()"
+      ></i>
+      Actualizar
+    </button>
+  </header>
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <i class="pi pi-users"></i>
+      <div>
+        <span>Registrados</span><strong>{{ users().length }}</strong>
+      </div>
+    </article>
+    <article class="summary-card summary-card--active">
+      <i class="pi pi-user-check"></i>
+      <div>
+        <span>Activos</span><strong>{{ activeUsers() }}</strong>
+      </div>
+    </article>
+    <article class="summary-card summary-card--admin">
+      <i class="pi pi-shield"></i>
+      <div>
+        <span>Administradores</span><strong>{{ adminUsers() }}</strong>
+      </div>
+    </article>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="message message--error" role="alert">
+      <i class="pi pi-exclamation-circle"></i>{{ errorMessage() }}
+    </div>
+  }
+  @if (successMessage()) {
+    <div class="message message--success" role="status">
+      <i class="pi pi-check-circle"></i>{{ successMessage() }}
+    </div>
+  }
+
+  <div class="workspace">
+    <section class="panel form-panel">
+      <header class="panel__header">
+        <i class="pi pi-user-plus"></i>
+        <div>
+          <span>Nuevo acceso</span>
+          <h2>Crear usuario</h2>
+        </div>
+      </header>
+
+      <form [formGroup]="userForm" (ngSubmit)="createUser()" novalidate>
+        <label class="field">
+          <span>Nombre completo</span>
+          <input
+            type="text"
+            formControlName="fullName"
+            maxlength="150"
+            autocomplete="name"
+            placeholder="Ej. Juan Perez"
+          />
+          @if (userForm.controls.fullName.touched && userForm.controls.fullName.invalid) {
+            <small>Escribe el nombre completo.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Nombre de usuario</span>
+          <input
+            type="text"
+            formControlName="username"
+            maxlength="50"
+            autocomplete="username"
+            placeholder="Ej. juan.perez"
+          />
+          @if (userForm.controls.username.touched && userForm.controls.username.invalid) {
+            <small>Usa letras, números, punto, guion o guion bajo.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Contraseña temporal</span>
+          <div class="password-field">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              maxlength="100"
+              autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres"
+            />
+            <button
+              type="button"
+              (click)="togglePassword()"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <i
+                class="pi"
+                [class.pi-eye]="!showPassword()"
+                [class.pi-eye-slash]="showPassword()"
+              ></i>
+            </button>
+          </div>
+          @if (userForm.controls.password.touched && userForm.controls.password.invalid) {
+            <small>La contraseña debe tener al menos 8 caracteres.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Tipo de usuario</span>
+          <select formControlName="role">
+            @for (role of roleOptions; track role.value) {
+              <option [value]="role.value">{{ role.label }}</option>
+            }
+          </select>
+          <em>{{ selectedRoleDescription() }}</em>
+        </label>
+
+        <label class="active-option">
+          <input type="checkbox" formControlName="active" />
+          <span
+            ><strong>Usuario activo</strong
+            ><small>Podrá iniciar sesión inmediatamente.</small></span
+          >
+        </label>
+
+        <button type="submit" class="button button--primary" [disabled]="saving()">
+          <i
+            class="pi"
+            [class.pi-spin]="saving()"
+            [class.pi-spinner]="saving()"
+            [class.pi-user-plus]="!saving()"
+          ></i>
+          {{ saving() ? 'Creando usuario...' : 'Crear usuario' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel users-panel">
+      <header class="panel__header panel__header--list">
+        <div>
+          <span>Cuentas del sistema</span>
+          <h2>Usuarios registrados</h2>
+        </div>
+        <b>{{ users().length }}</b>
+      </header>
+
+      @if (loading()) {
+        <div class="empty"><i class="pi pi-spin pi-spinner"></i>Cargando usuarios...</div>
+      } @else if (users().length === 0) {
+        <div class="empty"><i class="pi pi-user"></i>No hay usuarios registrados.</div>
+      } @else {
+        <div class="user-list">
+          @for (user of users(); track user.id) {
+            <article class="user-row" [class.user-row--inactive]="!user.active">
+              <div class="avatar">{{ userInitials(user) }}</div>
+              <div class="identity">
+                <strong>{{ user.fullName }}</strong
+                ><span>@{{ user.username }}</span>
+              </div>
+              <div class="badges">
+                <span
+                  class="role"
+                  [class.role--admin]="user.role === 'ADMIN'"
+                  [class.role--operator]="user.role === 'OPERATOR'"
+                  >{{ roleLabel(user.role) }}</span
+                >
+                <span class="state" [class.state--inactive]="!user.active">{{
+                  user.active ? 'Activo' : 'Inactivo'
+                }}</span>
+              </div>
+              <time [attr.datetime]="user.createdAt"
+                >Creado {{ user.createdAt | date: 'dd/MM/yyyy' }}</time
+              >
+            </article>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</section>

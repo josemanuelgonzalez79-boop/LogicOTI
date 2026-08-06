@@ -3,11 +3,13 @@ export interface LoginCredentials {
   password: string;
 }
 
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'MONITORING';
+
 export interface AuthUser {
   id: number;
   username: string;
   fullName: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface LoginResponse {

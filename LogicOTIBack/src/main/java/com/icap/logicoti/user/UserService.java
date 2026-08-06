@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Transactional(readOnly = true)
@@ -36,17 +37,19 @@ public class UserService {
 
     @Transactional
     public UserResponse create(UserCreateRequest request) {
-        if (userRepository.existsByUsernameIgnoreCase(request.username())) {
+        String username = request.username().trim();
+
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new ConflictException(
-                    "El nombre de usuario ya está registrado: " + request.username()
+                    "El nombre de usuario ya está registrado: " + username
             );
         }
 
         AppUser user = new AppUser(
-                request.username().trim(),
+                username,
                 passwordEncoder.encode(request.password()),
                 request.fullName().trim(),
-                request.role().trim(),
+                normalizeRole(request.role()),
                 request.active()
         );
 
@@ -56,15 +59,16 @@ public class UserService {
     @Transactional
     public UserResponse update(Long id, UserUpdateRequest request) {
         AppUser user = findUserById(id);
+        String username = request.username().trim();
 
         boolean usernameBelongsToAnotherUser =
-                userRepository.findByUsernameIgnoreCase(request.username())
+                userRepository.findByUsernameIgnoreCase(username)
                         .filter(existingUser -> !existingUser.getId().equals(id))
                         .isPresent();
 
         if (usernameBelongsToAnotherUser) {
             throw new ConflictException(
-                    "El nombre de usuario ya está registrado: " + request.username()
+                    "El nombre de usuario ya está registrado: " + username
             );
         }
 
@@ -75,10 +79,10 @@ public class UserService {
         }
 
         user.update(
-                request.username().trim(),
+                username,
                 passwordHash,
                 request.fullName().trim(),
-                request.role().trim(),
+                normalizeRole(request.role()),
                 request.active()
         );
 
@@ -98,5 +102,9 @@ public class UserService {
                                 "Usuario no encontrado con id: " + id
                         )
                 );
+    }
+
+    private String normalizeRole(String role) {
+        return role.trim().toUpperCase(Locale.ROOT);
     }
 }

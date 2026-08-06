@@ -1,10 +1,14 @@
-import { Component, output } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+
+import { UserRole } from '../../core/models/auth.model';
+import { AuthService } from '../../core/services/auth.service';
 
 interface MenuItem {
   label: string;
   icon: string;
   route: string;
+  roles?: UserRole[];
 }
 
 @Component({
@@ -14,9 +18,11 @@ interface MenuItem {
   styleUrl: './sidebar.scss',
 })
 export class Sidebar {
+  private readonly authService = inject(AuthService);
+
   navigationSelected = output<void>();
 
-  protected readonly menuItems: MenuItem[] = [
+  private readonly allMenuItems: MenuItem[] = [
     {
       label: 'Dashboard',
       icon: 'pi pi-home',
@@ -53,11 +59,18 @@ export class Sidebar {
       route: '/diagnostics',
     },
     {
-      label: 'Administración',
-      icon: 'pi pi-cog',
+      label: 'Usuarios',
+      icon: 'pi pi-users',
       route: '/administration',
+      roles: ['ADMIN'],
     },
   ];
+
+  protected readonly menuItems = this.allMenuItems.filter((item) => {
+    const role = this.authService.getSession()?.user.role;
+
+    return !item.roles || (role !== undefined && item.roles.includes(role));
+  });
 
   protected onNavigation(): void {
     this.navigationSelected.emit();

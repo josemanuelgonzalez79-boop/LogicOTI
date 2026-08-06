@@ -233,14 +233,16 @@
         </div>
       </a>
 
-      <a routerLink="/administration" class="quick-action">
-        <i class="pi pi-cog"></i>
+      @if (isAdmin) {
+        <a routerLink="/administration" class="quick-action">
+          <i class="pi pi-users"></i>
 
-        <div>
-          <strong>Administración</strong>
-          <span>Usuarios, permisos y configuración</span>
-        </div>
-      </a>
+          <div>
+            <strong>Usuarios</strong>
+            <span>Altas y permisos de acceso</span>
+          </div>
+        </a>
+      }
     </div>
   </section>
 </section>

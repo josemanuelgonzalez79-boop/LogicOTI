@@ -3,6 +3,12 @@ export const API_ENDPOINTS = {
     login: '/auth/login',
   },
 
+  users: {
+    list: '/users',
+    create: '/users',
+    detail: (userId: number) => `/users/${userId}`,
+  },
+
   building: {
     get: '/building',
   },

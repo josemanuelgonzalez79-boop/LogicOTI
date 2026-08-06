@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -95,10 +96,10 @@ export const routes: Routes = [
   // Administración
   {
     path: 'administration',
-    canActivate: [authGuard],
+    canActivate: [authGuard, adminGuard],
     loadComponent: () =>
       import('./features/administration/administration').then((c) => c.Administration),
-    title: 'Administración | OTI',
+    title: 'Usuarios | OTI',
   },
 
   // Página no encontrada
