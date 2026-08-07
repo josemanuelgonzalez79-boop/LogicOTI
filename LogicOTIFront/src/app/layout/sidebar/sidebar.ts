@@ -44,6 +44,11 @@ export class Sidebar {
       route: '/alarms',
     },
     {
+      label: 'Seguridad',
+      icon: 'pi pi-shield',
+      route: '/security',
+    },
+    {
       label: 'Históricos',
       icon: 'pi pi-chart-line',
       route: '/history',

@@ -1,0 +1,526 @@
+<section class="security-page">
+  <header class="page-header">
+    <div>
+      <span class="page-header__eyebrow">Matriz causa-efecto</span>
+      <h1>Seguridad y horarios</h1>
+      <p>
+        Arma la alarma del edificio, revisa si los sensores están listos y configura los horarios de
+        operación automática.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <div class="connection-status" [attr.data-status]="connectionStatus()">
+        <span class="connection-status__dot"></span>
+        <div>
+          <strong>{{ connectionLabel() }}</strong>
+          <span>Estado de alarma por WebSocket</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="button button--secondary"
+        [disabled]="loading()"
+        (click)="loadAll()"
+      >
+        <i
+          class="pi"
+          [class.pi-refresh]="!loading()"
+          [class.pi-spin]="loading()"
+          [class.pi-spinner]="loading()"
+        ></i>
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if (!canOperate) {
+    <article class="role-notice">
+      <i class="pi pi-eye"></i>
+      <div>
+        <strong>Modo de consulta</strong>
+        <span>Tu usuario puede revisar el estado y los horarios sin modificar la seguridad.</span>
+      </div>
+    </article>
+  } @else if (!canEditSettings) {
+    <article class="role-notice role-notice--operator">
+      <i class="pi pi-shield"></i>
+      <div>
+        <strong>Operación manual habilitada</strong>
+        <span
+          >Puedes armar o desarmar la alarma. Los horarios solamente los modifica un
+          administrador.</span
+        >
+      </div>
+    </article>
+  }
+
+  @if (errorMessage()) {
+    <div class="feedback feedback--error" role="alert">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="feedback feedback--success" role="status">
+      <i class="pi pi-check-circle"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+  }
+
+  <section class="security-overview">
+    <article class="alarm-card" [attr.data-mode]="status()?.mode ?? 'UNKNOWN'">
+      <div class="alarm-card__icon">
+        <i
+          class="pi"
+          [class.pi-lock-open]="status()?.mode === 'DISARMED'"
+          [class.pi-clock]="status()?.mode === 'ARMING'"
+          [class.pi-shield]="status()?.mode === 'ARMED' || status()?.mode === 'ARMED_WITH_BYPASS'"
+          [class.pi-ban]="status()?.mode === 'REJECTED'"
+          [class.pi-bell]="status()?.mode === 'ALARM'"
+          [class.pi-question-circle]="!status()"
+        ></i>
+      </div>
+
+      <div class="alarm-card__content">
+        <span class="section-eyebrow">Estado actual</span>
+        <h2>{{ modeLabel(status()?.mode) }}</h2>
+        <p>{{ status()?.message ?? 'Consultando el estado de seguridad...' }}</p>
+
+        @if (status()?.mode === 'ARMING') {
+          <div class="arming-timer">
+            <span>{{ armingRemainingSeconds() }}</span>
+            <div>
+              <strong>segundos para armar</strong>
+              <small>Tiempo disponible para salir del edificio</small>
+            </div>
+          </div>
+        }
+
+        <dl class="alarm-details">
+          <div>
+            <dt>Último cambio</dt>
+            <dd>{{ status()?.changedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+          </div>
+          <div>
+            <dt>Realizado por</dt>
+            <dd>{{ status()?.changedBy ?? 'Sin información' }}</dd>
+          </div>
+          <div>
+            <dt>Origen</dt>
+            <dd>{{ sourceLabel(status()?.changeSource) }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      @if (canOperate) {
+        <div class="alarm-actions">
+          <button
+            type="button"
+            class="button button--arm"
+            [disabled]="executingAction() || status()?.armed || status()?.mode === 'ARMING'"
+            (click)="requestAction('ARM')"
+          >
+            <i class="pi pi-lock"></i>
+            Armar alarma
+          </button>
+
+          <button
+            type="button"
+            class="button button--disarm"
+            [disabled]="
+              executingAction() || status()?.mode === 'DISARMED' || status()?.mode === 'REJECTED'
+            "
+            (click)="requestAction('DISARM')"
+          >
+            <i class="pi pi-lock-open"></i>
+            Desarmar
+          </button>
+        </div>
+      }
+    </article>
+
+    <article class="precheck-card">
+      <header class="panel-header">
+        <div>
+          <span class="section-eyebrow">Revisión previa</span>
+          <h2>Sensores necesarios para armar</h2>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          title="Volver a revisar sensores"
+          [disabled]="refreshingPrecheck()"
+          (click)="refreshPrecheck()"
+        >
+          <i
+            class="pi"
+            [class.pi-refresh]="!refreshingPrecheck()"
+            [class.pi-spin]="refreshingPrecheck()"
+            [class.pi-spinner]="refreshingPrecheck()"
+          ></i>
+        </button>
+      </header>
+
+      <div class="readiness" [class.readiness--ready]="precheck()?.ready">
+        <span class="readiness__icon">
+          <i
+            class="pi"
+            [class.pi-check]="precheck()?.ready"
+            [class.pi-times]="!precheck()?.ready"
+          ></i>
+        </span>
+        <div>
+          <strong>{{
+            precheck()?.ready ? 'Sistema listo para armar' : 'Se requiere atención'
+          }}</strong>
+          <span>
+            {{ precheck()?.readableMotionSensors ?? 0 }} de
+            {{ precheck()?.totalMotionSensors ?? 0 }} sensores de movimiento disponibles
+          </span>
+        </div>
+      </div>
+
+      <div class="precheck-summary">
+        <div>
+          <span>PLC</span>
+          <strong [class.text-success]="precheck()?.plcConnected">
+            {{ precheck()?.plcConnected ? 'Conectado' : 'Sin conexión' }}
+          </strong>
+        </div>
+        <div>
+          <span>Bloqueos</span>
+          <strong [class.text-danger]="blockingIssues() > 0">{{ blockingIssues() }}</strong>
+        </div>
+        <div>
+          <span>Advertencias</span>
+          <strong [class.text-warning]="warningIssues() > 0">{{ warningIssues() }}</strong>
+        </div>
+      </div>
+
+      @if ((precheck()?.issues?.length ?? 0) > 0) {
+        <div class="issue-list">
+          @for (issue of precheck()?.issues ?? []; track issue.code + issue.sensorCode) {
+            <article class="issue" [class.issue--blocking]="issue.blocking">
+              <i
+                class="pi"
+                [class.pi-times-circle]="issue.blocking"
+                [class.pi-info-circle]="!issue.blocking"
+              ></i>
+              <div>
+                <strong>{{ issue.message }}</strong>
+                @if (issue.sensorCode) {
+                  <span>{{ issue.areaName }} · {{ issue.sensorCode }}</span>
+                }
+              </div>
+              <span>{{ issue.blocking ? 'Impide armar' : 'Advertencia' }}</span>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="empty-issues">
+          <i class="pi pi-check-circle"></i>
+          <span>No se encontraron problemas en la revisión.</span>
+        </div>
+      }
+    </article>
+  </section>
+
+  <section class="panel schedules-panel">
+    <header class="panel-header schedules-panel__header">
+      <div>
+        <span class="section-eyebrow">Configuración automática</span>
+        <h2>Horarios de armado</h2>
+        <p>El horario inicial arma la alarma después de las 18:00 y la desarma a las 08:00.</p>
+      </div>
+
+      @if (canEditSettings) {
+        <div class="schedule-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="savingSettings()"
+            (click)="resetScheduleForm()"
+          >
+            Descartar cambios
+          </button>
+          <button
+            type="button"
+            class="button button--primary"
+            [disabled]="savingSettings() || !scheduleForm()"
+            (click)="saveSchedules()"
+          >
+            <i
+              class="pi"
+              [class.pi-save]="!savingSettings()"
+              [class.pi-spin]="savingSettings()"
+              [class.pi-spinner]="savingSettings()"
+            ></i>
+            Guardar configuración
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (scheduleForm(); as form) {
+      <div class="schedule-master">
+        <label class="switch-control">
+          <input
+            type="checkbox"
+            [disabled]="!canEditSettings"
+            [ngModel]="form.automaticScheduleEnabled"
+            (ngModelChange)="updateAutomaticSchedule($event)"
+          />
+          <span class="switch-control__track"><span></span></span>
+          <span>
+            <strong>Armado automático</strong>
+            <small>
+              {{
+                form.automaticScheduleEnabled
+                  ? 'Los horarios configurados están activos.'
+                  : 'La alarma solamente cambiará de forma manual.'
+              }}
+            </small>
+          </span>
+        </label>
+
+        <label class="field-control field-control--timezone">
+          <span>Zona horaria</span>
+          <input
+            type="text"
+            [disabled]="!canEditSettings"
+            [ngModel]="form.timezone"
+            (ngModelChange)="updateTimezone($event)"
+          />
+        </label>
+      </div>
+
+      <div class="schedule-table-wrap">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Aplicar horario</th>
+              <th>Todo el día armada</th>
+              <th>Hora de armado</th>
+              <th>Hora de desarmado</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (day of form.days; track day.dayOfWeek) {
+              <tr [class.schedule-table__disabled]="!day.enabled">
+                <td>
+                  <strong>{{ dayName(day.dayOfWeek) }}</strong>
+                </td>
+                <td>
+                  <label class="compact-check">
+                    <input
+                      type="checkbox"
+                      [disabled]="!canEditSettings"
+                      [ngModel]="day.enabled"
+                      (ngModelChange)="updateDayBoolean(day.dayOfWeek, 'enabled', $event)"
+                    />
+                    <span>{{ day.enabled ? 'Sí' : 'No' }}</span>
+                  </label>
+                </td>
+                <td>
+                  <label class="compact-check">
+                    <input
+                      type="checkbox"
+                      [disabled]="!canEditSettings || !day.enabled"
+                      [ngModel]="day.allDayArmed"
+                      (ngModelChange)="updateDayBoolean(day.dayOfWeek, 'allDayArmed', $event)"
+                    />
+                    <span>{{ day.allDayArmed ? 'Sí' : 'No' }}</span>
+                  </label>
+                </td>
+                <td>
+                  <input
+                    class="time-input"
+                    type="time"
+                    [disabled]="!canEditSettings || !day.enabled || day.allDayArmed"
+                    [ngModel]="day.armTime"
+                    (ngModelChange)="updateDayTime(day.dayOfWeek, 'armTime', $event)"
+                  />
+                </td>
+                <td>
+                  <input
+                    class="time-input"
+                    type="time"
+                    [disabled]="!canEditSettings || !day.enabled || day.allDayArmed"
+                    [ngModel]="day.disarmTime"
+                    (ngModelChange)="updateDayTime(day.dayOfWeek, 'disarmTime', $event)"
+                  />
+                </td>
+                <td>
+                  @if (!day.enabled) {
+                    <span class="schedule-result schedule-result--off">Sin horario</span>
+                  } @else if (day.allDayArmed) {
+                    <span class="schedule-result schedule-result--all-day">Armada todo el día</span>
+                  } @else {
+                    <span class="schedule-result"> {{ day.armTime }} a {{ day.disarmTime }} </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="settings-grid">
+        <label class="number-setting">
+          <span>Tiempo para salir</span>
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="600"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.exitDelaySeconds"
+              (ngModelChange)="updateNumber('exitDelaySeconds', $event)"
+            /><span>segundos</span>
+          </div>
+          <small>Espera antes de completar el armado.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Apagado de luces sin actividad</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="1440"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.lightInactivityMinutes"
+              (ngModelChange)="updateNumber('lightInactivityMinutes', $event)"
+            /><span>minutos</span>
+          </div>
+          <small>Valor acordado inicialmente: 10 minutos.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Apagado de minisplits sin actividad</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="1440"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.minisplitInactivityMinutes"
+              (ngModelChange)="updateNumber('minisplitInactivityMinutes', $event)"
+            /><span>minutos</span>
+          </div>
+          <small>Valor acordado inicialmente: 30 minutos.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Duración del diagnóstico</span>
+          <div>
+            <input
+              type="number"
+              min="30"
+              max="600"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.diagnosticTimeoutSeconds"
+              (ngModelChange)="updateNumber('diagnosticTimeoutSeconds', $event)"
+            /><span>segundos</span>
+          </div>
+          <small>Tiempo para activar y restablecer los sensores.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Vigencia del diagnóstico</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="24"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.diagnosticValidityMonths"
+              (ngModelChange)="updateNumber('diagnosticValidityMonths', $event)"
+            /><span>meses</span>
+          </div>
+          <small>Valor acordado: revisión cada cuatro meses.</small>
+        </label>
+      </div>
+
+      <footer class="settings-footer">
+        <span>
+          Última modificación:
+          <strong>{{ settings()?.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</strong>
+          por <strong>{{ settings()?.updatedBy ?? 'SYSTEM' }}</strong>
+        </span>
+      </footer>
+    }
+  </section>
+
+  @if (pendingAction(); as action) {
+    <div class="modal-backdrop" role="presentation" (click)="closeActionConfirmation()">
+      <section
+        class="confirmation-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="security-confirmation-title"
+        (click)="$event.stopPropagation()"
+      >
+        <span
+          class="confirmation-modal__icon"
+          [class.confirmation-modal__icon--danger]="action === 'DISARM'"
+        >
+          <i
+            class="pi"
+            [class.pi-lock]="action === 'ARM'"
+            [class.pi-lock-open]="action === 'DISARM'"
+          ></i>
+        </span>
+        <h2 id="security-confirmation-title">
+          {{ action === 'ARM' ? '¿Armar la alarma?' : '¿Desarmar la alarma?' }}
+        </h2>
+        <p>
+          @if (action === 'ARM') {
+            El sistema revisará la conexión con el PLC y los sensores de movimiento antes de armar.
+          } @else {
+            Al confirmar, dejarán de generarse alarmas por movimiento hasta que vuelva a armarse.
+          }
+        </p>
+
+        @if (action === 'ARM' && blockingIssues() > 0) {
+          <div class="modal-warning">
+            <i class="pi pi-exclamation-triangle"></i>
+            Existen {{ blockingIssues() }} problemas que podrían rechazar el armado.
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="executingAction()"
+            (click)="closeActionConfirmation()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="button"
+            [class.button--arm]="action === 'ARM'"
+            [class.button--danger]="action === 'DISARM'"
+            [disabled]="executingAction()"
+            (click)="confirmAction()"
+          >
+            <i
+              class="pi"
+              [class.pi-check]="!executingAction()"
+              [class.pi-spin]="executingAction()"
+              [class.pi-spinner]="executingAction()"
+            ></i>
+            {{ executingAction() ? 'Procesando...' : 'Confirmar' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</section>

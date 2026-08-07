@@ -77,6 +77,14 @@ export const routes: Routes = [
     title: 'Alarmas | OTI',
   },
 
+  // Seguridad y horarios
+  {
+    path: 'security',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/security/security').then((c) => c.Security),
+    title: 'Seguridad | OTI',
+  },
+
   // Históricos
   {
     path: 'history',

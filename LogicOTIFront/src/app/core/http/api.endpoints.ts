@@ -39,6 +39,11 @@ export const API_ENDPOINTS = {
   },
 
   security: {
+    status: '/security/status',
+    precheck: '/security/precheck',
+    arm: '/security/arm',
+    disarm: '/security/disarm',
+    schedules: '/security/schedules',
     bypasses: '/security/bypasses',
     bypass: (sensorCode: string) => `/security/bypasses/${sensorCode}`,
     warnings: '/security/warnings',
@@ -55,6 +60,7 @@ export const API_ENDPOINTS = {
     smokeAlerts: '/topic/alerts/smoke',
     areaState: (areaCode: string) => `/topic/areas/${areaCode}/state`,
     sensorDiagnostic: (id: number) => `/topic/diagnostics/sensors/${id}`,
+    securityStatus: '/topic/security/status',
     securityWarnings: '/topic/security/warnings',
   },
 
