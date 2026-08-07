@@ -31,6 +31,19 @@ export const API_ENDPOINTS = {
     active: '/alarms/active',
   },
 
+  sensorDiagnostics: {
+    list: '/sensor-diagnostics',
+    due: '/sensor-diagnostics/due',
+    detail: (id: number) => `/sensor-diagnostics/${id}`,
+    cancel: (id: number) => `/sensor-diagnostics/${id}/cancel`,
+  },
+
+  security: {
+    bypasses: '/security/bypasses',
+    bypass: (sensorCode: string) => `/security/bypasses/${sensorCode}`,
+    warnings: '/security/warnings',
+  },
+
   cameras: {
     list: '/cameras',
     detail: (cameraCode: string) => `/cameras/${cameraCode}`,
@@ -41,6 +54,8 @@ export const API_ENDPOINTS = {
     status: '/realtime/status',
     smokeAlerts: '/topic/alerts/smoke',
     areaState: (areaCode: string) => `/topic/areas/${areaCode}/state`,
+    sensorDiagnostic: (id: number) => `/topic/diagnostics/sensors/${id}`,
+    securityWarnings: '/topic/security/warnings',
   },
 
   plc: {

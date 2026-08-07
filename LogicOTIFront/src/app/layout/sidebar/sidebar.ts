@@ -49,6 +49,11 @@ export class Sidebar {
       route: '/history',
     },
     {
+      label: 'Diagnóstico',
+      icon: 'pi pi-wrench',
+      route: '/diagnostics',
+    },
+    {
       label: 'Usuarios',
       icon: 'pi pi-users',
       route: '/administration',

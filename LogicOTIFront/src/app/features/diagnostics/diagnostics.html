@@ -1,311 +1,605 @@
-<section class="integration-tests">
-  <header class="integration-tests__header">
+<section class="diagnostics-page">
+  <header class="page-header">
     <div>
-      <span class="integration-tests__eyebrow">
-        Pruebas temporales
-      </span>
-
-      <h1>Integración Backend</h1>
-
+      <span class="page-header__eyebrow">Mantenimiento preventivo</span>
+      <h1>Diagnóstico de sensores</h1>
       <p>
-        Consumo de endpoints REST y comunicación WebSocket
-        proporcionados por el backend.
+        Comprueba sensores de movimiento y humo, revisa su vigencia y controla las omisiones
+        temporales usadas para armar la alarma.
       </p>
     </div>
 
-    <span
-      class="connection-badge"
-      [class.connection-badge--online]="
-        websocketConnected()
-      "
-    >
-      {{ websocketStatus() }}
-    </span>
+    <div class="header-actions">
+      <div class="connection-status" [attr.data-status]="connectionStatus()">
+        <span class="connection-status__dot"></span>
+        <div>
+          <strong>{{ connectionLabel() }}</strong>
+          <span>Actualización automática por WebSocket</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="button button--secondary"
+        [disabled]="loading()"
+        (click)="loadAll()"
+      >
+        <i
+          class="pi"
+          [class.pi-refresh]="!loading()"
+          [class.pi-spin]="loading()"
+          [class.pi-spinner]="loading()"
+        ></i>
+        Actualizar
+      </button>
+    </div>
   </header>
 
-  <div class="integration-tests__grid">
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-key"></i>
-
-        <div>
-          <strong>Autenticación</strong>
-          <small>POST /api/auth/login</small>
-        </div>
-      </div>
-
-      <p>
-        Consumido al iniciar sesión. El JWT se envía mediante
-        el interceptor.
-      </p>
-
-      <span class="test-card__validated">
-        <i class="pi pi-check-circle"></i>
-        Sesión autenticada
-      </span>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-server"></i>
-
-        <div>
-          <strong>Estado del sistema</strong>
-          <small>GET /api/system/status</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testSystemStatus()"
-      >
-        Consultar
-      </button>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-building"></i>
-
-        <div>
-          <strong>Estructura del edificio</strong>
-          <small>GET /api/building</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testBuilding()"
-      >
-        Consultar
-      </button>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-map-marker"></i>
-
-        <div>
-          <strong>Estado del área</strong>
-          <small>GET /api/areas/P1_A01/state</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testAreaState()"
-      >
-        Consultar P1_A01
-      </button>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-power-off"></i>
-
-        <div>
-          <strong>Comando de dispositivo</strong>
-          <small>
-            PUT /api/devices/P1_A01_MS02/command
-          </small>
-        </div>
-      </div>
-
-      <div class="test-card__actions">
-        <button
-          type="button"
-          (click)="turnOnDevice()"
-        >
-          Encender
-        </button>
-
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="turnOffDevice()"
-        >
-          Apagar
-        </button>
-      </div>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-history"></i>
-
-        <div>
-          <strong>Histórico de comandos</strong>
-          <small>GET /api/history/commands</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testHistory()"
-      >
-        Consultar histórico
-      </button>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-wifi"></i>
-
-        <div>
-          <strong>Diagnóstico tiempo real</strong>
-          <small>GET /api/realtime/status</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testRealtimeStatus()"
-      >
-        Consultar
-      </button>
-    </article>
-
-    <article class="test-card">
-      <div class="test-card__heading">
-        <i class="pi pi-cog"></i>
-
-        <div>
-          <strong>Prueba del PLC</strong>
-          <small>GET /api/plc/test</small>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        (click)="testPlc()"
-      >
-        Ejecutar prueba
-      </button>
-    </article>
-
-    <article class="test-card">
-        <div class="test-card__heading">
-            <i class="pi pi-lightbulb"></i>
-
-            <div>
-            <strong>Prueba de luz</strong>
-            <small>PUT /api/plc/test/light</small>
-            </div>
-        </div>
-
-        <div class="test-card__actions">
-            <button
-            type="button"
-            (click)="turnOnPlcLight()"
-            >
-            Encender
-            </button>
-
-            <button
-            type="button"
-            class="button-secondary"
-            (click)="turnOffPlcLight()"
-            >
-            Apagar
-            </button>
-        </div>
-    </article>
-
-    <article class="test-card test-card--websocket">
-      <div class="test-card__heading">
-        <i class="pi pi-bolt"></i>
-
-        <div>
-          <strong>WebSocket STOMP</strong>
-          <small>
-            /topic/areas/P1_A01/state
-          </small>
-        </div>
-      </div>
-
-      <p>
-        Estado:
-        <strong>{{ websocketStatus() }}</strong>
-      </p>
-
-      <div class="test-card__actions">
-        <button
-          type="button"
-          (click)="connectWebSocket()"
-          [disabled]="websocketConnected()"
-        >
-          Conectar
-        </button>
-
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="disconnectWebSocket()"
-          [disabled]="!websocketConnected()"
-        >
-          Desconectar
-        </button>
-
-        <button
-          type="button"
-          class="button-secondary"
-          (click)="clearWebSocketMessages()"
-        >
-          Limpiar WS
-        </button>
-      </div>
-
-      <small>
-        Mensajes recibidos:
-        {{ websocketMessages().length }}
-      </small>
-
-      @if (websocketError()) {
-        <div class="websocket-result websocket-result--error">
-          <span>Error WebSocket</span>
-          <pre>{{ websocketError() }}</pre>
-        </div>
-      }
-
-      @if (websocketLastMessage()) {
-        <div class="websocket-result">
-          <span>Último mensaje recibido</span>
-          <pre>{{ websocketLastMessage() }}</pre>
-        </div>
-      }
-    </article>
-  </div>
-
-  <section class="response-panel">
-    <header class="response-panel__header">
+  @if (!canRunDiagnostics) {
+    <article class="role-notice">
+      <i class="pi pi-eye"></i>
       <div>
-        <span>Resultado de la prueba REST</span>
+        <strong>Modo de consulta</strong>
+        <span
+          >Tu usuario puede revisar resultados, omisiones y advertencias sin iniciar pruebas.</span
+        >
+      </div>
+    </article>
+  }
 
-        <strong>
-          {{ activeTest() || 'Ninguna prueba ejecutada' }}
-        </strong>
+  @if (errorMessage()) {
+    <div class="feedback feedback--error" role="alert">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="feedback feedback--success" role="status">
+      <i class="pi pi-check-circle"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+  }
+
+  <section class="summary-grid" aria-label="Resumen de diagnóstico">
+    <article class="summary-card summary-card--info">
+      <span class="summary-card__icon"><i class="pi pi-wifi"></i></span>
+      <div>
+        <span>Sensores registrados</span>
+        <strong>{{ due()?.totalSensors ?? 0 }}</strong>
+        <small>Movimiento y humo</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--success">
+      <span class="summary-card__icon"><i class="pi pi-verified"></i></span>
+      <div>
+        <span>Diagnóstico vigente</span>
+        <strong>{{ validSensors() }}</strong>
+        <small>Vigencia de {{ due()?.validityMonths ?? 4 }} meses</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--warning">
+      <span class="summary-card__icon"><i class="pi pi-calendar-clock"></i></span>
+      <div>
+        <span>Pendientes o vencidos</span>
+        <strong>{{ due()?.dueSensors ?? 0 }}</strong>
+        <small>Requieren una prueba</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--danger">
+      <span class="summary-card__icon"><i class="pi pi-shield"></i></span>
+      <div>
+        <span>Sensores omitidos</span>
+        <strong>{{ activeBypasses().length }}</strong>
+        <small>Verificación diaria obligatoria</small>
+      </div>
+    </article>
+  </section>
+
+  @if (warnings().length > 0) {
+    <section class="warning-strip">
+      <span class="warning-strip__icon"><i class="pi pi-exclamation-triangle"></i></span>
+      <div>
+        <strong>{{ warnings()[0].message }}</strong>
+        <span>
+          {{ warnings()[0].areaName }} · {{ warnings()[0].createdAt | date: 'dd/MM/yyyy HH:mm' }}
+        </span>
+      </div>
+      <span class="warning-strip__count">{{ warnings().length }} advertencias</span>
+    </section>
+  }
+
+  @if (activeDiagnostics().length > 0) {
+    <section class="panel active-diagnostics">
+      <header class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Pruebas en curso</span>
+          <h2>Diagnósticos activos</h2>
+        </div>
+        <span class="count-badge count-badge--running"
+          >{{ activeDiagnostics().length }} activos</span
+        >
+      </header>
+
+      <div class="active-grid">
+        @for (diagnostic of activeDiagnostics(); track diagnostic.id) {
+          <article class="diagnostic-card">
+            <div class="diagnostic-card__heading">
+              <div>
+                <span>Diagnóstico #{{ diagnostic.id }}</span>
+                <strong>{{ diagnostic.sensors.length }} sensores</strong>
+              </div>
+              <span class="timer" [class.timer--urgent]="remainingSeconds(diagnostic) <= 30">
+                {{ remainingSeconds(diagnostic) }} s
+              </span>
+            </div>
+
+            <div class="progress-track" aria-hidden="true">
+              <span [style.width.%]="diagnosticProgress(diagnostic)"></span>
+            </div>
+
+            <p>
+              Activa y restablece cada sensor. La prueba se aprobará cuando ambos estados hayan sido
+              detectados.
+            </p>
+
+            <div class="diagnostic-sensors">
+              @for (sensor of diagnostic.sensors; track sensor.id) {
+                <div class="diagnostic-sensor">
+                  <div>
+                    <strong>{{ sensor.deviceName }}</strong>
+                    <span>{{ sensor.areaName }} · {{ sensor.deviceCode }}</span>
+                  </div>
+                  <span
+                    class="test-state"
+                    [class.test-state--complete]="sensor.sawInactive && sensor.sawActive"
+                    [class.test-state--partial]="sensor.sawInactive !== sensor.sawActive"
+                  >
+                    @if (sensor.sawInactive && sensor.sawActive) {
+                      <i class="pi pi-check"></i> Comprobado
+                    } @else if (sensor.sawInactive || sensor.sawActive) {
+                      <i class="pi pi-clock"></i> Falta un estado
+                    } @else {
+                      <i class="pi pi-circle"></i> Sin actividad
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+
+            @if (canRunDiagnostics) {
+              <button
+                type="button"
+                class="button button--danger-outline"
+                [disabled]="actionId() === diagnostic.id"
+                (click)="cancelDiagnostic(diagnostic)"
+              >
+                <i
+                  class="pi"
+                  [class.pi-times]="actionId() !== diagnostic.id"
+                  [class.pi-spin]="actionId() === diagnostic.id"
+                  [class.pi-spinner]="actionId() === diagnostic.id"
+                ></i>
+                Cancelar diagnóstico
+              </button>
+            }
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="panel sensor-panel">
+    <header class="panel-header sensor-panel__header">
+      <div>
+        <span class="panel-header__eyebrow">Inventario verificable</span>
+        <h2>Sensores del edificio</h2>
       </div>
 
-      <button
-        type="button"
-        class="button-secondary"
-        (click)="clearResponse()"
-      >
-        Limpiar
-      </button>
+      @if (canRunDiagnostics) {
+        <button
+          type="button"
+          class="button button--primary"
+          [disabled]="saving() || selectedCodes().size === 0"
+          (click)="startDiagnostic()"
+        >
+          <i
+            class="pi"
+            [class.pi-play]="!saving()"
+            [class.pi-spin]="saving()"
+            [class.pi-spinner]="saving()"
+          ></i>
+          Iniciar diagnóstico ({{ selectedCodes().size }})
+        </button>
+      }
     </header>
 
-    <div class="response-panel__status">
-      @if (loading()) {
-        Procesando solicitud...
-      } @else {
-        {{ responseStatus() || 'Sin respuesta' }}
+    <div class="filters">
+      <label class="search-field">
+        <span class="sr-only">Buscar sensores</span>
+        <i class="pi pi-search"></i>
+        <input
+          type="search"
+          placeholder="Buscar por sensor, código o área"
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+        />
+      </label>
+
+      <label class="select-field">
+        <span>Área</span>
+        <select [ngModel]="areaFilter()" (ngModelChange)="areaFilter.set($event)">
+          <option value="ALL">Todas las áreas</option>
+          @for (area of areaOptions(); track area.code) {
+            <option [value]="area.code">{{ area.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="select-field">
+        <span>Tipo</span>
+        <select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)">
+          <option value="ALL">Todos</option>
+          <option value="MOTION">Movimiento</option>
+          <option value="SMOKE">Humo</option>
+        </select>
+      </label>
+
+      <label class="select-field">
+        <span>Estado</span>
+        <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+          <option value="ALL">Todos</option>
+          <option value="VALID">Vigente</option>
+          <option value="DUE">Pendiente</option>
+          <option value="EXPIRED">Vencido</option>
+        </select>
+      </label>
+
+      @if (
+        searchText() || areaFilter() !== 'ALL' || typeFilter() !== 'ALL' || statusFilter() !== 'ALL'
+      ) {
+        <button type="button" class="button button--secondary" (click)="clearFilters()">
+          <i class="pi pi-filter-slash"></i>
+          Limpiar
+        </button>
       }
     </div>
 
-    <pre>{{
-      responseBody() ||
-        'La respuesta JSON del endpoint REST aparecerá aquí.'
-    }}</pre>
+    @if (loading() && !due()) {
+      <div class="panel-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Consultando sensores...</span>
+      </div>
+    } @else if (filteredSensors().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-inbox"></i>
+        <strong>No hay sensores para mostrar</strong>
+        <span>Cambia los filtros para consultar otro grupo.</span>
+      </div>
+    } @else {
+      <div class="sensor-table-wrap">
+        <table class="sensor-table">
+          <thead>
+            <tr>
+              @if (canRunDiagnostics) {
+                <th class="sensor-table__check">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar sensores visibles"
+                    [checked]="allFilteredSelected()"
+                    (change)="toggleAllFiltered()"
+                  />
+                </th>
+              }
+              <th>Sensor</th>
+              <th>Área</th>
+              <th>Tipo</th>
+              <th>Diagnóstico</th>
+              <th>Vigencia</th>
+              <th>Alarma</th>
+              @if (canManageBypasses) {
+                <th>Acción</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (sensor of filteredSensors(); track sensor.deviceCode) {
+              <tr
+                [class.sensor-table__selected]="selectedCodes().has(sensor.deviceCode)"
+                [class.sensor-table__bypassed]="activeBypassByCode().has(sensor.deviceCode)"
+              >
+                @if (canRunDiagnostics) {
+                  <td class="sensor-table__check">
+                    <input
+                      type="checkbox"
+                      [attr.aria-label]="'Seleccionar ' + sensor.deviceName"
+                      [checked]="selectedCodes().has(sensor.deviceCode)"
+                      [disabled]="runningSensorCodes().has(sensor.deviceCode)"
+                      (change)="toggleSensor(sensor.deviceCode)"
+                    />
+                  </td>
+                }
+                <td>
+                  <div class="sensor-name">
+                    <span class="sensor-name__icon" [attr.data-type]="sensor.deviceType">
+                      <i
+                        class="pi"
+                        [class.pi-eye]="sensor.deviceType === 'MOTION'"
+                        [class.pi-exclamation-triangle]="sensor.deviceType === 'SMOKE'"
+                      ></i>
+                    </span>
+                    <div>
+                      <strong>{{ sensor.deviceName }}</strong>
+                      <small>{{ sensor.deviceCode }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <strong>{{ sensor.areaName }}</strong>
+                  <small>{{ sensor.areaCode }}</small>
+                </td>
+                <td>{{ sensorTypeLabel(sensor.deviceType) }}</td>
+                <td>
+                  @if (runningSensorCodes().has(sensor.deviceCode)) {
+                    <span class="status-badge status-badge--running">
+                      <i class="pi pi-spin pi-spinner"></i> En proceso
+                    </span>
+                  } @else {
+                    <span class="status-badge" [attr.data-status]="sensor.status">
+                      {{ dueStatusLabel(sensor.status) }}
+                    </span>
+                  }
+                </td>
+                <td>
+                  @if (sensor.validUntil) {
+                    <span>{{ sensor.validUntil | date: 'dd/MM/yyyy' }}</span>
+                    <small>
+                      Última prueba: {{ sensor.lastPassedAt | date: 'dd/MM/yyyy HH:mm' }}
+                    </small>
+                  } @else {
+                    <span>Sin diagnóstico aprobado</span>
+                  }
+                </td>
+                <td>
+                  @if (activeBypassByCode().has(sensor.deviceCode)) {
+                    <span class="bypass-badge"><i class="pi pi-eye-slash"></i> Omitido</span>
+                  } @else {
+                    <span class="normal-badge"><i class="pi pi-shield"></i> Incluido</span>
+                  }
+                </td>
+                @if (canManageBypasses) {
+                  <td>
+                    @if (activeBypassByCode().get(sensor.deviceCode); as bypass) {
+                      <button
+                        type="button"
+                        class="table-action table-action--restore"
+                        (click)="requestRevoke(bypass)"
+                      >
+                        Reincorporar
+                      </button>
+                    } @else if (sensor.deviceType === 'MOTION') {
+                      <button type="button" class="table-action" (click)="openBypass(sensor)">
+                        Omitir temporalmente
+                      </button>
+                    } @else {
+                      <span class="not-allowed">El humo no puede omitirse</span>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <footer class="panel-footer">
+      Mostrando {{ filteredSensors().length }} de {{ due()?.totalSensors ?? 0 }} sensores
+    </footer>
+  </section>
+
+  <section class="lower-grid">
+    <article class="panel bypass-panel">
+      <header class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Excepciones de armado</span>
+          <h2>Omisiones activas</h2>
+        </div>
+        <span class="count-badge">{{ activeBypasses().length }}</span>
+      </header>
+
+      @if (activeBypasses().length === 0) {
+        <div class="healthy-state">
+          <i class="pi pi-shield"></i>
+          <div>
+            <strong>No hay sensores omitidos</strong>
+            <span>Todos los sensores participan en la revisión antes del armado.</span>
+          </div>
+        </div>
+      } @else {
+        <div class="compact-list">
+          @for (bypass of activeBypasses(); track bypass.id) {
+            <article class="compact-item compact-item--warning">
+              <div>
+                <strong>{{ bypass.sensorName }}</strong>
+                <span>{{ bypass.areaName }} · {{ bypass.sensorCode }}</span>
+                <p>{{ bypass.reason }}</p>
+                <small>
+                  Omitido por {{ bypass.createdBy }} ·
+                  {{ bypass.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+                </small>
+              </div>
+              @if (canManageBypasses) {
+                <button
+                  type="button"
+                  class="icon-button"
+                  title="Reincorporar"
+                  (click)="requestRevoke(bypass)"
+                >
+                  <i class="pi pi-undo"></i>
+                </button>
+              }
+            </article>
+          }
+        </div>
+      }
+    </article>
+
+    <article class="panel recent-panel">
+      <header class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Últimos resultados</span>
+          <h2>Diagnósticos recientes</h2>
+        </div>
+      </header>
+
+      @if (recentDiagnostics().length === 0) {
+        <div class="empty-state empty-state--small">
+          <i class="pi pi-history"></i>
+          <strong>Todavía no hay resultados</strong>
+          <span>Los diagnósticos finalizados aparecerán aquí.</span>
+        </div>
+      } @else {
+        <div class="compact-list">
+          @for (diagnostic of recentDiagnostics(); track diagnostic.id) {
+            <article class="compact-item">
+              <span class="result-icon" [attr.data-status]="diagnostic.status">
+                <i
+                  class="pi"
+                  [class.pi-check]="diagnostic.status === 'PASSED'"
+                  [class.pi-times]="diagnostic.status === 'REJECTED'"
+                  [class.pi-ban]="diagnostic.status === 'CANCELLED'"
+                ></i>
+              </span>
+              <div>
+                <strong>Diagnóstico #{{ diagnostic.id }}</strong>
+                <span>
+                  {{ diagnosticStatusLabel(diagnostic.status) }} ·
+                  {{ diagnostic.sensors.length }} sensores
+                </span>
+                <small>
+                  {{ diagnostic.startedBy }} ·
+                  {{ diagnostic.startedAt | date: 'dd/MM/yyyy HH:mm' }}
+                </small>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </article>
   </section>
 </section>
+
+@if (bypassTarget(); as sensor) {
+  <div class="modal-backdrop" (click)="closeBypass()">
+    <section class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <header class="modal__header">
+        <div>
+          <span>Omisión temporal</span>
+          <h2>{{ sensor.deviceName }}</h2>
+        </div>
+        <button type="button" class="modal__close" [disabled]="saving()" (click)="closeBypass()">
+          <i class="pi pi-times"></i>
+        </button>
+      </header>
+
+      <div class="modal__warning">
+        <i class="pi pi-exclamation-triangle"></i>
+        <p>
+          Este sensor de movimiento dejará de impedir el armado de la alarma. El sistema seguirá
+          mostrando una advertencia diaria hasta que sea reincorporado.
+        </p>
+      </div>
+
+      <label class="reason-field">
+        <span>Motivo de la omisión</span>
+        <textarea
+          rows="4"
+          maxlength="300"
+          placeholder="Ejemplo: sensor pendiente de reemplazo por mantenimiento."
+          [ngModel]="bypassReason()"
+          (ngModelChange)="bypassReason.set($event)"
+        ></textarea>
+        <small>{{ bypassReason().length }}/300</small>
+      </label>
+
+      <footer class="modal__actions">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="saving()"
+          (click)="closeBypass()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="button button--warning"
+          [disabled]="saving() || !bypassReason().trim()"
+          (click)="createBypass()"
+        >
+          <i
+            class="pi"
+            [class.pi-eye-slash]="!saving()"
+            [class.pi-spin]="saving()"
+            [class.pi-spinner]="saving()"
+          ></i>
+          Confirmar omisión
+        </button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (revokeTarget(); as bypass) {
+  <div class="modal-backdrop" (click)="closeRevoke()">
+    <section
+      class="modal modal--small"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal__header">
+        <div>
+          <span>Reincorporar sensor</span>
+          <h2>{{ bypass.sensorName }}</h2>
+        </div>
+        <button type="button" class="modal__close" [disabled]="saving()" (click)="closeRevoke()">
+          <i class="pi pi-times"></i>
+        </button>
+      </header>
+
+      <p class="modal__description">
+        El sensor volverá a participar en la revisión necesaria para armar la alarma.
+      </p>
+
+      <footer class="modal__actions">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="saving()"
+          (click)="closeRevoke()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="button button--primary"
+          [disabled]="saving()"
+          (click)="revokeBypass()"
+        >
+          <i
+            class="pi"
+            [class.pi-undo]="!saving()"
+            [class.pi-spin]="saving()"
+            [class.pi-spinner]="saving()"
+          ></i>
+          Reincorporar
+        </button>
+      </footer>
+    </section>
+  </div>
+}
