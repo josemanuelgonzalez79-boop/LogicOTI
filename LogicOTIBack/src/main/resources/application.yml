@@ -20,6 +20,11 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  task:
+    scheduling:
+      pool:
+        size: 4
+      thread-name-prefix: logicoti-scheduler-
 
 server:
   port: ${SERVER_PORT:3210}

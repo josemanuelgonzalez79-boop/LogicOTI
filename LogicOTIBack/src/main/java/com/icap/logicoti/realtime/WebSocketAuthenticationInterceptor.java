@@ -26,6 +26,8 @@ public class WebSocketAuthenticationInterceptor
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String SMOKE_ALERT_TOPIC =
         "/topic/alerts/smoke";
+    private static final String SECURITY_STATUS_TOPIC =
+            "/topic/security/status";
 
     private static final Pattern AREA_TOPIC_PATTERN = Pattern.compile(
             "^/topic/areas/[A-Z0-9_]+/state$"
@@ -142,7 +144,12 @@ public class WebSocketAuthenticationInterceptor
                 boolean allowedSmokeAlertTopic =
                         SMOKE_ALERT_TOPIC.equals(destination);
 
-                if (!allowedAreaTopic && !allowedSmokeAlertTopic) {
+                boolean allowedSecurityStatusTopic =
+                        SECURITY_STATUS_TOPIC.equals(destination);
+
+                if (!allowedAreaTopic
+                        && !allowedSmokeAlertTopic
+                        && !allowedSecurityStatusTopic) {
                 throw new AccessDeniedException(
                         "La suscripción solicitada no está permitida."
                 );

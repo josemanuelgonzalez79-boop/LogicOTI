@@ -115,6 +115,22 @@ public class SecurityConfig {
                                 "OPERATOR"
                         )
 
+                        // Armado y desarmado manual de la alarma.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/security/arm",
+                                "/api/security/disarm"
+                        ).hasAnyRole(
+                                "ADMIN",
+                                "OPERATOR"
+                        )
+
+                        // La configuración de horarios queda solo para ADMIN.
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/security/schedules"
+                        ).hasRole("ADMIN")
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,
