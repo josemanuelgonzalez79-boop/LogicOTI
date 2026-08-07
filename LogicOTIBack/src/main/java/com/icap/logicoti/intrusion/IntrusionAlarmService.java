@@ -206,9 +206,11 @@ public class IntrusionAlarmService {
             return;
         }
 
+        AlarmMode armedMode = determineArmedMode(precheck);
+
         transition(
-                AlarmMode.ARMED,
-                "La alarma quedó armada correctamente.",
+                armedMode,
+                armedMessage(armedMode),
                 current.changedBy(),
                 current.changeSource(),
                 null,
@@ -256,9 +258,10 @@ public class IntrusionAlarmService {
                 scheduleService.getSettings();
 
         if (settings.exitDelaySeconds() == 0) {
+            AlarmMode armedMode = determineArmedMode(precheck);
             SecurityStatusResponse armed = transition(
-                    AlarmMode.ARMED,
-                    "La alarma quedó armada correctamente.",
+                    armedMode,
+                    armedMessage(armedMode),
                     username,
                     source,
                     null,
@@ -284,6 +287,29 @@ public class IntrusionAlarmService {
         );
 
         return new SecurityActionResponse(arming, precheck);
+    }
+
+    private AlarmMode determineArmedMode(
+            SecurityPrecheckResponse precheck
+    ) {
+        boolean hasBypassedSensors = precheck.issues()
+                .stream()
+                .anyMatch(issue ->
+                        "SENSOR_BYPASSED".equals(issue.code())
+                );
+
+        return hasBypassedSensors
+                ? AlarmMode.ARMED_WITH_BYPASS
+                : AlarmMode.ARMED;
+    }
+
+    private String armedMessage(AlarmMode mode) {
+        if (mode == AlarmMode.ARMED_WITH_BYPASS) {
+            return "La alarma quedó armada con uno o más sensores "
+                    + "de movimiento omitidos temporalmente.";
+        }
+
+        return "La alarma quedó armada correctamente.";
     }
 
     private SecurityStatusResponse transition(

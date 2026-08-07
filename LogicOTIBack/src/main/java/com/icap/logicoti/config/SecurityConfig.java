@@ -119,11 +119,24 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/security/arm",
-                                "/api/security/disarm"
+                                "/api/security/disarm",
+                                "/api/sensor-diagnostics",
+                                "/api/sensor-diagnostics/*/cancel"
                         ).hasAnyRole(
                                 "ADMIN",
                                 "OPERATOR"
                         )
+
+                        // Omitir un sensor debilita la protección y queda sólo para ADMIN.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/security/bypasses"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/security/bypasses/*"
+                        ).hasRole("ADMIN")
 
                         // La configuración de horarios queda solo para ADMIN.
                         .requestMatchers(

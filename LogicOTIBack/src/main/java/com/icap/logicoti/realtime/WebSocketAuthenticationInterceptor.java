@@ -28,10 +28,17 @@ public class WebSocketAuthenticationInterceptor
         "/topic/alerts/smoke";
     private static final String SECURITY_STATUS_TOPIC =
             "/topic/security/status";
+    private static final String SECURITY_WARNING_TOPIC =
+            "/topic/security/warnings";
 
     private static final Pattern AREA_TOPIC_PATTERN = Pattern.compile(
             "^/topic/areas/[A-Z0-9_]+/state$"
     );
+
+    private static final Pattern SENSOR_DIAGNOSTIC_TOPIC_PATTERN =
+            Pattern.compile(
+                    "^/topic/diagnostics/sensors/[0-9]+$"
+            );
 
     private final JwtService jwtService;
     private final AppUserRepository userRepository;
@@ -147,9 +154,20 @@ public class WebSocketAuthenticationInterceptor
                 boolean allowedSecurityStatusTopic =
                         SECURITY_STATUS_TOPIC.equals(destination);
 
+                boolean allowedSecurityWarningTopic =
+                        SECURITY_WARNING_TOPIC.equals(destination);
+
+                boolean allowedSensorDiagnosticTopic =
+                        destination != null
+                        && SENSOR_DIAGNOSTIC_TOPIC_PATTERN
+                                .matcher(destination)
+                                .matches();
+
                 if (!allowedAreaTopic
                         && !allowedSmokeAlertTopic
-                        && !allowedSecurityStatusTopic) {
+                        && !allowedSecurityStatusTopic
+                        && !allowedSecurityWarningTopic
+                        && !allowedSensorDiagnosticTopic) {
                 throw new AccessDeniedException(
                         "La suscripción solicitada no está permitida."
                 );

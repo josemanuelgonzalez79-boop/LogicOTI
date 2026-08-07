@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -25,10 +27,27 @@ public class SecurityPrecheckService {
                 device.name,
                 area.code AS area_code,
                 area.name AS area_name,
-                device.plc_state_tag
+                device.plc_state_tag,
+                bypass.id AS bypass_id,
+                bypass.reason AS bypass_reason,
+                latest_diagnostic.completed_at AS last_diagnostic_at
             FROM building_device device
             INNER JOIN building_area area
                 ON area.id = device.area_id
+            LEFT JOIN sensor_bypass_history bypass
+                ON bypass.device_id = device.id
+               AND bypass.active = TRUE
+            LEFT JOIN LATERAL (
+                SELECT session.completed_at
+                FROM sensor_diagnostic_item item
+                INNER JOIN sensor_diagnostic_session session
+                    ON session.id = item.session_id
+                WHERE item.device_id = device.id
+                  AND item.status = 'PASSED'
+                  AND session.status = 'PASSED'
+                ORDER BY session.completed_at DESC, session.id DESC
+                LIMIT 1
+            ) latest_diagnostic ON TRUE
             WHERE device.active = TRUE
               AND area.active = TRUE
               AND device.device_type = 'MOTION'
@@ -38,21 +57,26 @@ public class SecurityPrecheckService {
     private final JdbcTemplate jdbcTemplate;
     private final PlcProperties plcProperties;
     private final PlcCommunicationService plcCommunicationService;
+    private final SecurityScheduleService scheduleService;
 
     public SecurityPrecheckService(
             JdbcTemplate jdbcTemplate,
             PlcProperties plcProperties,
-            PlcCommunicationService plcCommunicationService
+            PlcCommunicationService plcCommunicationService,
+            SecurityScheduleService scheduleService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.plcProperties = plcProperties;
         this.plcCommunicationService = plcCommunicationService;
+        this.scheduleService = scheduleService;
     }
 
     @Transactional(readOnly = true)
     public SecurityPrecheckResponse check() {
         List<MotionSensor> sensors = findMotionSensors();
         List<Issue> initialIssues = new ArrayList<>();
+        SecuritySettingsResponse settings =
+                scheduleService.getSettings();
 
         if (sensors.isEmpty()) {
             initialIssues.add(systemIssue(
@@ -64,6 +88,24 @@ public class SecurityPrecheckService {
         }
 
         for (MotionSensor sensor : sensors) {
+            if (sensor.bypassed()) {
+                initialIssues.add(sensorIssue(
+                        "SENSOR_BYPASSED",
+                        "WARNING",
+                        false,
+                        sensor,
+                        "El sensor está omitido temporalmente. Motivo: "
+                                + sensor.bypassReason()
+                ));
+                continue;
+            }
+
+            addDiagnosticIssue(
+                    sensor,
+                    settings,
+                    initialIssues
+            );
+
             if (!hasText(sensor.stateTag())) {
                 initialIssues.add(sensorIssue(
                         "TAG_NOT_CONFIGURED",
@@ -108,6 +150,7 @@ public class SecurityPrecheckService {
         }
 
         List<MotionSensor> configuredSensors = sensors.stream()
+                .filter(sensor -> !sensor.bypassed())
                 .filter(sensor -> hasText(sensor.stateTag()))
                 .toList();
 
@@ -271,9 +314,51 @@ public class SecurityPrecheckService {
                         resultSet.getString("name"),
                         resultSet.getString("area_code"),
                         resultSet.getString("area_name"),
-                        resultSet.getString("plc_state_tag")
+                        resultSet.getString("plc_state_tag"),
+                        resultSet.getObject("bypass_id") != null,
+                        resultSet.getString("bypass_reason"),
+                        toInstant(resultSet.getTimestamp(
+                                "last_diagnostic_at"
+                        ))
                 )
         );
+    }
+
+    private void addDiagnosticIssue(
+            MotionSensor sensor,
+            SecuritySettingsResponse settings,
+            List<Issue> issues
+    ) {
+        if (sensor.lastDiagnosticAt() == null) {
+            issues.add(sensorIssue(
+                    "DIAGNOSTIC_MISSING",
+                    "ERROR",
+                    true,
+                    sensor,
+                    "El sensor todavía no tiene un diagnóstico aprobado."
+            ));
+            return;
+        }
+
+        ZoneId zoneId = ZoneId.of(settings.timezone());
+        Instant validUntil = ZonedDateTime.ofInstant(
+                sensor.lastDiagnosticAt(),
+                zoneId
+        ).plusMonths(
+                settings.diagnosticValidityMonths()
+        ).toInstant();
+
+        if (!validUntil.isAfter(Instant.now())) {
+            issues.add(sensorIssue(
+                    "DIAGNOSTIC_EXPIRED",
+                    "ERROR",
+                    true,
+                    sensor,
+                    "El diagnóstico del sensor venció el "
+                            + validUntil
+                            + "."
+            ));
+        }
     }
 
     private Issue systemIssue(
@@ -330,13 +415,20 @@ public class SecurityPrecheckService {
         return exception.getMessage();
     }
 
+    private Instant toInstant(java.sql.Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
+    }
+
     private record MotionSensor(
             long id,
             String code,
             String name,
             String areaCode,
             String areaName,
-            String stateTag
+            String stateTag,
+            boolean bypassed,
+            String bypassReason,
+            Instant lastDiagnosticAt
     ) {
     }
 
