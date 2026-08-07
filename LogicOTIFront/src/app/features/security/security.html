@@ -297,6 +297,129 @@
         </label>
       </div>
 
+      <section class="automatic-lighting">
+        <header class="automatic-lighting__header">
+          <div>
+            <span class="section-eyebrow">Iluminación de áreas comunes</span>
+            <h3>Encendido automático por movimiento</h3>
+            <p>
+              Durante el horario configurado, cualquier sensor de movimiento incluido en el
+              sistema puede encender las luces seleccionadas. Se apagarán después del tiempo sin
+              actividad indicado abajo.
+            </p>
+          </div>
+
+          <span
+            class="automatic-lighting__status"
+            [class.automatic-lighting__status--active]="automaticLightingStatus()?.withinSchedule"
+          >
+            <i class="pi pi-bolt"></i>
+            {{ automaticLightingStatus()?.message ?? 'Consultando automatización...' }}
+          </span>
+        </header>
+
+        <div class="automatic-lighting__controls">
+          <label class="switch-control automatic-lighting__switch">
+            <input
+              type="checkbox"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.automaticLightingEnabled"
+              (ngModelChange)="updateAutomaticLighting($event)"
+            />
+            <span class="switch-control__track"><span></span></span>
+            <span>
+              <strong>Automatización habilitada</strong>
+              <small>Funciona aunque la alarma de intrusión esté desarmada.</small>
+            </span>
+          </label>
+
+          <label class="field-control">
+            <span>Inicia a las</span>
+            <input
+              class="time-input"
+              type="time"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.automaticLightingStartTime"
+              (ngModelChange)="updateAutomaticLightingTime('automaticLightingStartTime', $event)"
+            />
+          </label>
+
+          <label class="field-control">
+            <span>Termina a las</span>
+            <input
+              class="time-input"
+              type="time"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.automaticLightingEndTime"
+              (ngModelChange)="updateAutomaticLightingTime('automaticLightingEndTime', $event)"
+            />
+          </label>
+        </div>
+
+        <div class="automatic-lighting__summary">
+          <article>
+            <span>Luces configuradas</span>
+            <strong>{{ selectedLightingTargets() }}</strong>
+          </article>
+          <article>
+            <span>Encendidas automáticamente</span>
+            <strong>{{ automaticLightingStatus()?.automaticLightsOn ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Último movimiento</span>
+            <strong>
+              {{
+                automaticLightingStatus()?.lastMotionAt
+                  ? (automaticLightingStatus()?.lastMotionAt | date: 'dd/MM HH:mm:ss')
+                  : 'Sin actividad'
+              }}
+            </strong>
+          </article>
+          <article>
+            <span>Próximo apagado</span>
+            <strong>
+              {{
+                automaticLightingStatus()?.nextTurnOffAt
+                  ? (automaticLightingStatus()?.nextTurnOffAt | date: 'dd/MM HH:mm:ss')
+                  : 'No programado'
+              }}
+            </strong>
+          </article>
+        </div>
+
+        <div class="lighting-targets">
+          <div class="lighting-targets__title">
+            <div>
+              <strong>Luces que responderán al movimiento</strong>
+              <span>La selección inicial incluye pasillos, escaleras y áreas comunes.</span>
+            </div>
+            <span>{{ selectedLightingTargets() }} seleccionadas</span>
+          </div>
+
+          <div class="lighting-targets__grid">
+            @for (target of settings()?.lightingTargets ?? []; track target.deviceId) {
+              <label class="lighting-target" [class.lighting-target--selected]="isLightingTargetSelected(target.deviceCode)">
+                <input
+                  type="checkbox"
+                  [disabled]="!canEditSettings"
+                  [ngModel]="isLightingTargetSelected(target.deviceCode)"
+                  (ngModelChange)="updateLightingTarget(target.deviceCode, $event)"
+                />
+                <span class="lighting-target__check"><i class="pi pi-check"></i></span>
+                <span>
+                  <strong>{{ target.areaName }}</strong>
+                  <small>{{ target.floorName }} · {{ target.deviceCode }}</small>
+                </span>
+              </label>
+            } @empty {
+              <div class="lighting-targets__empty">
+                No se encontraron luces controlables con tags de comando y estado.
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
       <div class="schedule-table-wrap">
         <table class="schedule-table">
           <thead>

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
 import {
+  AutomaticLightingStatus,
   SecurityActionResponse,
   SecurityPrecheck,
   SecuritySettings,
@@ -53,6 +54,9 @@ const precheck: SecurityPrecheck = {
 
 const settings: SecuritySettings = {
   automaticScheduleEnabled: true,
+  automaticLightingEnabled: true,
+  automaticLightingStartTime: '18:00:00',
+  automaticLightingEndTime: '08:00:00',
   timezone: 'America/Mazatlan',
   exitDelaySeconds: 60,
   lightInactivityMinutes: 10,
@@ -60,14 +64,42 @@ const settings: SecuritySettings = {
   diagnosticTimeoutSeconds: 120,
   diagnosticValidityMonths: 4,
   days,
+  lightingTargets: [
+    {
+      deviceId: 1,
+      deviceCode: 'P1_A03_LUZ01',
+      deviceName: 'Iluminación general',
+      areaCode: 'P1_A03',
+      areaName: 'Pasillo principal',
+      floorCode: 'P1',
+      floorName: 'Piso 1',
+      selected: true,
+    },
+  ],
   updatedAt: '2026-08-07T17:00:00Z',
   updatedBy: 'SYSTEM',
+};
+
+const automaticLightingStatus: AutomaticLightingStatus = {
+  enabled: true,
+  withinSchedule: true,
+  startTime: '18:00:00',
+  endTime: '08:00:00',
+  inactivityMinutes: 10,
+  configuredLights: 1,
+  automaticLightsOn: 0,
+  lastMotionAt: null,
+  nextTurnOffAt: null,
+  lights: [],
+  message: 'Horario activo, sin luces encendidas automáticamente.',
+  timestamp: '2026-08-07T17:00:00Z',
 };
 
 class SecurityApiServiceMock {
   readonly getStatus = vi.fn(() => of(status));
   readonly getPrecheck = vi.fn(() => of(precheck));
   readonly getSchedules = vi.fn(() => of(settings));
+  readonly getAutomaticLightingStatus = vi.fn(() => of(automaticLightingStatus));
   readonly arm = vi.fn(() =>
     of<SecurityActionResponse>({
       status: { ...status, mode: 'ARMING', message: 'La alarma se está armando.' },
@@ -81,9 +113,11 @@ class SecurityApiServiceMock {
 class SecurityRealtimeServiceMock {
   private readonly statusSubject = new Subject<SecurityStatus>();
   private readonly connectionSubject = new BehaviorSubject<RealtimeConnectionStatus>('CONNECTED');
+  private readonly automaticLightingSubject = new Subject<AutomaticLightingStatus>();
 
   readonly status$ = this.statusSubject.asObservable();
   readonly connectionStatus$ = this.connectionSubject.asObservable();
+  readonly automaticLighting$ = this.automaticLightingSubject.asObservable();
   readonly connect = vi.fn();
   readonly disconnect = vi.fn(async () => undefined);
 
@@ -122,6 +156,7 @@ describe('Security', () => {
     expect(fixture.componentInstance.status()?.mode).toBe('DISARMED');
     expect(fixture.componentInstance.precheck()?.ready).toBe(true);
     expect(fixture.componentInstance.scheduleForm()?.days).toHaveLength(7);
+    expect(fixture.componentInstance.selectedLightingTargets()).toBe(1);
     fixture.destroy();
   });
 
@@ -152,6 +187,7 @@ describe('Security', () => {
     expect(api.updateSchedules).toHaveBeenCalledWith(
       expect.objectContaining({
         lightInactivityMinutes: 15,
+        automaticLightingTargetDeviceCodes: ['P1_A03_LUZ01'],
         days: expect.arrayContaining([expect.objectContaining({ dayOfWeek: 1 })]),
       }),
     );

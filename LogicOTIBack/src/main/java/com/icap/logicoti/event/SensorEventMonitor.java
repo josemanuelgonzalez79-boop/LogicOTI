@@ -2,6 +2,7 @@ package com.icap.logicoti.event;
 
 import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
+import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.plc.PlcCommunicationService;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
@@ -32,6 +33,7 @@ public class SensorEventMonitor {
     private final boolean enabled;
     private final SimpMessagingTemplate messagingTemplate;
     private final IntrusionMotionAlarmService motionAlarmService;
+    private final AutomaticLightingService automaticLightingService;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -50,6 +52,7 @@ public class SensorEventMonitor {
                 PlcProperties plcProperties,
                 SimpMessagingTemplate messagingTemplate,
                 IntrusionMotionAlarmService motionAlarmService,
+                AutomaticLightingService automaticLightingService,
 
                 @Value("${sensor.monitor.enabled:true}")
                 boolean enabled
@@ -59,6 +62,7 @@ public class SensorEventMonitor {
                 this.plcProperties = plcProperties;
                 this.messagingTemplate = messagingTemplate;
                 this.motionAlarmService = motionAlarmService;
+                this.automaticLightingService = automaticLightingService;
                 this.enabled = enabled;
         }
 
@@ -243,6 +247,13 @@ public class SensorEventMonitor {
         }
 
         if (previousState.equals(currentState)) {
+            if (currentState
+                    && "MOTION".equalsIgnoreCase(sensor.type())) {
+                automaticLightingService.refreshActiveMotion(
+                        sensor.code()
+                );
+            }
+
             return;
         }
 
@@ -283,6 +294,18 @@ public class SensorEventMonitor {
                 }
 
                 if ("MOTION".equalsIgnoreCase(sensor.type())) {
+                        try {
+                                automaticLightingService.processMotion(
+                                        savedEvent
+                                );
+                        } catch (RuntimeException exception) {
+                                LOGGER.warn(
+                                        "No se pudo procesar iluminación automática para {}: {}",
+                                        sensor.code(),
+                                        exception.getMessage()
+                                );
+                        }
+
                         motionAlarmService.process(savedEvent);
                 }
 

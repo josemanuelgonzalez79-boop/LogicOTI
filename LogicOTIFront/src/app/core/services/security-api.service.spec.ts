@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import {
+  AutomaticLightingStatus,
   SecurityPrecheck,
   SecuritySettings,
   SecuritySettingsUpdateRequest,
@@ -39,6 +40,9 @@ const precheck: SecurityPrecheck = {
 
 const settings: SecuritySettings = {
   automaticScheduleEnabled: true,
+  automaticLightingEnabled: true,
+  automaticLightingStartTime: '18:00:00',
+  automaticLightingEndTime: '08:00:00',
   timezone: 'America/Mazatlan',
   exitDelaySeconds: 60,
   lightInactivityMinutes: 10,
@@ -46,8 +50,24 @@ const settings: SecuritySettings = {
   diagnosticTimeoutSeconds: 120,
   diagnosticValidityMonths: 4,
   days: [],
+  lightingTargets: [],
   updatedAt: '2026-08-07T17:00:00Z',
   updatedBy: 'admin',
+};
+
+const automaticLightingStatus: AutomaticLightingStatus = {
+  enabled: true,
+  withinSchedule: true,
+  startTime: '18:00:00',
+  endTime: '08:00:00',
+  inactivityMinutes: 10,
+  configuredLights: 0,
+  automaticLightsOn: 0,
+  lastMotionAt: null,
+  nextTurnOffAt: null,
+  lights: [],
+  message: 'Horario activo, sin luces encendidas automáticamente.',
+  timestamp: '2026-08-07T17:00:00Z',
 };
 
 describe('SecurityApiService', () => {
@@ -111,6 +131,7 @@ describe('SecurityApiService', () => {
     const body: SecuritySettingsUpdateRequest = {
       ...settings,
       days: [],
+      automaticLightingTargetDeviceCodes: [],
     };
 
     service.updateSchedules(body).subscribe((response) => expect(response).toEqual(settings));
@@ -119,5 +140,17 @@ describe('SecurityApiService', () => {
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual(body);
     request.flush(settings);
+  });
+
+  it('consulta el estado de iluminación automática', () => {
+    service
+      .getAutomaticLightingStatus()
+      .subscribe((response) => expect(response.withinSchedule).toBe(true));
+
+    const request = http.expectOne((item) =>
+      item.url.endsWith('/security/automatic-lighting/status'),
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush(automaticLightingStatus);
   });
 });

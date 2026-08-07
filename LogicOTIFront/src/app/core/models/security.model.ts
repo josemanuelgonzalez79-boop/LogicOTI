@@ -55,6 +55,9 @@ export interface SecurityScheduleDay {
 
 export interface SecuritySettings {
   automaticScheduleEnabled: boolean;
+  automaticLightingEnabled: boolean;
+  automaticLightingStartTime: string;
+  automaticLightingEndTime: string;
   timezone: string;
   exitDelaySeconds: number;
   lightInactivityMinutes: number;
@@ -62,6 +65,7 @@ export interface SecuritySettings {
   diagnosticTimeoutSeconds: number;
   diagnosticValidityMonths: number;
   days: SecurityScheduleDay[];
+  lightingTargets: AutomaticLightingTarget[];
   updatedAt: string;
   updatedBy: string;
 }
@@ -76,6 +80,9 @@ export interface SecurityScheduleDayRequest {
 
 export interface SecuritySettingsUpdateRequest {
   automaticScheduleEnabled: boolean;
+  automaticLightingEnabled: boolean;
+  automaticLightingStartTime: string;
+  automaticLightingEndTime: string;
   timezone: string;
   exitDelaySeconds: number;
   lightInactivityMinutes: number;
@@ -83,4 +90,40 @@ export interface SecuritySettingsUpdateRequest {
   diagnosticTimeoutSeconds: number;
   diagnosticValidityMonths: number;
   days: SecurityScheduleDayRequest[];
+  automaticLightingTargetDeviceCodes: string[];
+}
+
+export interface AutomaticLightingTarget {
+  deviceId: number;
+  deviceCode: string;
+  deviceName: string;
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  selected: boolean;
+}
+
+export interface AutomaticLightingControlledLight {
+  deviceCode: string;
+  deviceName: string;
+  areaCode: string;
+  areaName: string;
+  activatedAt: string;
+  turnOffAt: string;
+}
+
+export interface AutomaticLightingStatus {
+  enabled: boolean;
+  withinSchedule: boolean;
+  startTime: string;
+  endTime: string;
+  inactivityMinutes: number;
+  configuredLights: number;
+  automaticLightsOn: number;
+  lastMotionAt: string | null;
+  nextTurnOffAt: string | null;
+  lights: AutomaticLightingControlledLight[];
+  message: string;
+  timestamp: string;
 }

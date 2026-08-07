@@ -13,6 +13,14 @@ import java.util.List;
 public record SecuritySettingsUpdateRequest(
         boolean automaticScheduleEnabled,
 
+        boolean automaticLightingEnabled,
+
+        @NotNull(message = "La hora inicial de iluminación es obligatoria.")
+        LocalTime automaticLightingStartTime,
+
+        @NotNull(message = "La hora final de iluminación es obligatoria.")
+        LocalTime automaticLightingEndTime,
+
         @NotBlank(message = "La zona horaria es obligatoria.")
         String timezone,
 
@@ -38,7 +46,12 @@ public record SecuritySettingsUpdateRequest(
 
         @NotNull(message = "Los horarios por día son obligatorios.")
         @Size(min = 7, max = 7, message = "Se deben enviar los 7 días de la semana.")
-        List<@Valid ScheduleDay> days
+        List<@Valid ScheduleDay> days,
+
+        @NotNull(message = "La selección de luces es obligatoria.")
+        @Size(max = 100, message = "No se pueden seleccionar más de 100 luces.")
+        List<@NotBlank(message = "El código de la luz no puede estar vacío.") String>
+                automaticLightingTargetDeviceCodes
 ) {
 
     public record ScheduleDay(

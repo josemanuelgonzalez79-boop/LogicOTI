@@ -11,7 +11,9 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.zone.ZoneRulesException;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -20,6 +22,9 @@ public class SecurityScheduleService {
     private static final String SETTINGS_QUERY = """
             SELECT
                 automatic_schedule_enabled,
+                automatic_lighting_enabled,
+                automatic_lighting_start_time,
+                automatic_lighting_end_time,
                 timezone,
                 exit_delay_seconds,
                 light_inactivity_minutes,
@@ -43,9 +48,44 @@ public class SecurityScheduleService {
             ORDER BY day_of_week
             """;
 
+    private static final String LIGHTING_TARGETS_QUERY = """
+            SELECT
+                device.id,
+                device.code,
+                device.name,
+                area.code AS area_code,
+                area.name AS area_name,
+                floor.code AS floor_code,
+                floor.name AS floor_name,
+                EXISTS (
+                    SELECT 1
+                    FROM security_automatic_lighting_target target
+                    WHERE target.device_id = device.id
+                ) AS selected
+            FROM building_device device
+            INNER JOIN building_area area
+                ON area.id = device.area_id
+            INNER JOIN building_floor floor
+                ON floor.id = area.floor_id
+            WHERE device.active = TRUE
+              AND area.active = TRUE
+              AND floor.active = TRUE
+              AND device.device_type = 'LIGHT'
+              AND device.controllable = TRUE
+              AND device.plc_command_tag IS NOT NULL
+              AND device.plc_state_tag IS NOT NULL
+            ORDER BY floor.display_order,
+                     area.display_order,
+                     device.display_order,
+                     device.id
+            """;
+
     private static final String UPDATE_SETTINGS = """
             UPDATE security_settings
             SET automatic_schedule_enabled = ?,
+                automatic_lighting_enabled = ?,
+                automatic_lighting_start_time = ?,
+                automatic_lighting_end_time = ?,
                 timezone = ?,
                 exit_delay_seconds = ?,
                 light_inactivity_minutes = ?,
@@ -64,6 +104,17 @@ public class SecurityScheduleService {
                 arm_time = ?,
                 disarm_time = ?
             WHERE day_of_week = ?
+            """;
+
+    private static final String DELETE_LIGHTING_TARGETS = """
+            DELETE FROM security_automatic_lighting_target
+            """;
+
+    private static final String INSERT_LIGHTING_TARGET = """
+            INSERT INTO security_automatic_lighting_target (device_id)
+            SELECT id
+            FROM building_device
+            WHERE UPPER(code) = ?
             """;
 
     private static final List<String> DAY_NAMES = List.of(
@@ -88,14 +139,35 @@ public class SecurityScheduleService {
         SettingsRow settings = jdbcTemplate.queryForObject(
                 SETTINGS_QUERY,
                 (resultSet, rowNumber) -> new SettingsRow(
-                        resultSet.getBoolean("automatic_schedule_enabled"),
+                        resultSet.getBoolean(
+                                "automatic_schedule_enabled"
+                        ),
+                        resultSet.getBoolean(
+                                "automatic_lighting_enabled"
+                        ),
+                        resultSet.getObject(
+                                "automatic_lighting_start_time",
+                                LocalTime.class
+                        ),
+                        resultSet.getObject(
+                                "automatic_lighting_end_time",
+                                LocalTime.class
+                        ),
                         resultSet.getString("timezone"),
                         resultSet.getInt("exit_delay_seconds"),
                         resultSet.getInt("light_inactivity_minutes"),
-                        resultSet.getInt("minisplit_inactivity_minutes"),
-                        resultSet.getInt("diagnostic_timeout_seconds"),
-                        resultSet.getInt("diagnostic_validity_months"),
-                        toInstant(resultSet.getTimestamp("updated_at")),
+                        resultSet.getInt(
+                                "minisplit_inactivity_minutes"
+                        ),
+                        resultSet.getInt(
+                                "diagnostic_timeout_seconds"
+                        ),
+                        resultSet.getInt(
+                                "diagnostic_validity_months"
+                        ),
+                        toInstant(
+                                resultSet.getTimestamp("updated_at")
+                        ),
                         resultSet.getString("updated_by")
                 )
         );
@@ -117,7 +189,9 @@ public class SecurityScheduleService {
                                     dayOfWeek,
                                     DAY_NAMES.get(dayOfWeek),
                                     resultSet.getBoolean("enabled"),
-                                    resultSet.getBoolean("all_day_armed"),
+                                    resultSet.getBoolean(
+                                            "all_day_armed"
+                                    ),
                                     resultSet.getObject(
                                             "arm_time",
                                             LocalTime.class
@@ -132,6 +206,9 @@ public class SecurityScheduleService {
 
         return new SecuritySettingsResponse(
                 settings.automaticScheduleEnabled(),
+                settings.automaticLightingEnabled(),
+                settings.automaticLightingStartTime(),
+                settings.automaticLightingEndTime(),
                 settings.timezone(),
                 settings.exitDelaySeconds(),
                 settings.lightInactivityMinutes(),
@@ -139,6 +216,7 @@ public class SecurityScheduleService {
                 settings.diagnosticTimeoutSeconds(),
                 settings.diagnosticValidityMonths(),
                 days,
+                findLightingTargets(),
                 settings.updatedAt(),
                 settings.updatedBy()
         );
@@ -149,11 +227,14 @@ public class SecurityScheduleService {
             SecuritySettingsUpdateRequest request,
             String username
     ) {
-        validateRequest(request);
+        Set<String> selectedLightCodes = validateRequest(request);
 
         jdbcTemplate.update(
                 UPDATE_SETTINGS,
                 request.automaticScheduleEnabled(),
+                request.automaticLightingEnabled(),
+                request.automaticLightingStartTime(),
+                request.automaticLightingEndTime(),
                 request.timezone().trim(),
                 request.exitDelaySeconds(),
                 request.lightInactivityMinutes(),
@@ -176,6 +257,8 @@ public class SecurityScheduleService {
             );
         }
 
+        replaceLightingTargets(selectedLightCodes);
+
         return getSettings();
     }
 
@@ -187,7 +270,7 @@ public class SecurityScheduleService {
         );
     }
 
-    private void validateRequest(
+    private Set<String> validateRequest(
             SecuritySettingsUpdateRequest request
     ) {
         try {
@@ -197,6 +280,14 @@ public class SecurityScheduleService {
                     "La zona horaria "
                             + request.timezone()
                             + " no es válida."
+            );
+        }
+
+        if (request.automaticLightingStartTime().equals(
+                request.automaticLightingEndTime()
+        )) {
+            throw new BadRequestException(
+                    "El inicio y fin de iluminación automática no pueden ser iguales."
             );
         }
 
@@ -221,6 +312,70 @@ public class SecurityScheduleService {
                 );
             }
         }
+
+        Set<String> selected = new LinkedHashSet<>();
+
+        for (String requestedCode
+                : request.automaticLightingTargetDeviceCodes()) {
+            String code = requestedCode
+                    .trim()
+                    .toUpperCase(Locale.ROOT);
+
+            if (!selected.add(code)) {
+                throw new BadRequestException(
+                        "La luz " + code + " está repetida."
+                );
+            }
+        }
+
+        if (request.automaticLightingEnabled() && selected.isEmpty()) {
+            throw new BadRequestException(
+                    "Selecciona al menos una luz para la automatización."
+            );
+        }
+
+        Set<String> available = findLightingTargets()
+                .stream()
+                .map(SecuritySettingsResponse.LightingTarget::deviceCode)
+                .map(code -> code.toUpperCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (!available.containsAll(selected)) {
+            throw new BadRequestException(
+                    "Se seleccionó una luz inexistente o no controlable."
+            );
+        }
+
+        return selected;
+    }
+
+    private List<SecuritySettingsResponse.LightingTarget>
+    findLightingTargets() {
+        return jdbcTemplate.query(
+                LIGHTING_TARGETS_QUERY,
+                (resultSet, rowNumber) ->
+                        new SecuritySettingsResponse.LightingTarget(
+                                resultSet.getLong("id"),
+                                resultSet.getString("code"),
+                                resultSet.getString("name"),
+                                resultSet.getString("area_code"),
+                                resultSet.getString("area_name"),
+                                resultSet.getString("floor_code"),
+                                resultSet.getString("floor_name"),
+                                resultSet.getBoolean("selected")
+                        )
+        );
+    }
+
+    private void replaceLightingTargets(Set<String> selectedCodes) {
+        jdbcTemplate.update(DELETE_LIGHTING_TARGETS);
+
+        selectedCodes.forEach(code ->
+                jdbcTemplate.update(
+                        INSERT_LIGHTING_TARGET,
+                        code
+                )
+        );
     }
 
     private Instant toInstant(Timestamp timestamp) {
@@ -229,6 +384,9 @@ public class SecurityScheduleService {
 
     private record SettingsRow(
             boolean automaticScheduleEnabled,
+            boolean automaticLightingEnabled,
+            LocalTime automaticLightingStartTime,
+            LocalTime automaticLightingEndTime,
             String timezone,
             int exitDelaySeconds,
             int lightInactivityMinutes,

@@ -82,6 +82,9 @@ class SecurityScheduleCalculatorTests {
     private SecuritySettingsResponse settings() {
         return new SecuritySettingsResponse(
                 true,
+                true,
+                LocalTime.of(18, 0),
+                LocalTime.of(8, 0),
                 "America/Mazatlan",
                 60,
                 10,
@@ -97,6 +100,7 @@ class SecurityScheduleCalculatorTests {
                         day(6, true),
                         day(7, true)
                 ),
+                List.of(),
                 Instant.parse("2026-08-06T12:00:00Z"),
                 "admin"
         );

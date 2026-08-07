@@ -8,6 +8,8 @@ import { finalize, forkJoin, interval } from 'rxjs';
 import { UserRole } from '../../core/models/auth.model';
 import {
   AlarmMode,
+  AutomaticLightingStatus,
+  AutomaticLightingTarget,
   SecurityActionResponse,
   SecurityPrecheck,
   SecurityScheduleDay,
@@ -50,10 +52,15 @@ export class Security implements OnInit, OnDestroy {
   readonly status = signal<SecurityStatus | null>(null);
   readonly precheck = signal<SecurityPrecheck | null>(null);
   readonly settings = signal<SecuritySettings | null>(null);
+  readonly automaticLightingStatus = signal<AutomaticLightingStatus | null>(null);
   readonly scheduleForm = signal<SecuritySettingsUpdateRequest | null>(null);
   readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
   readonly currentTime = signal(Date.now());
   readonly pendingAction = signal<PendingAction | null>(null);
+
+  readonly selectedLightingTargets = computed(
+    () => this.scheduleForm()?.automaticLightingTargetDeviceCodes.length ?? 0,
+  );
 
   readonly currentRole: UserRole = this.authService.getSession()?.user.role ?? 'MONITORING';
   readonly canOperate = this.currentRole === 'ADMIN' || this.currentRole === 'OPERATOR';
@@ -85,6 +92,10 @@ export class Security implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((status) => this.receiveStatus(status));
 
+    this.realtime.automaticLighting$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.automaticLightingStatus.set(status));
+
     interval(1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.currentTime.set(Date.now()));
@@ -105,13 +116,15 @@ export class Security implements OnInit, OnDestroy {
       status: this.api.getStatus(),
       precheck: this.api.getPrecheck(),
       settings: this.api.getSchedules(),
+      automaticLighting: this.api.getAutomaticLightingStatus(),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ status, precheck, settings }) => {
+        next: ({ status, precheck, settings, automaticLighting }) => {
           this.status.set(status);
           this.precheck.set(precheck);
           this.applySettings(settings);
+          this.automaticLightingStatus.set(automaticLighting);
         },
         error: (error: HttpErrorResponse) =>
           this.errorMessage.set(
@@ -184,6 +197,41 @@ export class Security implements OnInit, OnDestroy {
     this.scheduleForm.update((form) =>
       form ? { ...form, automaticScheduleEnabled: enabled } : form,
     );
+  }
+
+  updateAutomaticLighting(enabled: boolean): void {
+    this.scheduleForm.update((form) =>
+      form ? { ...form, automaticLightingEnabled: enabled } : form,
+    );
+  }
+
+  updateAutomaticLightingTime(
+    field: 'automaticLightingStartTime' | 'automaticLightingEndTime',
+    value: string,
+  ): void {
+    this.scheduleForm.update((form) => (form ? { ...form, [field]: value } : form));
+  }
+
+  updateLightingTarget(deviceCode: string, selected: boolean): void {
+    this.scheduleForm.update((form) => {
+      if (!form) {
+        return form;
+      }
+
+      const codes = new Set(form.automaticLightingTargetDeviceCodes);
+
+      if (selected) {
+        codes.add(deviceCode);
+      } else {
+        codes.delete(deviceCode);
+      }
+
+      return { ...form, automaticLightingTargetDeviceCodes: [...codes] };
+    });
+  }
+
+  isLightingTargetSelected(deviceCode: string): boolean {
+    return this.scheduleForm()?.automaticLightingTargetDeviceCodes.includes(deviceCode) ?? false;
   }
 
   updateTimezone(timezone: string): void {
@@ -320,6 +368,10 @@ export class Security implements OnInit, OnDestroy {
     return day.dayOfWeek;
   }
 
+  trackLightingTarget(_: number, target: AutomaticLightingTarget): number {
+    return target.deviceId;
+  }
+
   private receiveStatus(status: SecurityStatus): void {
     this.status.set(status);
 
@@ -355,6 +407,9 @@ export class Security implements OnInit, OnDestroy {
   private toRequest(settings: SecuritySettings): SecuritySettingsUpdateRequest {
     return {
       automaticScheduleEnabled: settings.automaticScheduleEnabled,
+      automaticLightingEnabled: settings.automaticLightingEnabled,
+      automaticLightingStartTime: this.toTimeInput(settings.automaticLightingStartTime),
+      automaticLightingEndTime: this.toTimeInput(settings.automaticLightingEndTime),
       timezone: settings.timezone,
       exitDelaySeconds: settings.exitDelaySeconds,
       lightInactivityMinutes: settings.lightInactivityMinutes,
@@ -368,6 +423,9 @@ export class Security implements OnInit, OnDestroy {
         armTime: this.toTimeInput(day.armTime),
         disarmTime: this.toTimeInput(day.disarmTime),
       })),
+      automaticLightingTargetDeviceCodes: settings.lightingTargets
+        .filter((target) => target.selected)
+        .map((target) => target.deviceCode),
     };
   }
 
@@ -383,6 +441,25 @@ export class Security implements OnInit, OnDestroy {
 
     if (form.days.length !== 7) {
       this.errorMessage.set('La configuración debe contener los siete días de la semana.');
+      return false;
+    }
+
+    if (
+      !form.automaticLightingStartTime ||
+      !form.automaticLightingEndTime ||
+      form.automaticLightingStartTime === form.automaticLightingEndTime
+    ) {
+      this.errorMessage.set(
+        'El inicio y fin de la iluminación automática no pueden ser iguales.',
+      );
+      return false;
+    }
+
+    if (
+      form.automaticLightingEnabled &&
+      form.automaticLightingTargetDeviceCodes.length === 0
+    ) {
+      this.errorMessage.set('Selecciona al menos una luz para la automatización.');
       return false;
     }
 

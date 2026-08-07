@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
 import {
+  AutomaticLightingStatus,
   SecurityActionResponse,
   SecurityPrecheck,
   SecuritySettings,
@@ -47,6 +48,12 @@ export class SecurityApiService {
     return this.http.put<SecuritySettings>(
       `${this.baseUrl}${API_ENDPOINTS.security.schedules}`,
       request,
+    );
+  }
+
+  getAutomaticLightingStatus(): Observable<AutomaticLightingStatus> {
+    return this.http.get<AutomaticLightingStatus>(
+      `${this.baseUrl}${API_ENDPOINTS.security.automaticLightingStatus}`,
     );
   }
 }

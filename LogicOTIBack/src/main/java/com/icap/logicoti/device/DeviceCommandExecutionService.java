@@ -3,6 +3,7 @@ package com.icap.logicoti.device;
 import com.icap.logicoti.audit.DeviceCommandHistoryService;
 import com.icap.logicoti.device.AreaStateResponse.DeviceStateResponse;
 import com.icap.logicoti.exception.ConflictException;
+import com.icap.logicoti.intrusion.AutomaticLightingRuntimeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,17 @@ public class DeviceCommandExecutionService {
 
     private final AreaStateService areaStateService;
     private final DeviceCommandHistoryService historyService;
+    private final AutomaticLightingRuntimeService automaticLightingRuntimeService;
 
     public DeviceCommandExecutionService(
             AreaStateService areaStateService,
-            DeviceCommandHistoryService historyService
+            DeviceCommandHistoryService historyService,
+            AutomaticLightingRuntimeService automaticLightingRuntimeService
     ) {
         this.areaStateService = areaStateService;
         this.historyService = historyService;
+        this.automaticLightingRuntimeService =
+                automaticLightingRuntimeService;
     }
 
     public AreaStateResponse execute(
@@ -35,6 +40,38 @@ public class DeviceCommandExecutionService {
             String requestedBy,
             String requestedByRole,
             String sourceIp
+    ) {
+        return executeInternal(
+                deviceCode,
+                requestedValue,
+                requestedBy,
+                requestedByRole,
+                sourceIp,
+                true
+        );
+    }
+
+    public AreaStateResponse executeAutomatic(
+            String deviceCode,
+            boolean requestedValue
+    ) {
+        return executeInternal(
+                deviceCode,
+                requestedValue,
+                "SYSTEM",
+                "AUTOMATION",
+                "INTERNAL",
+                false
+        );
+    }
+
+    private AreaStateResponse executeInternal(
+            String deviceCode,
+            boolean requestedValue,
+            String requestedBy,
+            String requestedByRole,
+            String sourceIp,
+            boolean releaseAutomaticOwnership
     ) {
         long startedAt = System.nanoTime();
 
@@ -93,6 +130,10 @@ public class DeviceCommandExecutionService {
                     elapsedMilliseconds(startedAt)
             );
 
+            if (releaseAutomaticOwnership) {
+                releaseAutomaticControlSafely(deviceCode);
+            }
+
             return response;
 
         } catch (ConflictException exception) {
@@ -118,6 +159,18 @@ public class DeviceCommandExecutionService {
             );
 
             throw exception;
+        }
+    }
+
+    private void releaseAutomaticControlSafely(String deviceCode) {
+        try {
+            automaticLightingRuntimeService.release(deviceCode);
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "No se pudo liberar el control automático de {}.",
+                    deviceCode,
+                    exception
+            );
         }
     }
 
