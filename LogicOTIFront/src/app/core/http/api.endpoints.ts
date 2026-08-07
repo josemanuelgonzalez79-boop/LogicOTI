@@ -62,6 +62,7 @@ export const API_ENDPOINTS = {
     sensorDiagnostic: (id: number) => `/topic/diagnostics/sensors/${id}`,
     securityStatus: '/topic/security/status',
     securityWarnings: '/topic/security/warnings',
+    securityMotionAlerts: '/topic/security/motion-alerts',
   },
 
   plc: {

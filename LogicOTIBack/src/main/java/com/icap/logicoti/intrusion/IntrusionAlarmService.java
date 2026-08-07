@@ -1,5 +1,6 @@
 package com.icap.logicoti.intrusion;
 
+import com.icap.logicoti.event.SensorEventHistoryResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -83,6 +84,34 @@ public class IntrusionAlarmService {
 
     public SecurityPrecheckResponse precheck() {
         return precheckService.check();
+    }
+
+    @Transactional
+    public SecurityStatusResponse activateFromMotion(
+            SensorEventHistoryResponse event
+    ) {
+        StateRow current = findState();
+
+        if (!current.mode().isArmed()) {
+            return null;
+        }
+
+        if (current.mode() == AlarmMode.ALARM) {
+            return createStatus(current);
+        }
+
+        return transition(
+                AlarmMode.ALARM,
+                "Movimiento detectado por "
+                        + event.deviceName()
+                        + " en "
+                        + event.areaName()
+                        + ".",
+                "SYSTEM",
+                "SYSTEM",
+                null,
+                current.automaticTransitionKey()
+        );
     }
 
     @Transactional

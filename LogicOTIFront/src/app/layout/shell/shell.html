@@ -1,6 +1,7 @@
 <app-navbar [activeAlarmCount]="activeAlarmCount()" (menuToggle)="openMobileMenu()" />
 
 <p-toast key="global-smoke-alert" position="top-right" styleClass="global-smoke-toast" />
+<p-toast key="global-motion-alert" position="top-right" styleClass="global-motion-toast" />
 
 @if (activeAlarmCount() > 0) {
   <a routerLink="/alarms" class="global-alarm-banner">
@@ -21,6 +22,71 @@
       <i class="pi pi-arrow-right"></i>
     </span>
   </a>
+}
+
+@if (motionAlert(); as alert) {
+  <div class="motion-alarm-overlay" role="presentation" (click)="closeMotionAlarm()">
+    <section
+      class="motion-alarm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="motion-alarm-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="motion-alarm-dialog__header">
+        <span class="motion-alarm-dialog__icon"><i class="pi pi-exclamation-triangle"></i></span>
+        <div>
+          <span>Alarma de movimiento</span>
+          <h2 id="motion-alarm-title">{{ alert.event.areaName }}</h2>
+          <p>{{ alert.message }}</p>
+        </div>
+        <button type="button" class="motion-alarm-dialog__close" (click)="closeMotionAlarm()">
+          <i class="pi pi-times"></i>
+          <span class="sr-only">Cerrar alarma</span>
+        </button>
+      </header>
+
+      @if (safeMotionCameraUrl(); as cameraUrl) {
+        <div class="motion-alarm-viewer">
+          <iframe
+            [src]="cameraUrl"
+            [title]="'Cámara de ' + alert.event.areaName"
+            allow="autoplay; fullscreen"
+          ></iframe>
+        </div>
+      } @else {
+        <div class="motion-alarm-empty">
+          <i class="pi pi-video"></i>
+          <strong>No hay video disponible para esta área</strong>
+          <span>La alarma permanece activa y el evento quedó registrado.</span>
+        </div>
+      }
+
+      <footer class="motion-alarm-dialog__footer">
+        <div>
+          <strong>{{ alert.event.deviceName }}</strong>
+          <span>{{ alert.event.deviceCode }} · {{ alert.event.detectedAt | date: 'HH:mm:ss' }}</span>
+        </div>
+
+        <div class="motion-alarm-dialog__actions">
+          <button type="button" class="button button--secondary" (click)="closeMotionAlarm()">
+            Cerrar
+          </button>
+
+          @if (motionCamera(); as camera) {
+            <a
+              class="button button--danger"
+              routerLink="/cameras"
+              [queryParams]="{ camera: camera.code }"
+              (click)="closeMotionAlarm()"
+            >
+              Abrir cámaras
+            </a>
+          }
+        </div>
+      </footer>
+    </section>
+  </div>
 }
 
 <div class="app-shell">

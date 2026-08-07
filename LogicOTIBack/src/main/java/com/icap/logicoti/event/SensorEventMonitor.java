@@ -1,6 +1,7 @@
 package com.icap.logicoti.event;
 
 import com.icap.logicoti.config.PlcProperties;
+import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
 import com.icap.logicoti.plc.PlcCommunicationService;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
@@ -30,6 +31,7 @@ public class SensorEventMonitor {
     private final PlcProperties plcProperties;
     private final boolean enabled;
     private final SimpMessagingTemplate messagingTemplate;
+    private final IntrusionMotionAlarmService motionAlarmService;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -47,6 +49,7 @@ public class SensorEventMonitor {
                 PlcCommunicationService plcCommunicationService,
                 PlcProperties plcProperties,
                 SimpMessagingTemplate messagingTemplate,
+                IntrusionMotionAlarmService motionAlarmService,
 
                 @Value("${sensor.monitor.enabled:true}")
                 boolean enabled
@@ -55,6 +58,7 @@ public class SensorEventMonitor {
                 this.plcCommunicationService = plcCommunicationService;
                 this.plcProperties = plcProperties;
                 this.messagingTemplate = messagingTemplate;
+                this.motionAlarmService = motionAlarmService;
                 this.enabled = enabled;
         }
 
@@ -276,6 +280,10 @@ public class SensorEventMonitor {
                                 "Alerta de humo publicada por WebSocket para {}.",
                                 sensor.code()
                         );
+                }
+
+                if ("MOTION".equalsIgnoreCase(sensor.type())) {
+                        motionAlarmService.process(savedEvent);
                 }
 
                 LOGGER.info(

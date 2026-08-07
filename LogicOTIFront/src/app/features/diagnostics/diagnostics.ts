@@ -95,6 +95,12 @@ export class Diagnostics implements OnInit, OnDestroy {
 
   readonly activeBypasses = computed(() => this.bypasses().filter((bypass) => bypass.active));
 
+  readonly activeWarnings = computed(() => {
+    const activeBypassIds = new Set(this.activeBypasses().map((bypass) => bypass.id));
+
+    return this.warnings().filter((warning) => activeBypassIds.has(warning.bypassId));
+  });
+
   readonly areaOptions = computed(() => {
     const areas = new Map<string, string>();
 
@@ -366,6 +372,9 @@ export class Diagnostics implements OnInit, OnDestroy {
         next: (revoked) => {
           this.bypasses.update((items) =>
             items.map((item) => (item.id === revoked.id ? revoked : item)),
+          );
+          this.warnings.update((items) =>
+            items.filter((warning) => warning.bypassId !== revoked.id),
           );
           this.revokeTarget.set(null);
           this.successMessage.set(`${revoked.sensorName} volvió a participar en el armado.`);

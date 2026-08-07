@@ -206,6 +206,7 @@ public class SensorBypassService {
         int limit = Math.max(1, Math.min(requestedLimit, 200));
         List<SecurityWarningResponse> items = jdbcTemplate.query(
                 WARNING_COLUMNS + """
+                 WHERE bypass.active = TRUE
                  ORDER BY warning.created_at DESC, warning.id DESC
                  LIMIT ?
                 """,

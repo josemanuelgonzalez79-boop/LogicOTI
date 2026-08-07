@@ -99,16 +99,17 @@
     </article>
   </section>
 
-  @if (warnings().length > 0) {
+  @if (activeWarnings().length > 0) {
     <section class="warning-strip">
       <span class="warning-strip__icon"><i class="pi pi-exclamation-triangle"></i></span>
       <div>
-        <strong>{{ warnings()[0].message }}</strong>
+        <strong>{{ activeWarnings()[0].message }}</strong>
         <span>
-          {{ warnings()[0].areaName }} · {{ warnings()[0].createdAt | date: 'dd/MM/yyyy HH:mm' }}
+          {{ activeWarnings()[0].areaName }} ·
+          {{ activeWarnings()[0].createdAt | date: 'dd/MM/yyyy HH:mm' }}
         </span>
       </div>
-      <span class="warning-strip__count">{{ warnings().length }} advertencias</span>
+      <span class="warning-strip__count">{{ activeWarnings().length }} advertencias</span>
     </section>
   }
 
