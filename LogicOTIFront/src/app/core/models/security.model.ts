@@ -58,6 +58,7 @@ export interface SecuritySettings {
   automaticLightingEnabled: boolean;
   automaticLightingStartTime: string;
   automaticLightingEndTime: string;
+  areaInactivityEnabled: boolean;
   timezone: string;
   exitDelaySeconds: number;
   lightInactivityMinutes: number;
@@ -83,6 +84,7 @@ export interface SecuritySettingsUpdateRequest {
   automaticLightingEnabled: boolean;
   automaticLightingStartTime: string;
   automaticLightingEndTime: string;
+  areaInactivityEnabled: boolean;
   timezone: string;
   exitDelaySeconds: number;
   lightInactivityMinutes: number;
@@ -124,6 +126,35 @@ export interface AutomaticLightingStatus {
   lastMotionAt: string | null;
   nextTurnOffAt: string | null;
   lights: AutomaticLightingControlledLight[];
+  message: string;
+  timestamp: string;
+}
+
+export interface AreaInactivityAreaStatus {
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  lastMotionAt: string;
+  lightTurnOffAt: string;
+  minisplitTurnOffAt: string;
+  lightProcessed: boolean;
+  minisplitProcessed: boolean;
+  lightsTurnedOff: number;
+  minisplitsTurnedOff: number;
+}
+
+export interface AreaInactivityStatus {
+  enabled: boolean;
+  lightInactivityMinutes: number;
+  minisplitInactivityMinutes: number;
+  trackedAreas: number;
+  pendingAreas: number;
+  lightsTurnedOff: number;
+  minisplitsTurnedOff: number;
+  lastMotionAt: string | null;
+  nextActionAt: string | null;
+  areas: AreaInactivityAreaStatus[];
   message: string;
   timestamp: string;
 }

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import {
+  AreaInactivityStatus,
   AutomaticLightingStatus,
   SecurityPrecheck,
   SecuritySettings,
@@ -43,6 +44,7 @@ const settings: SecuritySettings = {
   automaticLightingEnabled: true,
   automaticLightingStartTime: '18:00:00',
   automaticLightingEndTime: '08:00:00',
+  areaInactivityEnabled: false,
   timezone: 'America/Mazatlan',
   exitDelaySeconds: 60,
   lightInactivityMinutes: 10,
@@ -68,6 +70,21 @@ const automaticLightingStatus: AutomaticLightingStatus = {
   lights: [],
   message: 'Horario activo, sin luces encendidas automáticamente.',
   timestamp: '2026-08-07T17:00:00Z',
+};
+
+const areaInactivityStatus: AreaInactivityStatus = {
+  enabled: true,
+  lightInactivityMinutes: 10,
+  minisplitInactivityMinutes: 30,
+  trackedAreas: 1,
+  pendingAreas: 1,
+  lightsTurnedOff: 0,
+  minisplitsTurnedOff: 0,
+  lastMotionAt: '2026-08-10T17:00:00Z',
+  nextActionAt: '2026-08-10T17:10:00Z',
+  areas: [],
+  message: 'Vigilando la actividad de las áreas.',
+  timestamp: '2026-08-10T17:00:00Z',
 };
 
 describe('SecurityApiService', () => {
@@ -152,5 +169,15 @@ describe('SecurityApiService', () => {
     );
     expect(request.request.method).toBe('GET');
     request.flush(automaticLightingStatus);
+  });
+
+  it('consulta el estado de apagado por inactividad', () => {
+    service
+      .getAreaInactivityStatus()
+      .subscribe((response) => expect(response.pendingAreas).toBe(1));
+
+    const request = http.expectOne((item) => item.url.endsWith('/security/inactivity/status'));
+    expect(request.request.method).toBe('GET');
+    request.flush(areaInactivityStatus);
   });
 });

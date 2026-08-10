@@ -16,15 +16,18 @@ public class SecurityController {
     private final IntrusionAlarmService alarmService;
     private final SecurityScheduleService scheduleService;
     private final AutomaticLightingService automaticLightingService;
+    private final AreaInactivityService areaInactivityService;
 
     public SecurityController(
             IntrusionAlarmService alarmService,
             SecurityScheduleService scheduleService,
-            AutomaticLightingService automaticLightingService
+            AutomaticLightingService automaticLightingService,
+            AreaInactivityService areaInactivityService
     ) {
         this.alarmService = alarmService;
         this.scheduleService = scheduleService;
         this.automaticLightingService = automaticLightingService;
+        this.areaInactivityService = areaInactivityService;
     }
 
     @GetMapping("/status")
@@ -63,6 +66,11 @@ public class SecurityController {
     @GetMapping("/automatic-lighting/status")
     public AutomaticLightingStatusResponse automaticLightingStatus() {
         return automaticLightingService.getStatus();
+    }
+
+    @GetMapping("/inactivity/status")
+    public AreaInactivityStatusResponse inactivityStatus() {
+        return areaInactivityService.getStatus();
     }
 
     @PutMapping("/schedules")

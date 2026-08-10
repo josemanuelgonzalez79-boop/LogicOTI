@@ -25,6 +25,7 @@ public class SecurityScheduleService {
                 automatic_lighting_enabled,
                 automatic_lighting_start_time,
                 automatic_lighting_end_time,
+                area_inactivity_enabled,
                 timezone,
                 exit_delay_seconds,
                 light_inactivity_minutes,
@@ -86,6 +87,7 @@ public class SecurityScheduleService {
                 automatic_lighting_enabled = ?,
                 automatic_lighting_start_time = ?,
                 automatic_lighting_end_time = ?,
+                area_inactivity_enabled = ?,
                 timezone = ?,
                 exit_delay_seconds = ?,
                 light_inactivity_minutes = ?,
@@ -153,6 +155,9 @@ public class SecurityScheduleService {
                                 "automatic_lighting_end_time",
                                 LocalTime.class
                         ),
+                        resultSet.getBoolean(
+                                "area_inactivity_enabled"
+                        ),
                         resultSet.getString("timezone"),
                         resultSet.getInt("exit_delay_seconds"),
                         resultSet.getInt("light_inactivity_minutes"),
@@ -209,6 +214,7 @@ public class SecurityScheduleService {
                 settings.automaticLightingEnabled(),
                 settings.automaticLightingStartTime(),
                 settings.automaticLightingEndTime(),
+                settings.areaInactivityEnabled(),
                 settings.timezone(),
                 settings.exitDelaySeconds(),
                 settings.lightInactivityMinutes(),
@@ -235,6 +241,7 @@ public class SecurityScheduleService {
                 request.automaticLightingEnabled(),
                 request.automaticLightingStartTime(),
                 request.automaticLightingEndTime(),
+                request.areaInactivityEnabled(),
                 request.timezone().trim(),
                 request.exitDelaySeconds(),
                 request.lightInactivityMinutes(),
@@ -258,6 +265,12 @@ public class SecurityScheduleService {
         }
 
         replaceLightingTargets(selectedLightCodes);
+
+        if (!request.areaInactivityEnabled()) {
+            jdbcTemplate.update(
+                    "DELETE FROM security_area_inactivity_runtime"
+            );
+        }
 
         return getSettings();
     }
@@ -387,6 +400,7 @@ public class SecurityScheduleService {
             boolean automaticLightingEnabled,
             LocalTime automaticLightingStartTime,
             LocalTime automaticLightingEndTime,
+            boolean areaInactivityEnabled,
             String timezone,
             int exitDelaySeconds,
             int lightInactivityMinutes,

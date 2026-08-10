@@ -9,6 +9,7 @@ public record SecuritySettingsResponse(
         boolean automaticLightingEnabled,
         LocalTime automaticLightingStartTime,
         LocalTime automaticLightingEndTime,
+        boolean areaInactivityEnabled,
         String timezone,
         int exitDelaySeconds,
         int lightInactivityMinutes,

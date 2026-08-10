@@ -3,6 +3,7 @@ package com.icap.logicoti.event;
 import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
 import com.icap.logicoti.intrusion.AutomaticLightingService;
+import com.icap.logicoti.intrusion.AreaInactivityService;
 import com.icap.logicoti.plc.PlcCommunicationService;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
@@ -34,6 +35,7 @@ public class SensorEventMonitor {
     private final SimpMessagingTemplate messagingTemplate;
     private final IntrusionMotionAlarmService motionAlarmService;
     private final AutomaticLightingService automaticLightingService;
+    private final AreaInactivityService areaInactivityService;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -46,25 +48,27 @@ public class SensorEventMonitor {
 
     private boolean historyLoaded;
 
-        public SensorEventMonitor(
-                SensorEventHistoryService historyService,
-                PlcCommunicationService plcCommunicationService,
-                PlcProperties plcProperties,
-                SimpMessagingTemplate messagingTemplate,
-                IntrusionMotionAlarmService motionAlarmService,
-                AutomaticLightingService automaticLightingService,
+    public SensorEventMonitor(
+            SensorEventHistoryService historyService,
+            PlcCommunicationService plcCommunicationService,
+            PlcProperties plcProperties,
+            SimpMessagingTemplate messagingTemplate,
+            IntrusionMotionAlarmService motionAlarmService,
+            AutomaticLightingService automaticLightingService,
+            AreaInactivityService areaInactivityService,
 
-                @Value("${sensor.monitor.enabled:true}")
-                boolean enabled
-        ) {
-                this.historyService = historyService;
-                this.plcCommunicationService = plcCommunicationService;
-                this.plcProperties = plcProperties;
-                this.messagingTemplate = messagingTemplate;
-                this.motionAlarmService = motionAlarmService;
-                this.automaticLightingService = automaticLightingService;
-                this.enabled = enabled;
-        }
+            @Value("${sensor.monitor.enabled:true}")
+            boolean enabled
+    ) {
+        this.historyService = historyService;
+        this.plcCommunicationService = plcCommunicationService;
+        this.plcProperties = plcProperties;
+        this.messagingTemplate = messagingTemplate;
+        this.motionAlarmService = motionAlarmService;
+        this.automaticLightingService = automaticLightingService;
+        this.areaInactivityService = areaInactivityService;
+        this.enabled = enabled;
+    }
 
     @Scheduled(
             initialDelayString =
@@ -252,6 +256,9 @@ public class SensorEventMonitor {
                 automaticLightingService.refreshActiveMotion(
                         sensor.code()
                 );
+                areaInactivityService.refreshActiveMotion(
+                        sensor.code()
+                );
             }
 
             return;
@@ -269,53 +276,61 @@ public class SensorEventMonitor {
         );
     }
 
-        private void saveChange(
-                SensorDefinition sensor,
-                Boolean previousState,
-                boolean currentState
-        ) {
-                SensorEventHistoryResponse savedEvent =
-                        historyService.saveChange(
-                                sensor,
-                                previousState,
-                                currentState
-                        );
-
-                if ("SMOKE".equalsIgnoreCase(sensor.type())) {
-                        messagingTemplate.convertAndSend(
-                                "/topic/alerts/smoke",
-                                savedEvent
-                        );
-
-                        LOGGER.info(
-                                "Alerta de humo publicada por WebSocket para {}.",
-                                sensor.code()
-                        );
-                }
-
-                if ("MOTION".equalsIgnoreCase(sensor.type())) {
-                        try {
-                                automaticLightingService.processMotion(
-                                        savedEvent
-                                );
-                        } catch (RuntimeException exception) {
-                                LOGGER.warn(
-                                        "No se pudo procesar iluminación automática para {}: {}",
-                                        sensor.code(),
-                                        exception.getMessage()
-                                );
-                        }
-
-                        motionAlarmService.process(savedEvent);
-                }
-
-                LOGGER.info(
-                        "Evento guardado: {} cambió de {} a {}.",
-                        sensor.code(),
+    private void saveChange(
+            SensorDefinition sensor,
+            Boolean previousState,
+            boolean currentState
+    ) {
+        SensorEventHistoryResponse savedEvent =
+                historyService.saveChange(
+                        sensor,
                         previousState,
                         currentState
                 );
+
+        if ("SMOKE".equalsIgnoreCase(sensor.type())) {
+            messagingTemplate.convertAndSend(
+                    "/topic/alerts/smoke",
+                    savedEvent
+            );
+
+            LOGGER.info(
+                    "Alerta de humo publicada por WebSocket para {}.",
+                    sensor.code()
+            );
         }
+
+        if ("MOTION".equalsIgnoreCase(sensor.type())) {
+            try {
+                automaticLightingService.processMotion(savedEvent);
+            } catch (RuntimeException exception) {
+                LOGGER.warn(
+                        "No se pudo procesar iluminación automática para {}: {}",
+                        sensor.code(),
+                        exception.getMessage()
+                );
+            }
+
+            try {
+                areaInactivityService.processMotion(savedEvent);
+            } catch (RuntimeException exception) {
+                LOGGER.warn(
+                        "No se pudo procesar inactividad para {}: {}",
+                        sensor.code(),
+                        exception.getMessage()
+                );
+            }
+
+            motionAlarmService.process(savedEvent);
+        }
+
+        LOGGER.info(
+                "Evento guardado: {} cambió de {} a {}.",
+                sensor.code(),
+                previousState,
+                currentState
+        );
+    }
 
     private String createAlias(
             SensorDefinition sensor

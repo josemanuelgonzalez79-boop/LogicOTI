@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
 import {
+  AreaInactivityStatus,
   AutomaticLightingStatus,
   SecurityActionResponse,
   SecurityPrecheck,
@@ -54,6 +55,12 @@ export class SecurityApiService {
   getAutomaticLightingStatus(): Observable<AutomaticLightingStatus> {
     return this.http.get<AutomaticLightingStatus>(
       `${this.baseUrl}${API_ENDPOINTS.security.automaticLightingStatus}`,
+    );
+  }
+
+  getAreaInactivityStatus(): Observable<AreaInactivityStatus> {
+    return this.http.get<AreaInactivityStatus>(
+      `${this.baseUrl}${API_ENDPOINTS.security.areaInactivityStatus}`,
     );
   }
 }

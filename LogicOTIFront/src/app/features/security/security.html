@@ -420,6 +420,112 @@
         </div>
       </section>
 
+      <section class="area-inactivity">
+        <header class="area-inactivity__header">
+          <div>
+            <span class="section-eyebrow">Ahorro por oficina</span>
+            <h3>Apagado automático por inactividad</h3>
+            <p>
+              Cuando un área deja de detectar movimiento, el sistema apaga sus luces y minisplits
+              después de los tiempos configurados. Las luces comunes seleccionadas arriba conservan
+              su propia automatización.
+            </p>
+          </div>
+
+          <span
+            class="area-inactivity__status"
+            [class.area-inactivity__status--active]="areaInactivityStatus()?.enabled"
+          >
+            <i class="pi pi-clock"></i>
+            {{ areaInactivityStatus()?.message ?? 'Consultando inactividad...' }}
+          </span>
+        </header>
+
+        <div class="area-inactivity__controls">
+          <label class="switch-control">
+            <input
+              type="checkbox"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.areaInactivityEnabled"
+              (ngModelChange)="updateAreaInactivity($event)"
+            />
+            <span class="switch-control__track"><span></span></span>
+            <span>
+              <strong>Apagado por área habilitado</strong>
+              <small>
+                Se inicia al detectar movimiento y no vuelve a apagar un equipo encendido
+                manualmente hasta recibir nueva actividad.
+              </small>
+            </span>
+          </label>
+
+          <div class="area-inactivity__delays">
+            <span>Luces: {{ form.lightInactivityMinutes }} min</span>
+            <span>Minisplits: {{ form.minisplitInactivityMinutes }} min</span>
+          </div>
+        </div>
+
+        <div class="area-inactivity__summary">
+          <article>
+            <span>Áreas vigiladas</span>
+            <strong>{{ areaInactivityStatus()?.trackedAreas ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Apagados pendientes</span>
+            <strong>{{ areaInactivityStatus()?.pendingAreas ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Luces apagadas</span>
+            <strong>{{ areaInactivityStatus()?.lightsTurnedOff ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Minisplits apagados</span>
+            <strong>{{ areaInactivityStatus()?.minisplitsTurnedOff ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Último movimiento</span>
+            <strong>
+              {{
+                areaInactivityStatus()?.lastMotionAt
+                  ? (areaInactivityStatus()?.lastMotionAt | date: 'dd/MM HH:mm:ss')
+                  : 'Sin actividad'
+              }}
+            </strong>
+          </article>
+          <article>
+            <span>Próxima acción</span>
+            <strong>
+              {{
+                areaInactivityStatus()?.nextActionAt
+                  ? (areaInactivityStatus()?.nextActionAt | date: 'dd/MM HH:mm:ss')
+                  : 'No programada'
+              }}
+            </strong>
+          </article>
+        </div>
+
+        @if ((areaInactivityStatus()?.areas?.length ?? 0) > 0) {
+          <div class="area-inactivity__areas">
+            @for (area of areaInactivityStatus()?.areas ?? []; track area.areaCode) {
+              <article>
+                <span>
+                  <strong>{{ area.areaName }}</strong>
+                  <small>{{ area.floorName }} · {{ area.areaCode }}</small>
+                </span>
+                <span>
+                  Luz:
+                  <strong>{{ area.lightProcessed ? 'Procesada' : (area.lightTurnOffAt | date: 'HH:mm:ss') }}</strong>
+                </span>
+                <span>
+                  Minisplit:
+                  <strong>{{ area.minisplitProcessed ? 'Procesado' : (area.minisplitTurnOffAt | date: 'HH:mm:ss') }}</strong>
+                </span>
+              </article>
+            }
+          </div>
+        }
+      </section>
+
       <div class="schedule-table-wrap">
         <table class="schedule-table">
           <thead>
@@ -521,7 +627,7 @@
               (ngModelChange)="updateNumber('lightInactivityMinutes', $event)"
             /><span>minutos</span>
           </div>
-          <small>Valor acordado inicialmente: 10 minutos.</small>
+          <small>Se usa para oficinas y para las luces comunes configuradas arriba.</small>
         </label>
 
         <label class="number-setting">

@@ -21,6 +21,8 @@ public record SecuritySettingsUpdateRequest(
         @NotNull(message = "La hora final de iluminación es obligatoria.")
         LocalTime automaticLightingEndTime,
 
+        boolean areaInactivityEnabled,
+
         @NotBlank(message = "La zona horaria es obligatoria.")
         String timezone,
 

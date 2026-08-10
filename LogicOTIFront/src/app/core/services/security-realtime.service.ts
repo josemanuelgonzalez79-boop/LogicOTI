@@ -4,7 +4,11 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 
 import { API_ENDPOINTS } from '../http/api.endpoints';
 import { getWebsocketUrl } from '../http/realtime-url';
-import { AutomaticLightingStatus, SecurityStatus } from '../models/security.model';
+import {
+  AreaInactivityStatus,
+  AutomaticLightingStatus,
+  SecurityStatus,
+} from '../models/security.model';
 import { AuthService } from './auth.service';
 import { RealtimeConnectionStatus } from './smoke-alert-realtime.service';
 
@@ -14,6 +18,7 @@ export class SecurityRealtimeService {
 
   private readonly statusSubject = new Subject<SecurityStatus>();
   private readonly automaticLightingSubject = new Subject<AutomaticLightingStatus>();
+  private readonly areaInactivitySubject = new Subject<AreaInactivityStatus>();
   private readonly connectionStatusSubject = new BehaviorSubject<RealtimeConnectionStatus>(
     'DISCONNECTED',
   );
@@ -21,10 +26,13 @@ export class SecurityRealtimeService {
   private client: Client | null = null;
   private subscription: StompSubscription | null = null;
   private automaticLightingSubscription: StompSubscription | null = null;
+  private areaInactivitySubscription: StompSubscription | null = null;
 
   readonly status$: Observable<SecurityStatus> = this.statusSubject.asObservable();
   readonly automaticLighting$: Observable<AutomaticLightingStatus> =
     this.automaticLightingSubject.asObservable();
+  readonly areaInactivity$: Observable<AreaInactivityStatus> =
+    this.areaInactivitySubject.asObservable();
   readonly connectionStatus$: Observable<RealtimeConnectionStatus> =
     this.connectionStatusSubject.asObservable();
 
@@ -71,6 +79,7 @@ export class SecurityRealtimeService {
     client.onWebSocketClose = () => {
       this.subscription = null;
       this.automaticLightingSubscription = null;
+      this.areaInactivitySubscription = null;
       this.connectionStatusSubject.next(client.active ? 'RECONNECTING' : 'DISCONNECTED');
     };
 
@@ -83,6 +92,8 @@ export class SecurityRealtimeService {
     this.subscription = null;
     this.automaticLightingSubscription?.unsubscribe();
     this.automaticLightingSubscription = null;
+    this.areaInactivitySubscription?.unsubscribe();
+    this.areaInactivitySubscription = null;
 
     const client = this.client;
     this.client = null;
@@ -97,12 +108,17 @@ export class SecurityRealtimeService {
   private subscribe(client: Client): void {
     this.subscription?.unsubscribe();
     this.automaticLightingSubscription?.unsubscribe();
+    this.areaInactivitySubscription?.unsubscribe();
     this.subscription = client.subscribe(API_ENDPOINTS.realtime.securityStatus, (message) =>
       this.processStatus(message),
     );
     this.automaticLightingSubscription = client.subscribe(
       API_ENDPOINTS.realtime.automaticLighting,
       (message) => this.processAutomaticLighting(message),
+    );
+    this.areaInactivitySubscription = client.subscribe(
+      API_ENDPOINTS.realtime.areaInactivity,
+      (message) => this.processAreaInactivity(message),
     );
   }
 
@@ -119,6 +135,14 @@ export class SecurityRealtimeService {
       this.automaticLightingSubject.next(JSON.parse(message.body) as AutomaticLightingStatus);
     } catch (error) {
       console.error('El estado de iluminación automática no contiene un JSON válido.', error);
+    }
+  }
+
+  private processAreaInactivity(message: IMessage): void {
+    try {
+      this.areaInactivitySubject.next(JSON.parse(message.body) as AreaInactivityStatus);
+    } catch (error) {
+      console.error('El estado de inactividad por área no contiene un JSON válido.', error);
     }
   }
 }

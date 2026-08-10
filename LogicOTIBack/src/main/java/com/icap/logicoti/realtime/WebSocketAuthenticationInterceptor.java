@@ -32,6 +32,10 @@ public class WebSocketAuthenticationInterceptor
             "/topic/security/warnings";
     private static final String SECURITY_MOTION_ALERT_TOPIC =
             "/topic/security/motion-alerts";
+    private static final String AUTOMATIC_LIGHTING_TOPIC =
+            "/topic/security/automatic-lighting";
+    private static final String AREA_INACTIVITY_TOPIC =
+            "/topic/security/inactivity";
 
     private static final Pattern AREA_TOPIC_PATTERN = Pattern.compile(
             "^/topic/areas/[A-Z0-9_]+/state$"
@@ -162,6 +166,12 @@ public class WebSocketAuthenticationInterceptor
                 boolean allowedSecurityMotionAlertTopic =
                         SECURITY_MOTION_ALERT_TOPIC.equals(destination);
 
+                boolean allowedAutomaticLightingTopic =
+                        AUTOMATIC_LIGHTING_TOPIC.equals(destination);
+
+                boolean allowedAreaInactivityTopic =
+                        AREA_INACTIVITY_TOPIC.equals(destination);
+
                 boolean allowedSensorDiagnosticTopic =
                         destination != null
                         && SENSOR_DIAGNOSTIC_TOPIC_PATTERN
@@ -173,6 +183,8 @@ public class WebSocketAuthenticationInterceptor
                         && !allowedSecurityStatusTopic
                         && !allowedSecurityWarningTopic
                         && !allowedSecurityMotionAlertTopic
+                        && !allowedAutomaticLightingTopic
+                        && !allowedAreaInactivityTopic
                         && !allowedSensorDiagnosticTopic) {
                 throw new AccessDeniedException(
                         "La suscripción solicitada no está permitida."

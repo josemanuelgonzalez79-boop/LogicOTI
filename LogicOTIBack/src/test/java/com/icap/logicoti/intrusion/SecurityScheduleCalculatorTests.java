@@ -85,6 +85,7 @@ class SecurityScheduleCalculatorTests {
                 true,
                 LocalTime.of(18, 0),
                 LocalTime.of(8, 0),
+                false,
                 "America/Mazatlan",
                 60,
                 10,

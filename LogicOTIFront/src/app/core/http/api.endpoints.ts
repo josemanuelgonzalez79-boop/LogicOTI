@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
     disarm: '/security/disarm',
     schedules: '/security/schedules',
     automaticLightingStatus: '/security/automatic-lighting/status',
+    areaInactivityStatus: '/security/inactivity/status',
     bypasses: '/security/bypasses',
     bypass: (sensorCode: string) => `/security/bypasses/${sensorCode}`,
     warnings: '/security/warnings',
@@ -65,6 +66,7 @@ export const API_ENDPOINTS = {
     securityWarnings: '/topic/security/warnings',
     securityMotionAlerts: '/topic/security/motion-alerts',
     automaticLighting: '/topic/security/automatic-lighting',
+    areaInactivity: '/topic/security/inactivity',
   },
 
   plc: {

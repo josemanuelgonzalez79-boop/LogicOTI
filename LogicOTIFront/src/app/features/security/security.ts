@@ -8,6 +8,7 @@ import { finalize, forkJoin, interval } from 'rxjs';
 import { UserRole } from '../../core/models/auth.model';
 import {
   AlarmMode,
+  AreaInactivityStatus,
   AutomaticLightingStatus,
   AutomaticLightingTarget,
   SecurityActionResponse,
@@ -53,6 +54,7 @@ export class Security implements OnInit, OnDestroy {
   readonly precheck = signal<SecurityPrecheck | null>(null);
   readonly settings = signal<SecuritySettings | null>(null);
   readonly automaticLightingStatus = signal<AutomaticLightingStatus | null>(null);
+  readonly areaInactivityStatus = signal<AreaInactivityStatus | null>(null);
   readonly scheduleForm = signal<SecuritySettingsUpdateRequest | null>(null);
   readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
   readonly currentTime = signal(Date.now());
@@ -96,6 +98,10 @@ export class Security implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((status) => this.automaticLightingStatus.set(status));
 
+    this.realtime.areaInactivity$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.areaInactivityStatus.set(status));
+
     interval(1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.currentTime.set(Date.now()));
@@ -117,14 +123,16 @@ export class Security implements OnInit, OnDestroy {
       precheck: this.api.getPrecheck(),
       settings: this.api.getSchedules(),
       automaticLighting: this.api.getAutomaticLightingStatus(),
+      areaInactivity: this.api.getAreaInactivityStatus(),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ status, precheck, settings, automaticLighting }) => {
+        next: ({ status, precheck, settings, automaticLighting, areaInactivity }) => {
           this.status.set(status);
           this.precheck.set(precheck);
           this.applySettings(settings);
           this.automaticLightingStatus.set(automaticLighting);
+          this.areaInactivityStatus.set(areaInactivity);
         },
         error: (error: HttpErrorResponse) =>
           this.errorMessage.set(
@@ -202,6 +210,12 @@ export class Security implements OnInit, OnDestroy {
   updateAutomaticLighting(enabled: boolean): void {
     this.scheduleForm.update((form) =>
       form ? { ...form, automaticLightingEnabled: enabled } : form,
+    );
+  }
+
+  updateAreaInactivity(enabled: boolean): void {
+    this.scheduleForm.update((form) =>
+      form ? { ...form, areaInactivityEnabled: enabled } : form,
     );
   }
 
@@ -305,6 +319,7 @@ export class Security implements OnInit, OnDestroy {
               : status,
           );
           this.successMessage.set('La configuración de seguridad quedó guardada.');
+          this.refreshAreaInactivityStatus();
         },
         error: (error: HttpErrorResponse) =>
           this.errorMessage.set(
@@ -410,6 +425,7 @@ export class Security implements OnInit, OnDestroy {
       automaticLightingEnabled: settings.automaticLightingEnabled,
       automaticLightingStartTime: this.toTimeInput(settings.automaticLightingStartTime),
       automaticLightingEndTime: this.toTimeInput(settings.automaticLightingEndTime),
+      areaInactivityEnabled: settings.areaInactivityEnabled,
       timezone: settings.timezone,
       exitDelaySeconds: settings.exitDelaySeconds,
       lightInactivityMinutes: settings.lightInactivityMinutes,
@@ -481,6 +497,13 @@ export class Security implements OnInit, OnDestroy {
   private clearMessages(): void {
     this.errorMessage.set('');
     this.successMessage.set('');
+  }
+
+  private refreshAreaInactivityStatus(): void {
+    this.api.getAreaInactivityStatus().subscribe({
+      next: (status) => this.areaInactivityStatus.set(status),
+      error: () => undefined,
+    });
   }
 
   private getErrorMessage(error: HttpErrorResponse, fallback: string): string {

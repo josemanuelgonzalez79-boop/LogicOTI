@@ -109,26 +109,24 @@
   </g>
 
   <g class="map-area" data-area-code="P1_A13" data-status="available" tabindex="0">
-    <title>Ingeniería · P1_A13</title>
+    <title>Hernán · Ingeniería · P1_A13</title>
     <rect class="area-shape" x="277" y="70" width="158" height="150" rx="8" />
-    <text class="area-label" x="356" y="136">Ingeniería</text>
+    <text class="area-label" x="356" y="136">Hernán</text>
     <text class="area-code" x="356" y="158">P1_A13</text>
   </g>
 
   <g class="map-area" data-area-code="P1_A12" data-status="available" tabindex="0">
-    <title>Gerencia de Operaciones · P1_A12</title>
+    <title>César · Gerencia de Operaciones · P1_A12</title>
     <rect class="area-shape" x="435" y="70" width="166" height="150" rx="8" />
-    <text class="area-label" x="518" y="128">Gerencia de</text>
-    <text class="area-label" x="518" y="148">Operaciones</text>
-    <text class="area-code" x="518" y="169">P1_A12</text>
+    <text class="area-label" x="518" y="138">César</text>
+    <text class="area-code" x="518" y="161">P1_A12</text>
   </g>
 
   <g class="map-area" data-area-code="P1_A14" data-status="available" tabindex="0">
-    <title>Gerencia de Ingeniería · P1_A14</title>
+    <title>Carlos · Gerencia de Ingeniería · P1_A14</title>
     <rect class="area-shape" x="601" y="70" width="154" height="150" rx="8" />
-    <text class="area-label" x="678" y="128">Gerencia de</text>
-    <text class="area-label" x="678" y="148">Ingeniería</text>
-    <text class="area-code" x="678" y="169">P1_A14</text>
+    <text class="area-label" x="678" y="138">Carlos</text>
+    <text class="area-code" x="678" y="161">P1_A14</text>
   </g>
 
   <g class="map-area" data-area-code="P1_A02" data-status="available" tabindex="0">
