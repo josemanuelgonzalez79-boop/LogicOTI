@@ -8,6 +8,10 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        return throwError(() => error);
+      }
+
       const detail = error.error?.detail ?? error.error?.message ?? error.message;
 
       messages.add({

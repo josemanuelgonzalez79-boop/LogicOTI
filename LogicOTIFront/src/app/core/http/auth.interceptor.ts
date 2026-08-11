@@ -1,32 +1,41 @@
-import {
-  HttpInterceptorFn,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 import { API_ENDPOINTS } from './api.endpoints';
 
-export const authInterceptor: HttpInterceptorFn = (
-  request,
-  next,
-) => {
+export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
 
   if (request.url.includes(API_ENDPOINTS.auth.login)) {
     return next(request);
   }
 
   const token = authService.getToken();
+  const authenticatedRequest = token
+    ? request.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    : request;
 
-  if (!token) {
-    return next(request);
-  }
+  return next(authenticatedRequest).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        const returnUrl = router.url.split('?')[0] === '/login' ? null : router.url;
 
-  const authenticatedRequest = request.clone({
-    setHeaders: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+        authService.logout();
 
-  return next(authenticatedRequest);
+        void router.navigate(['/login'], {
+          queryParams: returnUrl ? { returnUrl } : undefined,
+        });
+      }
+
+      return throwError(() => error);
+    }),
+  );
 };

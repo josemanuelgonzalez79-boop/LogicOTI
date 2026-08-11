@@ -48,7 +48,9 @@ describe('adminGuard', () => {
   it('envía al login cuando no existe una sesión válida', () => {
     authenticated = false;
     const router = TestBed.inject(Router);
-    const result = TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));
-    expect(router.serializeUrl(result as UrlTree)).toBe('/login');
+    const result = TestBed.runInInjectionContext(() =>
+      adminGuard({} as never, { url: '/administration' } as never),
+    );
+    expect(router.serializeUrl(result as UrlTree)).toBe('/login?returnUrl=%2Fadministration');
   });
 });

@@ -1,12 +1,21 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { RedirectFunction, Router, Routes } from '@angular/router';
 
 import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { AuthService } from './core/services/auth.service';
+
+const redirectFromApplicationRoot: RedirectFunction = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return router.createUrlTree([authService.isAuthenticated() ? '/dashboard' : '/login']);
+};
 
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'login',
+    redirectTo: redirectFromApplicationRoot,
     pathMatch: 'full',
   },
 

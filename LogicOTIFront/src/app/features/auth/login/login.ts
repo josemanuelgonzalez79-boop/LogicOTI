@@ -1,7 +1,7 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
@@ -14,14 +14,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    NgIf,
-    FormsModule,
-    ButtonModule,
-    CheckboxModule,
-    InputTextModule,
-    PasswordModule,
-  ],
+  imports: [NgIf, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
@@ -34,6 +27,7 @@ export class Login {
 
   constructor(
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly authService: AuthService,
     private readonly cdr: ChangeDetectorRef,
   ) {}
@@ -62,6 +56,13 @@ export class Login {
       )
       .subscribe({
         next: () => {
+          const returnUrl = this.getSafeReturnUrl();
+
+          if (returnUrl) {
+            void this.router.navigateByUrl(returnUrl);
+            return;
+          }
+
           void this.router.navigate(['/dashboard']);
         },
         error: () => {
@@ -69,5 +70,20 @@ export class Login {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  private getSafeReturnUrl(): string | null {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+
+    if (
+      !returnUrl ||
+      !returnUrl.startsWith('/') ||
+      returnUrl.startsWith('//') ||
+      returnUrl.startsWith('/login')
+    ) {
+      return null;
+    }
+
+    return returnUrl;
   }
 }
