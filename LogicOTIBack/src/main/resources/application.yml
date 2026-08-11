@@ -34,8 +34,8 @@ server:
 
 app:
   allowed-origins:
-    - ${FRONTEND_ORIGIN:http://localhost:4200}
-    - ${FRONTEND_ORIGIN_ALT:http://127.0.0.1:4200}
+    - ${FRONTEND_ORIGIN:http://localhost:8080}
+    - ${FRONTEND_ORIGIN_ALT:http://127.0.0.1:8080}
 
 plc:
   enabled: ${PLC_ENABLED:false}
@@ -46,6 +46,13 @@ cameras:
   enabled: ${CAMERAS_ENABLED:false}
   playback-base-url: ${CAMERA_PLAYBACK_BASE_URL:}
   available-streams: ${CAMERA_AVAILABLE_STREAMS:}
+
+notifications:
+  web-push:
+    enabled: ${WEB_PUSH_ENABLED:false}
+    public-key: ${WEB_PUSH_PUBLIC_KEY:}
+    private-key: ${WEB_PUSH_PRIVATE_KEY:}
+    subject: ${WEB_PUSH_SUBJECT:mailto:soporte@icap.com.mx}
 
 management:
   endpoints:

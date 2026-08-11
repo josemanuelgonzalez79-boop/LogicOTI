@@ -31,6 +31,11 @@ export const API_ENDPOINTS = {
     active: '/alarms/active',
   },
 
+  notifications: {
+    pushConfig: '/notifications/push/config',
+    pushSubscriptions: '/notifications/push/subscriptions',
+  },
+
   sensorDiagnostics: {
     list: '/sensor-diagnostics',
     due: '/sensor-diagnostics/due',

@@ -4,6 +4,7 @@ import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
 import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.intrusion.AreaInactivityService;
+import com.icap.logicoti.notification.WebPushSubscriptionService;
 import com.icap.logicoti.plc.PlcCommunicationService;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
@@ -36,6 +37,7 @@ public class SensorEventMonitor {
     private final IntrusionMotionAlarmService motionAlarmService;
     private final AutomaticLightingService automaticLightingService;
     private final AreaInactivityService areaInactivityService;
+    private final WebPushSubscriptionService webPushSubscriptionService;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -56,6 +58,7 @@ public class SensorEventMonitor {
             IntrusionMotionAlarmService motionAlarmService,
             AutomaticLightingService automaticLightingService,
             AreaInactivityService areaInactivityService,
+            WebPushSubscriptionService webPushSubscriptionService,
 
             @Value("${sensor.monitor.enabled:true}")
             boolean enabled
@@ -67,6 +70,7 @@ public class SensorEventMonitor {
         this.motionAlarmService = motionAlarmService;
         this.automaticLightingService = automaticLightingService;
         this.areaInactivityService = areaInactivityService;
+        this.webPushSubscriptionService = webPushSubscriptionService;
         this.enabled = enabled;
     }
 
@@ -293,6 +297,18 @@ public class SensorEventMonitor {
                     "/topic/alerts/smoke",
                     savedEvent
             );
+
+            if (savedEvent.currentState()) {
+                webPushSubscriptionService.sendToAll(
+                        "Alarma de humo",
+                        "Humo detectado en "
+                                + savedEvent.areaName()
+                                + ". Revisa el área inmediatamente.",
+                        "smoke-" + savedEvent.deviceCode(),
+                        "/alarms",
+                        true
+                );
+            }
 
             LOGGER.info(
                     "Alerta de humo publicada por WebSocket para {}.",

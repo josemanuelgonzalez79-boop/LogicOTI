@@ -11,16 +11,21 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    private final AppProperties appProperties;
+
+    public CorsConfig(AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:4200",
-                "http://127.0.0.1:4200",
-                "http://192.168.10.11:4200"
-        ));
+        // Los orígenes se obtienen de application.yml y .env.
+        configuration.setAllowedOrigins(
+                appProperties.getAllowedOrigins()
+        );
 
         configuration.setAllowedMethods(List.of(
                 "GET",
@@ -31,19 +36,16 @@ public class CorsConfig {
                 "OPTIONS"
         ));
 
-        configuration.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Origin",
-                "X-Requested-With"
-        ));
+        configuration.setAllowedHeaders(List.of("*"));
 
         configuration.setExposedHeaders(List.of(
-                "Authorization"
+                "Authorization",
+                "Content-Disposition",
+                "X-Total-Count"
         ));
 
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();

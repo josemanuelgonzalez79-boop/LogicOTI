@@ -144,6 +144,25 @@ public class SecurityConfig {
                                 "/api/security/schedules"
                         ).hasRole("ADMIN")
 
+                        // Cada usuario puede activar o desactivar avisos en sus dispositivos.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/notifications/push/subscriptions"
+                        ).hasAnyRole(
+                                "ADMIN",
+                                "OPERATOR",
+                                "MONITORING"
+                        )
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/notifications/push/subscriptions"
+                        ).hasAnyRole(
+                                "ADMIN",
+                                "OPERATOR",
+                                "MONITORING"
+                        )
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,

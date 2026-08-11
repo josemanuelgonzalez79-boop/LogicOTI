@@ -3,6 +3,7 @@ package com.icap.logicoti.intrusion;
 import com.icap.logicoti.camera.CameraListResponse;
 import com.icap.logicoti.camera.CameraService;
 import com.icap.logicoti.event.SensorEventHistoryResponse;
+import com.icap.logicoti.notification.WebPushSubscriptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,17 +24,20 @@ public class IntrusionMotionAlarmService {
     private final IntrusionAlarmService alarmService;
     private final CameraService cameraService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final WebPushSubscriptionService webPushSubscriptionService;
 
     public IntrusionMotionAlarmService(
             JdbcTemplate jdbcTemplate,
             IntrusionAlarmService alarmService,
             CameraService cameraService,
-            SimpMessagingTemplate messagingTemplate
+            SimpMessagingTemplate messagingTemplate,
+            WebPushSubscriptionService webPushSubscriptionService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.alarmService = alarmService;
         this.cameraService = cameraService;
         this.messagingTemplate = messagingTemplate;
+        this.webPushSubscriptionService = webPushSubscriptionService;
     }
 
     public void process(SensorEventHistoryResponse event) {
@@ -81,6 +85,19 @@ public class IntrusionMotionAlarmService {
         messagingTemplate.convertAndSend(
                 "/topic/security/motion-alerts",
                 response
+        );
+
+        String targetUrl = cameras.items().isEmpty()
+                ? "/security"
+                : "/cameras?camera="
+                        + cameras.items().getFirst().code();
+
+        webPushSubscriptionService.sendToAll(
+                "Movimiento con alarma armada",
+                message,
+                "motion-" + event.deviceCode(),
+                targetUrl,
+                true
         );
 
         LOGGER.warn(

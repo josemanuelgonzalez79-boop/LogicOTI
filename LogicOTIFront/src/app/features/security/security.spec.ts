@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
@@ -12,6 +13,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
 import { SecurityApiService } from '../../core/services/security-api.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
 import { SecurityRealtimeService } from '../../core/services/security-realtime.service';
 import { Security } from './security';
 
@@ -157,6 +159,19 @@ class AuthServiceMock {
   }));
 }
 
+class PushNotificationServiceMock {
+  readonly loading = signal(false);
+  readonly browserSupported = signal(true);
+  readonly serverConfigured = signal(true);
+  readonly subscribed = signal(false);
+  readonly subscriptionCount = signal(0);
+  readonly message = signal('Avisos disponibles.');
+
+  readonly initialize = vi.fn(async () => undefined);
+  readonly enable = vi.fn(async () => undefined);
+  readonly disable = vi.fn(async () => undefined);
+}
+
 describe('Security', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -165,6 +180,7 @@ describe('Security', () => {
         { provide: SecurityApiService, useClass: SecurityApiServiceMock },
         { provide: SecurityRealtimeService, useClass: SecurityRealtimeServiceMock },
         { provide: AuthService, useClass: AuthServiceMock },
+        { provide: PushNotificationService, useClass: PushNotificationServiceMock },
       ],
     }).compileComponents();
   });

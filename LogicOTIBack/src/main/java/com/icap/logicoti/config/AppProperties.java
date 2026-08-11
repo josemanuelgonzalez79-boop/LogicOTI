@@ -9,8 +9,8 @@ import java.util.List;
 public class AppProperties {
 
     private List<String> allowedOrigins = new ArrayList<>(List.of(
-            "http://localhost:4200",
-            "http://127.0.0.1:4200"
+            "http://localhost:8080",
+            "http://127.0.0.1:8080"
     ));
 
     public List<String> getAllowedOrigins() {

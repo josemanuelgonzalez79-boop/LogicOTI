@@ -4,6 +4,7 @@ import com.icap.logicoti.camera.CameraListResponse;
 import com.icap.logicoti.camera.CameraResponse;
 import com.icap.logicoti.camera.CameraService;
 import com.icap.logicoti.event.SensorEventHistoryResponse;
+import com.icap.logicoti.notification.WebPushSubscriptionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +37,9 @@ class IntrusionMotionAlarmServiceTests {
 
     @Mock
     private SimpMessagingTemplate messagingTemplate;
+
+    @Mock
+    private WebPushSubscriptionService webPushSubscriptionService;
 
     @InjectMocks
     private IntrusionMotionAlarmService service;
@@ -79,6 +83,13 @@ class IntrusionMotionAlarmServiceTests {
                 eq("/topic/security/motion-alerts"),
                 any(SecurityMotionAlertResponse.class)
         );
+        verify(webPushSubscriptionService).sendToAll(
+                eq("Movimiento con alarma armada"),
+                anyString(),
+                eq("motion-PB_A01_MOV01"),
+                eq("/cameras?camera=CAM-008"),
+                eq(true)
+        );
     }
 
     @Test
@@ -97,6 +108,13 @@ class IntrusionMotionAlarmServiceTests {
         verify(messagingTemplate, never()).convertAndSend(
                 anyString(),
                 any(Object.class)
+        );
+        verify(webPushSubscriptionService, never()).sendToAll(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString(),
+                eq(true)
         );
     }
 
@@ -125,6 +143,13 @@ class IntrusionMotionAlarmServiceTests {
         verify(messagingTemplate, never()).convertAndSend(
                 anyString(),
                 any(Object.class)
+        );
+        verify(webPushSubscriptionService, never()).sendToAll(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString(),
+                eq(true)
         );
     }
 

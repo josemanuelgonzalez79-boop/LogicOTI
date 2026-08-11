@@ -56,6 +56,62 @@
     </article>
   }
 
+  <article class="push-notification-card">
+    <span
+      class="push-notification-card__icon"
+      [class.push-notification-card__icon--active]="pushNotifications.subscribed()"
+    >
+      <i
+        class="pi"
+        [class.pi-bell]="pushNotifications.subscribed()"
+        [class.pi-mobile]="!pushNotifications.subscribed()"
+      ></i>
+    </span>
+
+    <div class="push-notification-card__content">
+      <span class="section-eyebrow">Avisos en este dispositivo</span>
+      <strong>
+        {{
+          pushNotifications.subscribed()
+            ? 'Notificaciones móviles activas'
+            : 'Recibir alarmas aunque cierres la pantalla'
+        }}
+      </strong>
+      <span>{{ pushNotifications.message() }}</span>
+      <small>
+        Cada teléfono se activa por separado. Al tocar el aviso se abrirá Alarmas o la cámara
+        relacionada; para ver el sistema desde fuera del edificio deberá estar conectada la VPN.
+      </small>
+    </div>
+
+    <div class="push-notification-card__action">
+      <span>{{ pushNotifications.subscriptionCount() }} dispositivos registrados en tu cuenta</span>
+      <button
+        type="button"
+        class="button"
+        [class.button--primary]="!pushNotifications.subscribed()"
+        [class.button--secondary]="pushNotifications.subscribed()"
+        [disabled]="pushNotifications.loading() || !pushNotifications.serverConfigured()"
+        (click)="togglePushNotifications()"
+      >
+        <i
+          class="pi"
+          [class.pi-spin]="pushNotifications.loading()"
+          [class.pi-spinner]="pushNotifications.loading()"
+          [class.pi-bell]="!pushNotifications.loading() && !pushNotifications.subscribed()"
+          [class.pi-bell-slash]="!pushNotifications.loading() && pushNotifications.subscribed()"
+        ></i>
+        {{
+          pushNotifications.loading()
+            ? 'Procesando...'
+            : pushNotifications.subscribed()
+              ? 'Desactivar en este equipo'
+              : 'Activar en este equipo'
+        }}
+      </button>
+    </div>
+  </article>
+
   @if (errorMessage()) {
     <div class="feedback feedback--error" role="alert">
       <i class="pi pi-exclamation-circle"></i>
@@ -303,9 +359,9 @@
             <span class="section-eyebrow">Iluminación de áreas comunes</span>
             <h3>Encendido automático por movimiento</h3>
             <p>
-              Durante el horario configurado, cualquier sensor de movimiento incluido en el
-              sistema puede encender las luces seleccionadas. Se apagarán después del tiempo sin
-              actividad indicado abajo.
+              Durante el horario configurado, cualquier sensor de movimiento incluido en el sistema
+              puede encender las luces seleccionadas. Se apagarán después del tiempo sin actividad
+              indicado abajo.
             </p>
           </div>
 
@@ -398,7 +454,10 @@
 
           <div class="lighting-targets__grid">
             @for (target of settings()?.lightingTargets ?? []; track target.deviceId) {
-              <label class="lighting-target" [class.lighting-target--selected]="isLightingTargetSelected(target.deviceCode)">
+              <label
+                class="lighting-target"
+                [class.lighting-target--selected]="isLightingTargetSelected(target.deviceCode)"
+              >
                 <input
                   type="checkbox"
                   [disabled]="!canEditSettings"
@@ -514,11 +573,17 @@
                 </span>
                 <span>
                   Luz:
-                  <strong>{{ area.lightProcessed ? 'Procesada' : (area.lightTurnOffAt | date: 'HH:mm:ss') }}</strong>
+                  <strong>{{
+                    area.lightProcessed ? 'Procesada' : (area.lightTurnOffAt | date: 'HH:mm:ss')
+                  }}</strong>
                 </span>
                 <span>
                   Minisplit:
-                  <strong>{{ area.minisplitProcessed ? 'Procesado' : (area.minisplitTurnOffAt | date: 'HH:mm:ss') }}</strong>
+                  <strong>{{
+                    area.minisplitProcessed
+                      ? 'Procesado'
+                      : (area.minisplitTurnOffAt | date: 'HH:mm:ss')
+                  }}</strong>
                 </span>
               </article>
             }

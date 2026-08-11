@@ -22,6 +22,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
 import { SecurityApiService } from '../../core/services/security-api.service';
 import { SecurityRealtimeService } from '../../core/services/security-realtime.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
 
 type PendingAction = 'ARM' | 'DISARM';
 type NumericSetting =
@@ -43,6 +44,7 @@ export class Security implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly api = inject(SecurityApiService);
   private readonly realtime = inject(SecurityRealtimeService);
+  readonly pushNotifications = inject(PushNotificationService);
 
   readonly loading = signal(false);
   readonly refreshingPrecheck = signal(false);
@@ -107,6 +109,7 @@ export class Security implements OnInit, OnDestroy {
       .subscribe(() => this.currentTime.set(Date.now()));
 
     this.realtime.connect();
+    void this.pushNotifications.initialize();
     this.loadAll();
   }
 
@@ -207,6 +210,15 @@ export class Security implements OnInit, OnDestroy {
     );
   }
 
+  togglePushNotifications(): void {
+    if (this.pushNotifications.subscribed()) {
+      void this.pushNotifications.disable();
+      return;
+    }
+
+    void this.pushNotifications.enable();
+  }
+
   updateAutomaticLighting(enabled: boolean): void {
     this.scheduleForm.update((form) =>
       form ? { ...form, automaticLightingEnabled: enabled } : form,
@@ -214,9 +226,7 @@ export class Security implements OnInit, OnDestroy {
   }
 
   updateAreaInactivity(enabled: boolean): void {
-    this.scheduleForm.update((form) =>
-      form ? { ...form, areaInactivityEnabled: enabled } : form,
-    );
+    this.scheduleForm.update((form) => (form ? { ...form, areaInactivityEnabled: enabled } : form));
   }
 
   updateAutomaticLightingTime(
@@ -465,16 +475,11 @@ export class Security implements OnInit, OnDestroy {
       !form.automaticLightingEndTime ||
       form.automaticLightingStartTime === form.automaticLightingEndTime
     ) {
-      this.errorMessage.set(
-        'El inicio y fin de la iluminación automática no pueden ser iguales.',
-      );
+      this.errorMessage.set('El inicio y fin de la iluminación automática no pueden ser iguales.');
       return false;
     }
 
-    if (
-      form.automaticLightingEnabled &&
-      form.automaticLightingTargetDeviceCodes.length === 0
-    ) {
+    if (form.automaticLightingEnabled && form.automaticLightingTargetDeviceCodes.length === 0) {
       this.errorMessage.set('Selecciona al menos una luz para la automatización.');
       return false;
     }
