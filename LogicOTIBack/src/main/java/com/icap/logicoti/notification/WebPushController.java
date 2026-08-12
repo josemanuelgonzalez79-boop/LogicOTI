@@ -38,6 +38,11 @@ public class WebPushController {
         );
     }
 
+    @PostMapping("/test")
+    public WebPushTestResponse test(Authentication authentication) {
+        return service.sendTestToUser(authentication.getName());
+    }
+
     @DeleteMapping("/subscriptions")
     public WebPushSubscriptionResponse unsubscribe(
             Authentication authentication,

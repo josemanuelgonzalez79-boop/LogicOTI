@@ -112,4 +112,24 @@ describe('PushNotificationService', () => {
     expect(service.subscribed()).toBe(true);
     expect(service.subscriptionCount()).toBe(1);
   });
+
+  it('envía una notificación de prueba y muestra el resultado del backend', async () => {
+    service.subscribed.set(true);
+
+    const testRequestPromise = service.sendTest();
+    const request = http.expectOne((item) => item.url.endsWith('/notifications/push/test'));
+
+    expect(request.request.method).toBe('POST');
+    request.flush({
+      attempted: 1,
+      accepted: 1,
+      failed: 0,
+      message: 'El servicio Push aceptó la notificación para 1 dispositivo(s).',
+      timestamp: '2026-08-11T23:45:00Z',
+    });
+
+    await testRequestPromise;
+
+    expect(service.message()).toContain('aceptó la notificación');
+  });
 });

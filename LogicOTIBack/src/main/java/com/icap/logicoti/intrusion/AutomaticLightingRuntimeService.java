@@ -64,7 +64,7 @@ public class AutomaticLightingRuntimeService {
             String whereClause,
             Object[] parameters
     ) {
-        return jdbcTemplate.query("""
+        String query = """
                 SELECT
                     device.id,
                     device.code,
@@ -79,9 +79,12 @@ public class AutomaticLightingRuntimeService {
                     ON device.id = runtime.device_id
                 INNER JOIN building_area area
                     ON area.id = device.area_id
-                """ + whereClause + """
+                %s
                 ORDER BY runtime.turn_off_at, device.id
-                """,
+                """.formatted(whereClause);
+
+        return jdbcTemplate.query(
+                query,
                 (resultSet, rowNumber) -> new RuntimeLight(
                         resultSet.getLong("id"),
                         resultSet.getString("code"),

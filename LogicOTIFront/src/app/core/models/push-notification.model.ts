@@ -25,3 +25,11 @@ export interface WebPushSubscriptionResponse {
   message: string;
   timestamp: string;
 }
+
+export interface WebPushTestResponse {
+  attempted: number;
+  accepted: number;
+  failed: number;
+  message: string;
+  timestamp: string;
+}

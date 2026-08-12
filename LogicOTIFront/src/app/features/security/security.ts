@@ -219,6 +219,10 @@ export class Security implements OnInit, OnDestroy {
     void this.pushNotifications.enable();
   }
 
+  testPushNotification(): void {
+    void this.pushNotifications.sendTest();
+  }
+
   updateAutomaticLighting(enabled: boolean): void {
     this.scheduleForm.update((form) =>
       form ? { ...form, automaticLightingEnabled: enabled } : form,

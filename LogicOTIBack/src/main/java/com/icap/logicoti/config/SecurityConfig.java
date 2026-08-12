@@ -147,7 +147,8 @@ public class SecurityConfig {
                         // Cada usuario puede activar o desactivar avisos en sus dispositivos.
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/notifications/push/subscriptions"
+                                "/api/notifications/push/subscriptions",
+                                "/api/notifications/push/test"
                         ).hasAnyRole(
                                 "ADMIN",
                                 "OPERATOR",

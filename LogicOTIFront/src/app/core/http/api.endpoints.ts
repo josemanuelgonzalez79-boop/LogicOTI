@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   notifications: {
     pushConfig: '/notifications/push/config',
     pushSubscriptions: '/notifications/push/subscriptions',
+    pushTest: '/notifications/push/test',
   },
 
   sensorDiagnostics: {

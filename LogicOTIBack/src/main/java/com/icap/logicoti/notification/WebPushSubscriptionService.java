@@ -130,6 +130,9 @@ public class WebPushSubscriptionService {
             boolean requireInteraction
     ) {
         if (!properties.isConfigured()) {
+            LOGGER.warn(
+                    "Se omitió una notificación Web Push porque el servidor no está configurado."
+            );
             return;
         }
 
@@ -137,8 +140,82 @@ public class WebPushSubscriptionService {
                 subscriptionRepository.findActiveForEnabledUsers();
 
         if (subscriptions.isEmpty()) {
+            LOGGER.info(
+                    "Se omitió una notificación Web Push porque no hay suscripciones activas."
+            );
             return;
         }
+
+        sendToSubscriptions(
+                subscriptions,
+                title,
+                body,
+                tag,
+                targetUrl,
+                requireInteraction
+        );
+    }
+
+    @Transactional
+    public WebPushTestResponse sendTestToUser(String username) {
+        AppUser user = findUser(username);
+
+        if (!properties.isConfigured()) {
+            return new WebPushTestResponse(
+                    0,
+                    0,
+                    0,
+                    "El servidor todavía no tiene una configuración Web Push válida.",
+                    Instant.now()
+            );
+        }
+
+        List<WebPushSubscription> subscriptions = subscriptionRepository
+                .findByUserIdAndActiveTrue(user.getId());
+
+        if (subscriptions.isEmpty()) {
+            return new WebPushTestResponse(
+                    0,
+                    0,
+                    0,
+                    "Esta cuenta no tiene dispositivos activos para recibir avisos.",
+                    Instant.now()
+            );
+        }
+
+        int accepted = sendToSubscriptions(
+                subscriptions,
+                "Prueba de notificación LogicOTI",
+                "Los avisos de este dispositivo están funcionando correctamente.",
+                "logicoti-push-test",
+                "/security",
+                false
+        );
+        int attempted = subscriptions.size();
+        int failed = attempted - accepted;
+        String message = failed == 0
+                ? "El servicio Push aceptó la notificación para "
+                        + accepted + " dispositivo(s)."
+                : "El servicio Push aceptó " + accepted + " de "
+                        + attempted + " envío(s); revisa el log del backend para el error.";
+
+        return new WebPushTestResponse(
+                attempted,
+                accepted,
+                failed,
+                message,
+                Instant.now()
+        );
+    }
+
+    private int sendToSubscriptions(
+            List<WebPushSubscription> subscriptions,
+            String title,
+            String body,
+            String tag,
+            String targetUrl,
+            boolean requireInteraction
+    ) {
 
         String payload;
 
@@ -155,7 +232,7 @@ public class WebPushSubscriptionService {
                     "No se pudo generar el contenido de la notificación: {}",
                     exception.getMessage()
             );
-            return;
+            return 0;
         }
 
         PushService pushService;
@@ -166,20 +243,26 @@ public class WebPushSubscriptionService {
                     properties.getPrivateKey(),
                     properties.getSubject()
             );
-        } catch (Exception exception) {
+        } catch (Exception | LinkageError exception) {
             LOGGER.error(
-                    "Las llaves Web Push no son válidas: {}",
+                    "No se pudo inicializar Web Push. Verifica las llaves VAPID y las dependencias criptográficas: {}",
                     exception.getMessage()
             );
-            return;
+            return 0;
         }
+
+        int accepted = 0;
 
         for (WebPushSubscription subscription : subscriptions) {
-            sendOne(pushService, subscription, payload);
+            if (sendOne(pushService, subscription, payload)) {
+                accepted++;
+            }
         }
+
+        return accepted;
     }
 
-    private void sendOne(
+    private boolean sendOne(
             PushService pushService,
             WebPushSubscription subscription,
             String payload
@@ -197,7 +280,12 @@ public class WebPushSubscriptionService {
 
             if (status >= 200 && status < 300) {
                 subscription.markSuccess();
-                return;
+                LOGGER.info(
+                        "Notificación Web Push aceptada con HTTP {} para la suscripción {}.",
+                        status,
+                        subscription.getId()
+                );
+                return true;
             }
 
             boolean expired = status == 404 || status == 410;
@@ -208,9 +296,15 @@ public class WebPushSubscriptionService {
                     status,
                     subscription.getId()
             );
+            return false;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             subscription.markFailure(false);
+            LOGGER.warn(
+                    "Se interrumpió el envío Web Push a la suscripción {}.",
+                    subscription.getId()
+            );
+            return false;
         } catch (Exception exception) {
             subscription.markFailure(false);
             LOGGER.warn(
@@ -218,6 +312,7 @@ public class WebPushSubscriptionService {
                     subscription.getId(),
                     exception.getMessage()
             );
+            return false;
         }
     }
 
@@ -230,7 +325,7 @@ public class WebPushSubscriptionService {
     ) {
         Map<String, Object> defaultAction = Map.of(
                 "operation", "openWindow",
-                "url", targetUrl
+                "url", normalizeTargetUrl(targetUrl)
         );
 
         Map<String, Object> data = Map.of(
@@ -242,8 +337,8 @@ public class WebPushSubscriptionService {
         Map<String, Object> notification = new LinkedHashMap<>();
         notification.put("title", title);
         notification.put("body", body);
-        notification.put("icon", "/icons/icon-192.png");
-        notification.put("badge", "/icons/badge-96.png");
+        notification.put("icon", "icons/icon-192.png");
+        notification.put("badge", "icons/badge-96.png");
         notification.put("tag", tag);
         notification.put("renotify", true);
         notification.put("requireInteraction", requireInteraction);
@@ -252,6 +347,16 @@ public class WebPushSubscriptionService {
         return jsonMapper.writeValueAsString(
                 Map.of("notification", notification)
         );
+    }
+
+    private String normalizeTargetUrl(String targetUrl) {
+        if (targetUrl == null || targetUrl.isBlank() || "/".equals(targetUrl)) {
+            return "./";
+        }
+
+        return targetUrl.startsWith("/")
+                ? targetUrl.substring(1)
+                : targetUrl;
     }
 
     private AppUser findUser(String username) {

@@ -170,6 +170,7 @@ class PushNotificationServiceMock {
   readonly initialize = vi.fn(async () => undefined);
   readonly enable = vi.fn(async () => undefined);
   readonly disable = vi.fn(async () => undefined);
+  readonly sendTest = vi.fn(async () => undefined);
 }
 
 describe('Security', () => {

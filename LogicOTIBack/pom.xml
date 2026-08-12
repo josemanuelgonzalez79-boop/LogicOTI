@@ -22,6 +22,7 @@
         <plc4x.version>0.13.1</plc4x.version>
         <springdoc.version>3.0.3</springdoc.version>
         <web-push.version>5.1.1</web-push.version>
+        <bouncycastle.version>1.85.2</bouncycastle.version>
     </properties>
 
     <dependencies>
@@ -146,6 +147,12 @@
             <groupId>nl.martijndwars</groupId>
             <artifactId>web-push</artifactId>
             <version>${web-push.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
         </dependency>
 
     </dependencies>

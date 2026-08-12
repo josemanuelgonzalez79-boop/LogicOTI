@@ -29,5 +29,7 @@ public interface WebPushSubscriptionRepository
             """)
     List<WebPushSubscription> findActiveForEnabledUsers();
 
+    List<WebPushSubscription> findByUserIdAndActiveTrue(Long userId);
+
     long countByUserIdAndActiveTrue(Long userId);
 }

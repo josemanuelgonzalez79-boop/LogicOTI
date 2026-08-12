@@ -108,7 +108,7 @@ public class AreaInactivityRuntimeService {
             String whereClause,
             Object[] parameters
     ) {
-        return jdbcTemplate.query("""
+        String query = """
                 SELECT
                     area.id,
                     area.code,
@@ -127,9 +127,12 @@ public class AreaInactivityRuntimeService {
                     ON area.id = runtime.area_id
                 INNER JOIN building_floor floor
                     ON floor.id = area.floor_id
-                """ + whereClause + """
+                %s
                 ORDER BY runtime.last_motion_at DESC, area.id
-                """,
+                """.formatted(whereClause);
+
+        return jdbcTemplate.query(
+                query,
                 (resultSet, rowNumber) -> new RuntimeArea(
                         resultSet.getLong("id"),
                         resultSet.getString("code"),

@@ -9,6 +9,7 @@ import {
   WebPushConfig,
   WebPushSubscriptionRequest,
   WebPushSubscriptionResponse,
+  WebPushTestResponse,
   WebPushUnsubscribeRequest,
 } from '../models/push-notification.model';
 
@@ -145,6 +146,31 @@ export class PushNotificationService {
       this.message.set(response.message);
     } catch (error) {
       this.message.set(this.errorMessage(error, 'No fue posible desactivar los avisos.'));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async sendTest(): Promise<void> {
+    if (this.loading() || !this.subscribed()) {
+      return;
+    }
+
+    this.loading.set(true);
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<WebPushTestResponse>(
+          `${this.baseUrl}${API_ENDPOINTS.notifications.pushTest}`,
+          {},
+        ),
+      );
+
+      this.message.set(response.message);
+    } catch (error) {
+      this.message.set(
+        this.errorMessage(error, 'No fue posible enviar la notificación de prueba.'),
+      );
     } finally {
       this.loading.set(false);
     }
