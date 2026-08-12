@@ -7,6 +7,7 @@ import com.icap.logicoti.user.AppUserRepository;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.security.Security;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -238,6 +240,7 @@ public class WebPushSubscriptionService {
         PushService pushService;
 
         try {
+            ensureBouncyCastleProvider();
             pushService = new PushService(
                     properties.getPublicKey(),
                     properties.getPrivateKey(),
@@ -260,6 +263,20 @@ public class WebPushSubscriptionService {
         }
 
         return accepted;
+    }
+
+    private static synchronized void ensureBouncyCastleProvider() {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) != null) {
+            return;
+        }
+
+        int position = Security.addProvider(new BouncyCastleProvider());
+
+        if (position < 0 || Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            throw new IllegalStateException("No fue posible registrar el proveedor criptográfico BC.");
+        }
+
+        LOGGER.info("Proveedor criptográfico Bouncy Castle registrado en la posición {}.", position);
     }
 
     private boolean sendOne(
