@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,7 @@ public class CameraAlertLinkService {
     private final long expirationSeconds;
     private final Clock clock;
 
+    @Autowired
     public CameraAlertLinkService(
             @Value("${security.jwt.secret}") String secret,
             CameraProperties cameraProperties
