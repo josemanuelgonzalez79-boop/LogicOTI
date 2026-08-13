@@ -8,6 +8,7 @@ import {
 import { filter, map, startWith } from 'rxjs';
 
 import { Shell } from './layout/shell/shell';
+import { PwaUpdateService } from './core/services/pwa-update.service';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ import { Shell } from './layout/shell/shell';
 })
 export class App {
   private readonly router = inject(Router);
+  readonly pwaUpdate = inject(PwaUpdateService);
 
   readonly isLoginRoute$ = this.router.events.pipe(
     filter(
@@ -33,4 +35,8 @@ export class App {
     ),
     startWith(this.router.url.startsWith('/login')),
   );
+
+  updateApplication(): void {
+    void this.pwaUpdate.activateUpdate();
+  }
 }

@@ -22,6 +22,7 @@ public class WebPushClient {
 
     public WebPushClient(WebPushProperties properties) {
         this.properties = properties;
+        ensureBouncyCastleProvider();
     }
 
     public int send(
@@ -48,7 +49,6 @@ public class WebPushClient {
 
         synchronized (this) {
             if (pushService == null) {
-                ensureBouncyCastleProvider();
                 pushService = new PushService(
                         properties.getPublicKey(),
                         properties.getPrivateKey(),

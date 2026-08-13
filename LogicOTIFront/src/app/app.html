@@ -3,3 +3,36 @@
 } @else {
   <app-shell />
 }
+
+@if (pwaUpdate.updateAvailable()) {
+  <aside class="pwa-update" role="alert" aria-live="assertive">
+    <span class="pwa-update__icon" aria-hidden="true">
+      <i class="pi pi-refresh"></i>
+    </span>
+
+    <div class="pwa-update__message">
+      <strong>Hay una nueva versión disponible</strong>
+      <span>Actualiza LogicOTI para utilizar los últimos cambios.</span>
+    </div>
+
+    <div class="pwa-update__actions">
+      <button
+        type="button"
+        class="pwa-update__later"
+        [disabled]="pwaUpdate.updating()"
+        (click)="pwaUpdate.dismiss()"
+      >
+        Después
+      </button>
+
+      <button
+        type="button"
+        class="pwa-update__install"
+        [disabled]="pwaUpdate.updating()"
+        (click)="updateApplication()"
+      >
+        {{ pwaUpdate.updating() ? 'Actualizando...' : 'Actualizar ahora' }}
+      </button>
+    </div>
+  </aside>
+}
