@@ -263,18 +263,18 @@
           <tbody>
             @for (event of filteredEvents(); track event.id) {
               <tr [class.history-table__critical]="event.currentState">
-                <td class="history-table__date">
+                <td class="history-table__date" data-label="Fecha">
                   {{ event.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
                 </td>
-                <td>
+                <td data-label="Área">
                   <strong>{{ event.areaName }}</strong>
                   <small>{{ event.areaCode }}</small>
                 </td>
-                <td>
+                <td data-label="Sensor">
                   <strong>{{ event.deviceName }}</strong>
                   <small>{{ event.deviceCode }}</small>
                 </td>
-                <td>
+                <td data-label="Evento">
                   <span
                     class="event-badge"
                     [class.event-badge--active]="event.eventType === 'ACTIVATED'"
@@ -283,7 +283,7 @@
                     {{ event.eventType === 'ACTIVATED' ? 'Activada' : 'Restablecida' }}
                   </span>
                 </td>
-                <td>
+                <td data-label="Severidad">
                   <span
                     class="severity-badge"
                     [class.severity-badge--critical]="event.severity === 'CRITICAL'"
@@ -303,7 +303,7 @@
                     }
                   </span>
                 </td>
-                <td>
+                <td data-label="Atención">
                   @if (event.eventType === 'ACTIVATED') {
                     <button
                       type="button"
@@ -325,7 +325,7 @@
                     <span class="not-applicable">—</span>
                   }
                 </td>
-                <td class="history-table__message">{{ event.message }}</td>
+                <td class="history-table__message" data-label="Detalle">{{ event.message }}</td>
               </tr>
             }
           </tbody>

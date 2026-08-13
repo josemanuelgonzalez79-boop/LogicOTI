@@ -1,4 +1,5 @@
 export type SensorType = 'MOTION' | 'SMOKE';
+export type SignalQuality = 'GOOD' | 'BAD' | 'STALE';
 
 export type SensorDueStatus = 'VALID' | 'DUE' | 'EXPIRED';
 
@@ -13,12 +14,18 @@ export interface SensorDiagnosticDueItem {
   status: SensorDueStatus;
   lastPassedAt: string | null;
   validUntil: string | null;
+  quality: SignalQuality;
+  lastUpdatedAt: string | null;
+  qualityDetail: string;
 }
 
 export interface SensorDiagnosticDueResponse {
   validityMonths: number;
   totalSensors: number;
   dueSensors: number;
+  goodSignals: number;
+  badSignals: number;
+  staleSignals: number;
   sensors: SensorDiagnosticDueItem[];
   timestamp: string;
 }

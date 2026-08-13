@@ -8,6 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -26,7 +27,7 @@ import { SystemApiService } from '../../core/services/system-api.service';
 @Component({
   selector: 'app-control',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [DatePipe, FormsModule, RouterLink],
   templateUrl: './control.html',
   styleUrl: './control.scss',
 })
@@ -167,6 +168,7 @@ export class Control implements OnInit, OnDestroy {
     if (
       !this.canControl ||
       !device.controllable ||
+      device.quality !== 'GOOD' ||
       this.isPending(device.code) ||
       !this.areaState()?.plcEnabled ||
       !this.areaState()?.connected
@@ -202,6 +204,7 @@ export class Control implements OnInit, OnDestroy {
     return (
       !this.canControl ||
       !device.controllable ||
+      device.quality !== 'GOOD' ||
       this.isPending(device.code) ||
       !state?.plcEnabled ||
       !state?.connected
@@ -269,6 +272,16 @@ export class Control implements OnInit, OnDestroy {
     }
 
     return device.state ? 'active' : 'inactive';
+  }
+
+  signalQualityLabel(device: AreaDevice): string {
+    const labels = {
+      GOOD: 'GOOD · Lectura válida',
+      BAD: 'BAD · Error de lectura',
+      STALE: 'STALE · Dato vencido',
+    } as const;
+
+    return labels[device.quality];
   }
 
   private loadBuilding(): void {

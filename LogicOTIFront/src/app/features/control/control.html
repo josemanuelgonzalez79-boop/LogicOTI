@@ -185,6 +185,30 @@
               </strong>
             </div>
 
+            <div
+              class="signal-quality"
+              [attr.data-quality]="device.quality"
+              [attr.title]="device.qualityDetail"
+            >
+              <span>
+                <i
+                  class="pi"
+                  [class.pi-check-circle]="device.quality === 'GOOD'"
+                  [class.pi-times-circle]="device.quality === 'BAD'"
+                  [class.pi-clock]="device.quality === 'STALE'"
+                ></i>
+                {{ signalQualityLabel(device) }}
+              </span>
+              <small>
+                @if (device.lastUpdatedAt) {
+                  Última actualización:
+                  {{ device.lastUpdatedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                } @else {
+                  Sin lectura válida registrada
+                }
+              </small>
+            </div>
+
             <div class="device-confirmation">
               <span>
                 Orden
@@ -216,6 +240,9 @@
               } @else if (!canControl) {
                 <i class="pi pi-lock"></i>
                 Solo lectura
+              } @else if (device.quality !== 'GOOD') {
+                <i class="pi pi-ban"></i>
+                Señal sin calidad válida
               } @else {
                 <span class="control-button__switch">
                   <span></span>
@@ -260,6 +287,28 @@
                 <span class="device-state__dot"></span>
                 {{ deviceStateLabel(device) }}
               </strong>
+              <div
+                class="signal-quality"
+                [attr.data-quality]="device.quality"
+                [attr.title]="device.qualityDetail"
+              >
+                <span>
+                  <i
+                    class="pi"
+                    [class.pi-check-circle]="device.quality === 'GOOD'"
+                    [class.pi-times-circle]="device.quality === 'BAD'"
+                    [class.pi-clock]="device.quality === 'STALE'"
+                  ></i>
+                  {{ signalQualityLabel(device) }}
+                </span>
+                <small>
+                  @if (device.lastUpdatedAt) {
+                    Actualizada {{ device.lastUpdatedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  } @else {
+                    Sin lectura válida
+                  }
+                </small>
+              </div>
             </div>
           </article>
         } @empty {

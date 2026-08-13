@@ -6,6 +6,7 @@ import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.intrusion.AreaInactivityService;
 import com.icap.logicoti.notification.WebPushSubscriptionService;
 import com.icap.logicoti.plc.PlcCommunicationService;
+import com.icap.logicoti.signal.SignalQualityRegistry;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
@@ -38,6 +39,7 @@ public class SensorEventMonitor {
     private final AutomaticLightingService automaticLightingService;
     private final AreaInactivityService areaInactivityService;
     private final WebPushSubscriptionService webPushSubscriptionService;
+    private final SignalQualityRegistry signalQualityRegistry;
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -59,6 +61,7 @@ public class SensorEventMonitor {
             AutomaticLightingService automaticLightingService,
             AreaInactivityService areaInactivityService,
             WebPushSubscriptionService webPushSubscriptionService,
+            SignalQualityRegistry signalQualityRegistry,
 
             @Value("${sensor.monitor.enabled:true}")
             boolean enabled
@@ -71,6 +74,7 @@ public class SensorEventMonitor {
         this.automaticLightingService = automaticLightingService;
         this.areaInactivityService = areaInactivityService;
         this.webPushSubscriptionService = webPushSubscriptionService;
+        this.signalQualityRegistry = signalQualityRegistry;
         this.enabled = enabled;
     }
 
@@ -96,8 +100,19 @@ public class SensorEventMonitor {
                 return;
             }
 
-            Map<Long, Boolean> currentStates =
-                    readSensorStates(sensors);
+            Map<Long, Boolean> currentStates;
+
+            try {
+                currentStates = readSensorStates(sensors);
+            } catch (RuntimeException exception) {
+                signalQualityRegistry.recordBad(
+                        sensors.stream()
+                                .map(SensorDefinition::id)
+                                .toList(),
+                        exception.getMessage()
+                );
+                throw exception;
+            }
 
             sensors.forEach(sensor ->
                     processState(
@@ -193,6 +208,14 @@ public class SensorEventMonitor {
                         response.getResponseCode(alias);
 
                 if (responseCode != PlcResponseCode.OK) {
+                    signalQualityRegistry.recordBad(
+                            sensor.id(),
+                            "El PLC respondió "
+                                    + responseCode
+                                    + " al leer "
+                                    + sensor.stateTag()
+                                    + "."
+                    );
                     LOGGER.warn(
                             "No se pudo leer {}. Respuesta: {}",
                             sensor.stateTag(),
@@ -202,6 +225,11 @@ public class SensorEventMonitor {
                 }
 
                 if (!response.isValidBoolean(alias)) {
+                    signalQualityRegistry.recordBad(
+                            sensor.id(),
+                            sensor.stateTag()
+                                    + " no devolvió un BOOL."
+                    );
                     LOGGER.warn(
                             "{} no devolvió un BOOL.",
                             sensor.stateTag()
@@ -209,9 +237,11 @@ public class SensorEventMonitor {
                     continue;
                 }
 
-                states.put(
+                boolean state = response.getBoolean(alias);
+                states.put(sensor.id(), state);
+                signalQualityRegistry.recordGood(
                         sensor.id(),
-                        response.getBoolean(alias)
+                        state
                 );
             }
 

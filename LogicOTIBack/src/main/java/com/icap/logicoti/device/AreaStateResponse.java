@@ -1,5 +1,7 @@
 package com.icap.logicoti.device;
 
+import com.icap.logicoti.signal.SignalQuality;
+
 import java.time.Instant;
 import java.util.List;
 
@@ -22,7 +24,10 @@ public record AreaStateResponse(
             boolean controllable,
             Boolean command,
             Boolean state,
-            Boolean fault
+            Boolean fault,
+            SignalQuality quality,
+            Instant lastUpdatedAt,
+            String qualityDetail
     ) {
     }
 }
