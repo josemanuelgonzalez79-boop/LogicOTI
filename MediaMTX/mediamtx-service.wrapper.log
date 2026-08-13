@@ -1,0 +1,28 @@
+2026-08-13 11:11:14,647 DEBUG - Starting WinSW in console mode
+2026-08-13 11:11:16,590 DEBUG - Starting WinSW in console mode
+2026-08-13 11:11:16,623 INFO  - Installing service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)'...
+2026-08-13 11:11:16,673 INFO  - Service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)' was installed successfully.
+2026-08-13 11:11:17,013 DEBUG - Starting WinSW in console mode
+2026-08-13 11:11:18,667 DEBUG - Starting WinSW in console mode
+2026-08-13 11:11:18,700 INFO  - Starting service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)'...
+2026-08-13 11:11:19,033 DEBUG - Starting WinSW in service mode
+2026-08-13 11:11:19,063 INFO  - Service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)' started successfully.
+2026-08-13 11:11:19,167 INFO  - Starting C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.exe "C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml"
+2026-08-13 11:11:19,193 INFO  - Started process 34296
+2026-08-13 11:11:19,206 DEBUG - Forwarding logs of the process System.Diagnostics.Process (mediamtx) to WinSW.TimeBasedRollingLogAppender
+2026-08-13 11:52:52,189 INFO  - Stopping LogicOTIMediaMTX
+2026-08-13 11:52:52,192 DEBUG - ProcessKill 34296
+2026-08-13 11:52:52,227 DEBUG - Stopping process 34296...
+2026-08-13 11:52:52,274 DEBUG - Process 34296 canceled with code 0.
+2026-08-13 11:52:52,289 INFO  - Finished LogicOTIMediaMTX
+2026-08-13 11:53:42,530 DEBUG - Starting WinSW in console mode
+2026-08-13 11:53:42,560 INFO  - Installing service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)'...
+2026-08-13 11:53:42,564 ERROR - A service with ID 'LogicOTIMediaMTX' already exists.
+2026-08-13 11:53:42,566 FATAL - Failed to install the service. El servicio especificado ya existe.
+2026-08-13 11:53:42,871 DEBUG - Starting WinSW in console mode
+2026-08-13 11:53:42,902 INFO  - Starting service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)'...
+2026-08-13 11:53:43,210 DEBUG - Starting WinSW in service mode
+2026-08-13 11:53:43,238 INFO  - Service 'LogicOTI - MediaMTX (LogicOTIMediaMTX)' started successfully.
+2026-08-13 11:53:43,344 INFO  - Starting C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.exe "C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml"
+2026-08-13 11:53:43,370 INFO  - Started process 5796
+2026-08-13 11:53:43,383 DEBUG - Forwarding logs of the process System.Diagnostics.Process (mediamtx) to WinSW.TimeBasedRollingLogAppender

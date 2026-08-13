@@ -1,0 +1,23 @@
+<service>
+  <id>LogicOTIMediaMTX</id>
+  <name>LogicOTI - MediaMTX</name>
+  <description>Servidor de video WebRTC para LogicOTI.</description>
+
+  <executable>%BASE%\mediamtx.exe</executable>
+  <arguments>"%BASE%\mediamtx.yml"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+
+  <onfailure action="restart" delay="5 sec"/>
+  <onfailure action="restart" delay="15 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <stoptimeout>15 sec</stoptimeout>
+
+  <log mode="roll-by-time">
+    <pattern>yyyy-MM-dd</pattern>
+  </log>
+</service>

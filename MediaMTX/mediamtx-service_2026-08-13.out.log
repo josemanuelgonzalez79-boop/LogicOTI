@@ -1,0 +1,23 @@
+2026/08/13 11:11:19 INF MediaMTX v1.20.0, windows, amd64
+2026/08/13 11:11:19 INF configuration loaded from C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml
+2026/08/13 11:11:19 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/08/13 11:11:19 INF [RTMP] started with listener on :1935 (TCP/RTMP)
+2026/08/13 11:11:19 INF [HLS] started with listener on :8888 (TCP/HTTP)
+2026/08/13 11:11:19 INF [WebRTC] started with listeners on :8889 (TCP/HTTP), :8189 (UDP/ICE)
+2026/08/13 11:11:19 INF [SRT] started with listener on :8890 (UDP/SRT)
+2026/08/13 11:11:19 INF [MoQ] started with listeners on :8892 (TCP/HTTP2), :8892 (UDP/HTTP3), :8893 (UDP/QUIC)
+2026/08/13 11:11:21 INF [WebRTC] [session 0dcaa6a8] created by [::1]:36312
+2026/08/13 11:11:21 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 11:11:21 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 11:11:21 INF [WebRTC] [session 0dcaa6a8] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/63698
+2026/08/13 11:11:21 INF [WebRTC] [session 0dcaa6a8] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 11:52:52 INF shutting down gracefully
+2026/08/13 11:52:52 INF [SRT] closing
+2026/08/13 11:52:52 INF [MoQ] closing
+2026/08/13 11:52:52 INF [WebRTC] closing
+2026/08/13 11:52:52 INF [WebRTC] [session 0dcaa6a8] closed: terminated
+2026/08/13 11:52:52 INF [HLS] closing
+2026/08/13 11:52:52 INF [RTMP] closing
+2026/08/13 11:52:52 INF [RTSP] closing
+2026/08/13 11:52:52 INF [path oti-cam-21] [RTSP source] stopped: path is closing
+2026/08/13 11:52:52 INF waiting for running hooks
