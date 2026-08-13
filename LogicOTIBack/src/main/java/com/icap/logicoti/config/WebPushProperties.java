@@ -9,6 +9,9 @@ public class WebPushProperties {
     private String publicKey = "";
     private String privateKey = "";
     private String subject = "mailto:soporte@icap.com.mx";
+    private int maxAttempts = 4;
+    private long initialRetryDelaySeconds = 30;
+    private int retryBatchSize = 100;
 
     public boolean isEnabled() {
         return enabled;
@@ -40,6 +43,32 @@ public class WebPushProperties {
 
     public void setSubject(String subject) {
         this.subject = subject;
+    }
+
+    public int getMaxAttempts() {
+        return Math.max(1, maxAttempts);
+    }
+
+    public void setMaxAttempts(int maxAttempts) {
+        this.maxAttempts = maxAttempts;
+    }
+
+    public long getInitialRetryDelaySeconds() {
+        return Math.max(1, initialRetryDelaySeconds);
+    }
+
+    public void setInitialRetryDelaySeconds(
+            long initialRetryDelaySeconds
+    ) {
+        this.initialRetryDelaySeconds = initialRetryDelaySeconds;
+    }
+
+    public int getRetryBatchSize() {
+        return Math.max(1, retryBatchSize);
+    }
+
+    public void setRetryBatchSize(int retryBatchSize) {
+        this.retryBatchSize = retryBatchSize;
     }
 
     public boolean isConfigured() {

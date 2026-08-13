@@ -2,15 +2,20 @@ package com.icap.logicoti.notification;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Validated
 @RequestMapping("/api/notifications/push")
 public class WebPushController {
 
@@ -41,6 +46,21 @@ public class WebPushController {
     @PostMapping("/test")
     public WebPushTestResponse test(Authentication authentication) {
         return service.sendTestToUser(authentication.getName());
+    }
+
+    @GetMapping("/deliveries")
+    public WebPushDeliveryPageResponse deliveries(
+            @RequestParam(defaultValue = "100")
+            @Min(1)
+            @Max(500)
+            int limit,
+
+            @RequestParam(defaultValue = "0")
+            @Min(0)
+            @Max(1000000)
+            int offset
+    ) {
+        return service.findDeliveries(limit, offset);
     }
 
     @DeleteMapping("/subscriptions")

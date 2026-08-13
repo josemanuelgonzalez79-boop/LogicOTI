@@ -164,6 +164,12 @@ public class SecurityConfig {
                                 "MONITORING"
                         )
 
+                        // La bitácora de entregas puede contener detalle operativo.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/notifications/push/deliveries"
+                        ).hasRole("ADMIN")
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,

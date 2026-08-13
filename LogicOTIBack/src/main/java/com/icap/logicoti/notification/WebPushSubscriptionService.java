@@ -4,19 +4,13 @@ import com.icap.logicoti.config.WebPushProperties;
 import com.icap.logicoti.exception.ResourceNotFoundException;
 import com.icap.logicoti.user.AppUser;
 import com.icap.logicoti.user.AppUserRepository;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.security.Security;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,19 +22,32 @@ public class WebPushSubscriptionService {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(WebPushSubscriptionService.class);
 
+    private static final int TITLE_LIMIT = 180;
+    private static final int BODY_LIMIT = 1000;
+    private static final int TAG_LIMIT = 200;
+    private static final int URL_LIMIT = 500;
+    private static final int ERROR_LIMIT = 2000;
+    private static final long MAX_RETRY_DELAY_SECONDS = 3600;
+
     private final WebPushProperties properties;
     private final WebPushSubscriptionRepository subscriptionRepository;
+    private final WebPushDeliveryRepository deliveryRepository;
+    private final WebPushClient webPushClient;
     private final AppUserRepository userRepository;
     private final JsonMapper jsonMapper;
 
     public WebPushSubscriptionService(
             WebPushProperties properties,
             WebPushSubscriptionRepository subscriptionRepository,
+            WebPushDeliveryRepository deliveryRepository,
+            WebPushClient webPushClient,
             AppUserRepository userRepository,
             JsonMapper jsonMapper
     ) {
         this.properties = properties;
         this.subscriptionRepository = subscriptionRepository;
+        this.deliveryRepository = deliveryRepository;
+        this.webPushClient = webPushClient;
         this.userRepository = userRepository;
         this.jsonMapper = jsonMapper;
     }
@@ -122,7 +129,10 @@ public class WebPushSubscriptionService {
         );
     }
 
-    @Async
+    /**
+     * Registra primero la entrega. El despachador programado hace el envío
+     * unos segundos después y conserva cada intento aunque el proveedor falle.
+     */
     @Transactional
     public void sendToAll(
             String title,
@@ -148,13 +158,19 @@ public class WebPushSubscriptionService {
             return;
         }
 
-        sendToSubscriptions(
+        String batchId = enqueue(
                 subscriptions,
                 title,
                 body,
                 tag,
                 targetUrl,
                 requireInteraction
+        );
+
+        LOGGER.info(
+                "Se registró el lote Web Push {} para {} dispositivo(s).",
+                batchId,
+                subscriptions.size()
         );
     }
 
@@ -185,7 +201,7 @@ public class WebPushSubscriptionService {
             );
         }
 
-        int accepted = sendToSubscriptions(
+        String batchId = enqueue(
                 subscriptions,
                 "Prueba de notificación LogicOTI",
                 "Los avisos de este dispositivo están funcionando correctamente.",
@@ -193,13 +209,30 @@ public class WebPushSubscriptionService {
                 "/security",
                 false
         );
+
+        int accepted = processDeliveries(
+                deliveryRepository.findBatch(batchId)
+        );
         int attempted = subscriptions.size();
         int failed = attempted - accepted;
-        String message = failed == 0
-                ? "El servicio Push aceptó la notificación para "
-                        + accepted + " dispositivo(s)."
-                : "El servicio Push aceptó " + accepted + " de "
-                        + attempted + " envío(s); revisa el log del backend para el error.";
+        long retryPending = deliveryRepository.countBatchByStatus(
+                batchId,
+                "RETRY_PENDING"
+        );
+
+        String message;
+
+        if (failed == 0) {
+            message = "El servicio Push aceptó la notificación para "
+                    + accepted + " dispositivo(s).";
+        } else if (retryPending > 0) {
+            message = "El servicio Push aceptó " + accepted + " de "
+                    + attempted + " envío(s); " + retryPending
+                    + " quedó en reintento automático.";
+        } else {
+            message = "El servicio Push aceptó " + accepted + " de "
+                    + attempted + " envío(s). Los demás quedaron registrados como fallidos.";
+        }
 
         return new WebPushTestResponse(
                 attempted,
@@ -210,7 +243,47 @@ public class WebPushSubscriptionService {
         );
     }
 
-    private int sendToSubscriptions(
+    @Scheduled(
+            initialDelayString = "${notifications.web-push.retry-poll-ms:5000}",
+            fixedDelayString = "${notifications.web-push.retry-poll-ms:5000}"
+    )
+    @Transactional
+    public void dispatchPendingDeliveries() {
+        if (!properties.isConfigured()) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        int abandoned = deliveryRepository
+                .markUndeliverableSubscriptions(now);
+
+        if (abandoned > 0) {
+            LOGGER.info(
+                    "Se cerraron {} entregas Web Push sin una suscripción activa.",
+                    abandoned
+            );
+        }
+
+        List<WebPushDeliveryTarget> deliveries =
+                deliveryRepository.findDue(
+                        now,
+                        properties.getRetryBatchSize()
+                );
+
+        if (!deliveries.isEmpty()) {
+            processDeliveries(deliveries);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public WebPushDeliveryPageResponse findDeliveries(
+            int limit,
+            int offset
+    ) {
+        return deliveryRepository.findRecent(limit, offset);
+    }
+
+    private String enqueue(
             List<WebPushSubscription> subscriptions,
             String title,
             String body,
@@ -218,119 +291,197 @@ public class WebPushSubscriptionService {
             String targetUrl,
             boolean requireInteraction
     ) {
+        return deliveryRepository.enqueue(
+                subscriptions,
+                limit(title, TITLE_LIMIT, "Notificación LogicOTI"),
+                limit(body, BODY_LIMIT, "Revisa LogicOTI."),
+                limit(tag, TAG_LIMIT, "logicoti-notification"),
+                limit(targetUrl, URL_LIMIT, "/"),
+                requireInteraction
+        );
+    }
 
-        String payload;
-
-        try {
-            payload = createPayload(
-                    title,
-                    body,
-                    tag,
-                    targetUrl,
-                    requireInteraction
-            );
-        } catch (JacksonException exception) {
-            LOGGER.error(
-                    "No se pudo generar el contenido de la notificación: {}",
-                    exception.getMessage()
-            );
-            return 0;
-        }
-
-        PushService pushService;
-
-        try {
-            ensureBouncyCastleProvider();
-            pushService = new PushService(
-                    properties.getPublicKey(),
-                    properties.getPrivateKey(),
-                    properties.getSubject()
-            );
-        } catch (Exception | LinkageError exception) {
-            LOGGER.error(
-                    "No se pudo inicializar Web Push. Verifica las llaves VAPID y las dependencias criptográficas: {}",
-                    exception.getMessage()
-            );
-            return 0;
-        }
-
+    private int processDeliveries(
+            List<WebPushDeliveryTarget> deliveries
+    ) {
         int accepted = 0;
 
-        for (WebPushSubscription subscription : subscriptions) {
-            if (sendOne(pushService, subscription, payload)) {
+        for (WebPushDeliveryTarget delivery : deliveries) {
+            if (processDelivery(delivery)) {
                 accepted++;
+            }
+
+            if (Thread.currentThread().isInterrupted()) {
+                break;
             }
         }
 
         return accepted;
     }
 
-    private static synchronized void ensureBouncyCastleProvider() {
-        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) != null) {
-            return;
-        }
-
-        int position = Security.addProvider(new BouncyCastleProvider());
-
-        if (position < 0 || Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            throw new IllegalStateException("No fue posible registrar el proveedor criptográfico BC.");
-        }
-
-        LOGGER.info("Proveedor criptográfico Bouncy Castle registrado en la posición {}.", position);
-    }
-
-    private boolean sendOne(
-            PushService pushService,
-            WebPushSubscription subscription,
-            String payload
+    private boolean processDelivery(
+            WebPushDeliveryTarget delivery
     ) {
+        Instant now = Instant.now();
+
         try {
-            Notification notification = new Notification(
-                    subscription.getEndpoint(),
-                    subscription.getP256dh(),
-                    subscription.getAuth(),
-                    payload
+            String payload = createPayload(
+                    delivery.title(),
+                    delivery.body(),
+                    delivery.tag(),
+                    delivery.targetUrl(),
+                    delivery.requireInteraction()
             );
 
-            HttpResponse response = pushService.send(notification);
-            int status = response.getStatusLine().getStatusCode();
+            int status = webPushClient.send(delivery, payload);
 
             if (status >= 200 && status < 300) {
-                subscription.markSuccess();
-                LOGGER.info(
-                        "Notificación Web Push aceptada con HTTP {} para la suscripción {}.",
+                deliveryRepository.recordAccepted(
+                        delivery,
                         status,
-                        subscription.getId()
+                        now
+                );
+                markSubscriptionSuccess(delivery.subscriptionId());
+                LOGGER.info(
+                        "Notificación Web Push {} aceptada con HTTP {}.",
+                        delivery.deliveryId(),
+                        status
                 );
                 return true;
             }
 
-            boolean expired = status == 404 || status == 410;
-            subscription.markFailure(expired);
+            if (status == 404 || status == 410) {
+                deliveryRepository.recordPermanentFailure(
+                        delivery,
+                        status,
+                        "La suscripción expiró o dejó de existir.",
+                        true,
+                        now
+                );
+                markSubscriptionFailure(
+                        delivery.subscriptionId(),
+                        true
+                );
+                return false;
+            }
 
-            LOGGER.warn(
-                    "El servicio Web Push respondió {} para la suscripción {}.",
+            if (isRetryable(status)) {
+                scheduleRetry(
+                        delivery,
+                        status,
+                        "El servicio Web Push respondió HTTP " + status + ".",
+                        now
+                );
+                return false;
+            }
+
+            deliveryRepository.recordPermanentFailure(
+                    delivery,
                     status,
-                    subscription.getId()
+                    "El servicio Web Push rechazó el envío con HTTP "
+                            + status + ".",
+                    false,
+                    now
+            );
+            markSubscriptionFailure(
+                    delivery.subscriptionId(),
+                    false
             );
             return false;
         } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            subscription.markFailure(false);
-            LOGGER.warn(
-                    "Se interrumpió el envío Web Push a la suscripción {}.",
-                    subscription.getId()
+            scheduleRetry(
+                    delivery,
+                    null,
+                    "El envío fue interrumpido.",
+                    now
             );
+            Thread.currentThread().interrupt();
             return false;
-        } catch (Exception exception) {
-            subscription.markFailure(false);
+        } catch (Exception | LinkageError exception) {
+            scheduleRetry(
+                    delivery,
+                    null,
+                    exceptionMessage(exception),
+                    now
+            );
             LOGGER.warn(
-                    "No se pudo enviar una notificación Web Push a {}: {}",
-                    subscription.getId(),
+                    "No se pudo enviar la notificación Web Push {}: {}",
+                    delivery.deliveryId(),
                     exception.getMessage()
             );
             return false;
         }
+    }
+
+    private void scheduleRetry(
+            WebPushDeliveryTarget delivery,
+            Integer httpStatus,
+            String error,
+            Instant now
+    ) {
+        int attemptNumber = delivery.attemptCount() + 1;
+        boolean exhausted = attemptNumber
+                >= properties.getMaxAttempts();
+        Instant nextAttemptAt = exhausted
+                ? null
+                : now.plusSeconds(retryDelaySeconds(attemptNumber));
+
+        deliveryRepository.recordRetryableFailure(
+                delivery,
+                httpStatus,
+                limit(error, ERROR_LIMIT, "Error de envío Web Push."),
+                nextAttemptAt,
+                exhausted,
+                now
+        );
+        markSubscriptionFailure(
+                delivery.subscriptionId(),
+                false
+        );
+    }
+
+    private long retryDelaySeconds(int attemptNumber) {
+        int exponent = Math.min(
+                Math.max(0, attemptNumber - 1),
+                10
+        );
+        long multiplier = 1L << exponent;
+        long baseDelay = properties
+                .getInitialRetryDelaySeconds();
+
+        if (baseDelay > MAX_RETRY_DELAY_SECONDS / multiplier) {
+            return MAX_RETRY_DELAY_SECONDS;
+        }
+
+        return Math.min(
+                baseDelay * multiplier,
+                MAX_RETRY_DELAY_SECONDS
+        );
+    }
+
+    private boolean isRetryable(int status) {
+        return status == 408
+                || status == 429
+                || status >= 500;
+    }
+
+    private void markSubscriptionSuccess(Long subscriptionId) {
+        subscriptionRepository.findById(subscriptionId)
+                .ifPresent(subscription -> {
+                    subscription.markSuccess();
+                    subscriptionRepository.save(subscription);
+                });
+    }
+
+    private void markSubscriptionFailure(
+            Long subscriptionId,
+            boolean deactivate
+    ) {
+        subscriptionRepository.findById(subscriptionId)
+                .ifPresent(subscription -> {
+                    subscription.markFailure(deactivate);
+                    subscriptionRepository.save(subscription);
+                });
     }
 
     private String createPayload(
@@ -367,13 +518,45 @@ public class WebPushSubscriptionService {
     }
 
     private String normalizeTargetUrl(String targetUrl) {
-        if (targetUrl == null || targetUrl.isBlank() || "/".equals(targetUrl)) {
+        if (targetUrl == null
+                || targetUrl.isBlank()
+                || "/".equals(targetUrl)) {
             return "./";
         }
 
         return targetUrl.startsWith("/")
                 ? targetUrl.substring(1)
                 : targetUrl;
+    }
+
+    private String exceptionMessage(Throwable throwable) {
+        String message = throwable.getMessage();
+
+        if (message == null || message.isBlank()) {
+            message = throwable.getClass().getSimpleName();
+        }
+
+        return limit(
+                message,
+                ERROR_LIMIT,
+                "Error de envío Web Push."
+        );
+    }
+
+    private String limit(
+            String value,
+            int maximumLength,
+            String fallback
+    ) {
+        String normalized = value == null || value.isBlank()
+                ? fallback
+                : value.trim();
+
+        if (normalized.length() <= maximumLength) {
+            return normalized;
+        }
+
+        return normalized.substring(0, maximumLength);
     }
 
     private AppUser findUser(String username) {

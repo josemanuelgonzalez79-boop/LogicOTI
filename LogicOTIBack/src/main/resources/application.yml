@@ -53,6 +53,10 @@ notifications:
     public-key: ${WEB_PUSH_PUBLIC_KEY:}
     private-key: ${WEB_PUSH_PRIVATE_KEY:}
     subject: ${WEB_PUSH_SUBJECT:mailto:soporte@icap.com.mx}
+    max-attempts: ${WEB_PUSH_MAX_ATTEMPTS:4}
+    initial-retry-delay-seconds: ${WEB_PUSH_INITIAL_RETRY_DELAY_SECONDS:30}
+    retry-batch-size: ${WEB_PUSH_RETRY_BATCH_SIZE:100}
+    retry-poll-ms: ${WEB_PUSH_RETRY_POLL_MS:5000}
 
 management:
   endpoints:
