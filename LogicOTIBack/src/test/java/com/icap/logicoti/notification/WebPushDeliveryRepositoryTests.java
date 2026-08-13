@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -103,6 +105,21 @@ class WebPushDeliveryRepositoryTests {
                 batchId,
                 "FAILED"
         )).isEqualTo(1);
+    }
+
+    @Test
+    void convertsInstantToPostgresqlSupportedUtcTimestamp() {
+        Instant instant = Instant.parse("2026-08-13T19:00:00Z");
+
+        OffsetDateTime timestamp = WebPushDeliveryRepository
+                .toDatabaseTimestamp(instant);
+
+        assertThat(timestamp).isEqualTo(
+                OffsetDateTime.ofInstant(instant, ZoneOffset.UTC)
+        );
+        assertThat(timestamp.toInstant()).isEqualTo(instant);
+        assertThat(WebPushDeliveryRepository.toDatabaseTimestamp(null))
+                .isNull();
     }
 
     private String enqueue() {
