@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -82,9 +84,9 @@ public class WebPushDeliveryRepository {
                 tag,
                 targetUrl,
                 requireInteraction,
-                now,
-                now,
-                now
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now)
         ));
 
         return batchId;
@@ -116,7 +118,7 @@ public class WebPushDeliveryRepository {
                         + " ORDER BY delivery.next_attempt_at, delivery.id"
                         + " LIMIT ?",
                 this::mapTarget,
-                now,
+                toDatabaseTimestamp(now),
                 limit
         );
     }
@@ -141,8 +143,8 @@ public class WebPushDeliveryRepository {
                   )
                 """,
                 "La suscripción o el usuario ya no están activos.",
-                now,
-                now
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now)
         );
     }
 
@@ -176,10 +178,10 @@ public class WebPushDeliveryRepository {
                 """,
                 attemptNumber,
                 httpStatus,
-                now,
-                now,
-                now,
-                now,
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
                 target.deliveryId()
         );
     }
@@ -225,10 +227,12 @@ public class WebPushDeliveryRepository {
                 attemptNumber,
                 httpStatus,
                 error,
-                exhausted ? null : nextAttemptAt,
-                now,
-                now,
-                exhausted ? now : null,
+                toDatabaseTimestamp(
+                        exhausted ? null : nextAttemptAt
+                ),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(exhausted ? now : null),
                 target.deliveryId()
         );
     }
@@ -270,9 +274,9 @@ public class WebPushDeliveryRepository {
                 attemptNumber,
                 httpStatus,
                 error,
-                now,
-                now,
-                now,
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
+                toDatabaseTimestamp(now),
                 target.deliveryId()
         );
     }
@@ -362,7 +366,7 @@ public class WebPushDeliveryRepository {
                 outcome,
                 httpStatus,
                 error,
-                now
+                toDatabaseTimestamp(now)
         );
     }
 
@@ -427,5 +431,11 @@ public class WebPushDeliveryRepository {
 
     private Instant toInstant(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toInstant();
+    }
+
+    static OffsetDateTime toDatabaseTimestamp(Instant instant) {
+        return instant == null
+                ? null
+                : instant.atOffset(ZoneOffset.UTC);
     }
 }
