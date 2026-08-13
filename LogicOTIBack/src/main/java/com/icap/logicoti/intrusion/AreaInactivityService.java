@@ -125,6 +125,16 @@ public class AreaInactivityService {
                     "${area.inactivity.poll-ms:5000}"
     )
     public void processExpiredAreas() {
+        int removed = runtimeService.removeInactiveEntries();
+
+        if (removed > 0) {
+            LOGGER.info(
+                    "Se descartaron {} ejecuciones de inactividad "
+                            + "asociadas a áreas inactivas.",
+                    removed
+            );
+        }
+
         SecuritySettingsResponse settings;
 
         try {

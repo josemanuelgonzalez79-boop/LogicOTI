@@ -15,3 +15,8 @@ springdoc:
     enabled: false
   api-docs:
     enabled: false
+
+security:
+  jwt:
+    secret: LogicOTI-Test-Secret-Only-Do-Not-Use-In-Production-2026-0123456789
+    expiration-seconds: 3600

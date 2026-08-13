@@ -31,8 +31,11 @@ public class AutomaticLightingRuntimeService {
                     ON device.id = target.device_id
                 INNER JOIN building_area area
                     ON area.id = device.area_id
+                INNER JOIN building_floor floor
+                    ON floor.id = area.floor_id
                 WHERE device.active = TRUE
                   AND area.active = TRUE
+                  AND floor.active = TRUE
                   AND device.device_type = 'LIGHT'
                   AND device.controllable = TRUE
                 ORDER BY area.display_order, device.display_order, device.id
@@ -55,7 +58,7 @@ public class AutomaticLightingRuntimeService {
     @Transactional(readOnly = true)
     public List<RuntimeLight> findExpiredLights(Instant instant) {
         return findRuntimeLights(
-                "WHERE runtime.turn_off_at <= ?",
+                "AND runtime.turn_off_at <= ?",
                 new Object[]{Timestamp.from(instant)}
         );
     }
@@ -79,6 +82,13 @@ public class AutomaticLightingRuntimeService {
                     ON device.id = runtime.device_id
                 INNER JOIN building_area area
                     ON area.id = device.area_id
+                INNER JOIN building_floor floor
+                    ON floor.id = area.floor_id
+                WHERE device.active = TRUE
+                  AND area.active = TRUE
+                  AND floor.active = TRUE
+                  AND device.device_type = 'LIGHT'
+                  AND device.controllable = TRUE
                 %s
                 ORDER BY runtime.turn_off_at, device.id
                 """.formatted(whereClause);
@@ -129,14 +139,46 @@ public class AutomaticLightingRuntimeService {
     @Transactional
     public void extendAll(Instant motionAt, Instant turnOffAt) {
         jdbcTemplate.update("""
-                UPDATE security_automatic_lighting_runtime
+                UPDATE security_automatic_lighting_runtime runtime
                 SET last_motion_at = ?,
                     turn_off_at = ?,
                     updated_at = CURRENT_TIMESTAMP
+                FROM building_device device
+                INNER JOIN building_area area
+                    ON area.id = device.area_id
+                INNER JOIN building_floor floor
+                    ON floor.id = area.floor_id
+                WHERE runtime.device_id = device.id
+                  AND device.active = TRUE
+                  AND area.active = TRUE
+                  AND floor.active = TRUE
+                  AND device.device_type = 'LIGHT'
+                  AND device.controllable = TRUE
                 """,
                 Timestamp.from(motionAt),
                 Timestamp.from(turnOffAt)
         );
+    }
+
+    @Transactional
+    public int removeInactiveEntries() {
+        return jdbcTemplate.update("""
+                DELETE FROM security_automatic_lighting_runtime runtime
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM building_device device
+                    INNER JOIN building_area area
+                        ON area.id = device.area_id
+                    INNER JOIN building_floor floor
+                        ON floor.id = area.floor_id
+                    WHERE device.id = runtime.device_id
+                      AND device.active = TRUE
+                      AND area.active = TRUE
+                      AND floor.active = TRUE
+                      AND device.device_type = 'LIGHT'
+                      AND device.controllable = TRUE
+                )
+                """);
     }
 
     @Transactional

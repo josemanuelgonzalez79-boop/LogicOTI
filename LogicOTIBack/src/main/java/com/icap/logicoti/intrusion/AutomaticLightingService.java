@@ -216,6 +216,16 @@ public class AutomaticLightingService {
                     "${automatic.lighting.poll-ms:5000}"
     )
     public void turnOffExpiredLights() {
+        int removed = runtimeService.removeInactiveEntries();
+
+        if (removed > 0) {
+            LOGGER.info(
+                    "Se descartaron {} ejecuciones de iluminación "
+                            + "asociadas a dispositivos o áreas inactivas.",
+                    removed
+            );
+        }
+
         Instant now = Instant.now();
         List<AutomaticLightingRuntimeService.RuntimeLight> expired =
                 runtimeService.findExpiredLights(now);

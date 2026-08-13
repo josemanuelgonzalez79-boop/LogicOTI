@@ -90,10 +90,12 @@ public class AreaInactivityRuntimeService {
     @Transactional(readOnly = true)
     public List<RuntimeArea> findDueAreas(Instant now) {
         return findRuntimeAreas("""
-                WHERE (runtime.light_processed = FALSE
-                       AND runtime.light_turn_off_at <= ?)
-                   OR (runtime.minisplit_processed = FALSE
-                       AND runtime.minisplit_turn_off_at <= ?)
+                AND (
+                    (runtime.light_processed = FALSE
+                     AND runtime.light_turn_off_at <= ?)
+                    OR (runtime.minisplit_processed = FALSE
+                        AND runtime.minisplit_turn_off_at <= ?)
+                )
                 """,
                 new Object[]{Timestamp.from(now), Timestamp.from(now)}
         );
@@ -127,6 +129,8 @@ public class AreaInactivityRuntimeService {
                     ON area.id = runtime.area_id
                 INNER JOIN building_floor floor
                     ON floor.id = area.floor_id
+                WHERE area.active = TRUE
+                  AND floor.active = TRUE
                 %s
                 ORDER BY runtime.last_motion_at DESC, area.id
                 """.formatted(whereClause);
@@ -151,6 +155,22 @@ public class AreaInactivityRuntimeService {
         );
     }
 
+    @Transactional
+    public int removeInactiveEntries() {
+        return jdbcTemplate.update("""
+                DELETE FROM security_area_inactivity_runtime runtime
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM building_area area
+                    INNER JOIN building_floor floor
+                        ON floor.id = area.floor_id
+                    WHERE area.id = runtime.area_id
+                      AND area.active = TRUE
+                      AND floor.active = TRUE
+                )
+                """);
+    }
+
     @Transactional(readOnly = true)
     public boolean isAutomaticLightingTarget(String deviceCode) {
         Integer count = jdbcTemplate.queryForObject("""
@@ -158,7 +178,16 @@ public class AreaInactivityRuntimeService {
                 FROM security_automatic_lighting_target target
                 INNER JOIN building_device device
                     ON device.id = target.device_id
+                INNER JOIN building_area area
+                    ON area.id = device.area_id
+                INNER JOIN building_floor floor
+                    ON floor.id = area.floor_id
                 WHERE UPPER(device.code) = UPPER(?)
+                  AND device.active = TRUE
+                  AND area.active = TRUE
+                  AND floor.active = TRUE
+                  AND device.device_type = 'LIGHT'
+                  AND device.controllable = TRUE
                 """,
                 Integer.class,
                 deviceCode

@@ -73,5 +73,5 @@ springdoc:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:LogicOTI-JWT-Secret-Key-2026-ICAP-Seguridad}
+    secret: ${JWT_SECRET}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
