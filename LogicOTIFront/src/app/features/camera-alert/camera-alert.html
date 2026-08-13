@@ -1,0 +1,91 @@
+<main class="camera-alert-page">
+  <header class="alert-brand">
+    <span class="alert-brand__mark" aria-hidden="true">
+      <i class="pi pi-building"></i>
+    </span>
+    <span>
+      <strong>LogicOTI</strong>
+      <small>Supervisión del edificio</small>
+    </span>
+  </header>
+
+  <section class="alert-card" aria-live="polite">
+    @if (loading()) {
+      <div class="alert-state">
+        <span class="alert-state__icon alert-state__icon--loading">
+          <i class="pi pi-spin pi-spinner"></i>
+        </span>
+        <h1>Abriendo cámara relacionada</h1>
+        <p>Validando el aviso de movimiento…</p>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="alert-state">
+        <span class="alert-state__icon alert-state__icon--error">
+          <i class="pi pi-clock"></i>
+        </span>
+        <span class="alert-state__eyebrow">Enlace no disponible</span>
+        <h1>No fue posible mostrar el video</h1>
+        <p>{{ errorMessage() }}</p>
+
+        <button type="button" class="primary-action" (click)="openFullApplication()">
+          <i class="pi pi-sign-in"></i>
+          Abrir LogicOTI
+        </button>
+      </div>
+    } @else if (alert(); as camera) {
+      <header class="camera-heading">
+        <div>
+          <span class="camera-heading__eyebrow">
+            <i class="pi pi-shield"></i>
+            Movimiento detectado
+          </span>
+          <h1>{{ camera.cameraName }}</h1>
+          <p>
+            {{ floorLabel(camera.floorCode) }}
+            @if (camera.areaCode) {
+              · {{ camera.areaCode }}
+            }
+          </p>
+        </div>
+
+        <span class="live-status">
+          <span aria-hidden="true"></span>
+          En vivo
+        </span>
+      </header>
+
+      <div class="video-frame">
+        @if (safeViewUrl(); as viewUrl) {
+          <iframe
+            [src]="viewUrl"
+            [title]="'Video en vivo de ' + camera.cameraName"
+            allow="autoplay; fullscreen; picture-in-picture"
+            referrerpolicy="no-referrer"
+          ></iframe>
+        } @else {
+          <div class="video-unavailable">
+            <i class="pi pi-video"></i>
+            <span>Video no disponible</span>
+          </div>
+        }
+      </div>
+
+      <footer class="camera-footer">
+        <p>
+          <i class="pi pi-lock"></i>
+          Este acceso temporal vence a las {{ expirationLabel() }}.
+        </p>
+
+        <button type="button" class="secondary-action" (click)="openFullApplication()">
+          Ver en LogicOTI
+          <i class="pi pi-arrow-right"></i>
+        </button>
+      </footer>
+    }
+  </section>
+
+  <p class="network-note">
+    <i class="pi pi-wifi"></i>
+    El video requiere conexión a la red del edificio o a su VPN.
+  </p>
+</main>

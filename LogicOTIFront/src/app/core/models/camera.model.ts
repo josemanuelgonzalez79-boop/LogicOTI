@@ -20,3 +20,13 @@ export interface CameraListResponse {
   playbackConfigured: boolean;
   timestamp: string;
 }
+
+export interface CameraAlertView {
+  cameraCode: string;
+  cameraName: string;
+  floorCode: CameraFloorCode;
+  areaCode: string | null;
+  viewUrl: string;
+  expiresAt: string;
+  timestamp: string;
+}

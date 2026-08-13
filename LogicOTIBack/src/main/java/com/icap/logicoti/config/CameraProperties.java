@@ -11,6 +11,7 @@ public class CameraProperties {
     private boolean enabled;
     private String playbackBaseUrl = "";
     private List<String> availableStreams = new ArrayList<>();
+    private long alertLinkExpirationSeconds = 900;
 
     public boolean isEnabled() {
         return enabled;
@@ -34,5 +35,15 @@ public class CameraProperties {
 
     public void setAvailableStreams(List<String> availableStreams) {
         this.availableStreams = availableStreams;
+    }
+
+    public long getAlertLinkExpirationSeconds() {
+        return alertLinkExpirationSeconds;
+    }
+
+    public void setAlertLinkExpirationSeconds(
+            long alertLinkExpirationSeconds
+    ) {
+        this.alertLinkExpirationSeconds = alertLinkExpirationSeconds;
     }
 }

@@ -10,7 +10,11 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (request.url.includes(API_ENDPOINTS.auth.login)) {
+  const isPublicRequest =
+    request.url.includes(API_ENDPOINTS.auth.login) ||
+    request.url.includes(API_ENDPOINTS.cameras.alertView);
+
+  if (isPublicRequest) {
     return next(request);
   }
 

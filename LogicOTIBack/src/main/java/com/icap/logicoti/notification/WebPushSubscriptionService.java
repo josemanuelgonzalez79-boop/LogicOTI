@@ -492,7 +492,7 @@ public class WebPushSubscriptionService {
             boolean requireInteraction
     ) {
         Map<String, Object> defaultAction = Map.of(
-                "operation", "openWindow",
+                "operation", "navigateLastFocusedOrOpen",
                 "url", normalizeTargetUrl(targetUrl)
         );
 

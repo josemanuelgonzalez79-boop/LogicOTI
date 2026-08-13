@@ -4,7 +4,12 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
-import { CameraFloorCode, CameraItem, CameraListResponse } from '../models/camera.model';
+import {
+  CameraAlertView,
+  CameraFloorCode,
+  CameraItem,
+  CameraListResponse,
+} from '../models/camera.model';
 
 @Injectable({ providedIn: 'root' })
 export class CameraApiService {
@@ -30,6 +35,15 @@ export class CameraApiService {
   getCamera(cameraCode: string): Observable<CameraItem> {
     return this.http.get<CameraItem>(
       `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.detail(cameraCode)}`,
+    );
+  }
+
+  getCameraAlert(token: string): Observable<CameraAlertView> {
+    const params = new HttpParams().set('token', token);
+
+    return this.http.get<CameraAlertView>(
+      `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.alertView}`,
+      { params },
     );
   }
 }

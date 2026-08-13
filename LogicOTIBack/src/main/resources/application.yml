@@ -46,6 +46,7 @@ cameras:
   enabled: ${CAMERAS_ENABLED:false}
   playback-base-url: ${CAMERA_PLAYBACK_BASE_URL:}
   available-streams: ${CAMERA_AVAILABLE_STREAMS:}
+  alert-link-expiration-seconds: ${CAMERA_ALERT_LINK_EXPIRATION_SECONDS:900}
 
 notifications:
   web-push:

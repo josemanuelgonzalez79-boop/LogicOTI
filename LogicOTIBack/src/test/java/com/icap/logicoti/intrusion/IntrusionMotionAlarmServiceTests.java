@@ -1,5 +1,6 @@
 package com.icap.logicoti.intrusion;
 
+import com.icap.logicoti.camera.CameraAlertLinkService;
 import com.icap.logicoti.camera.CameraListResponse;
 import com.icap.logicoti.camera.CameraResponse;
 import com.icap.logicoti.camera.CameraService;
@@ -18,6 +19,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,6 +36,9 @@ class IntrusionMotionAlarmServiceTests {
 
     @Mock
     private CameraService cameraService;
+
+    @Mock
+    private CameraAlertLinkService cameraAlertLinkService;
 
     @Mock
     private SimpMessagingTemplate messagingTemplate;
@@ -76,6 +81,8 @@ class IntrusionMotionAlarmServiceTests {
                         true,
                         Instant.now()
                 ));
+        when(cameraAlertLinkService.createTargetUrl("CAM-008"))
+                .thenReturn("/camera-alert?token=token-firmado");
 
         service.process(event);
 
@@ -85,9 +92,9 @@ class IntrusionMotionAlarmServiceTests {
         );
         verify(webPushSubscriptionService).sendToAll(
                 eq("Movimiento con alarma armada"),
-                anyString(),
+                contains("Toca el aviso para ver Recepción"),
                 eq("motion-PB_A01_MOV01"),
-                eq("/cameras?camera=CAM-008"),
+                eq("/camera-alert?token=token-firmado"),
                 eq(true)
         );
     }

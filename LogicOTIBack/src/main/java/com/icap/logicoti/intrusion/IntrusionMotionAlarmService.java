@@ -1,6 +1,8 @@
 package com.icap.logicoti.intrusion;
 
 import com.icap.logicoti.camera.CameraListResponse;
+import com.icap.logicoti.camera.CameraAlertLinkService;
+import com.icap.logicoti.camera.CameraResponse;
 import com.icap.logicoti.camera.CameraService;
 import com.icap.logicoti.event.SensorEventHistoryResponse;
 import com.icap.logicoti.notification.WebPushSubscriptionService;
@@ -23,6 +25,7 @@ public class IntrusionMotionAlarmService {
     private final JdbcTemplate jdbcTemplate;
     private final IntrusionAlarmService alarmService;
     private final CameraService cameraService;
+    private final CameraAlertLinkService cameraAlertLinkService;
     private final SimpMessagingTemplate messagingTemplate;
     private final WebPushSubscriptionService webPushSubscriptionService;
 
@@ -30,12 +33,14 @@ public class IntrusionMotionAlarmService {
             JdbcTemplate jdbcTemplate,
             IntrusionAlarmService alarmService,
             CameraService cameraService,
+            CameraAlertLinkService cameraAlertLinkService,
             SimpMessagingTemplate messagingTemplate,
             WebPushSubscriptionService webPushSubscriptionService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.alarmService = alarmService;
         this.cameraService = cameraService;
+        this.cameraAlertLinkService = cameraAlertLinkService;
         this.messagingTemplate = messagingTemplate;
         this.webPushSubscriptionService = webPushSubscriptionService;
     }
@@ -65,13 +70,29 @@ public class IntrusionMotionAlarmService {
                 event.areaCode()
         );
 
-        String message = cameras.items().isEmpty()
-                ? "Se detectó movimiento en "
+        CameraResponse availableCamera = cameras.items()
+                .stream()
+                .filter(CameraResponse::videoAvailable)
+                .findFirst()
+                .orElse(null);
+
+        String message;
+
+        if (cameras.items().isEmpty()) {
+            message = "Se detectó movimiento en "
                     + event.areaName()
-                    + ", pero el área no tiene una cámara asociada."
-                : "Se detectó movimiento en "
+                    + ", pero el área no tiene una cámara asociada.";
+        } else if (availableCamera == null) {
+            message = "Se detectó movimiento en "
                     + event.areaName()
-                    + ". Se abrió la cámara relacionada.";
+                    + ", pero la cámara relacionada no está disponible.";
+        } else {
+            message = "Se detectó movimiento en "
+                    + event.areaName()
+                    + ". Toca el aviso para ver "
+                    + availableCamera.name()
+                    + ".";
+        }
 
         SecurityMotionAlertResponse response =
                 new SecurityMotionAlertResponse(
@@ -87,10 +108,11 @@ public class IntrusionMotionAlarmService {
                 response
         );
 
-        String targetUrl = cameras.items().isEmpty()
+        String targetUrl = availableCamera == null
                 ? "/security"
-                : "/cameras?camera="
-                        + cameras.items().getFirst().code();
+                : cameraAlertLinkService.createTargetUrl(
+                        availableCamera.code()
+                );
 
         webPushSubscriptionService.sendToAll(
                 "Movimiento con alarma armada",

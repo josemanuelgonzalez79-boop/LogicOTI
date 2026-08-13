@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   cameras: {
     list: '/cameras',
     detail: (cameraCode: string) => `/cameras/${cameraCode}`,
+    alertView: '/camera-alerts/view',
   },
 
   realtime: {

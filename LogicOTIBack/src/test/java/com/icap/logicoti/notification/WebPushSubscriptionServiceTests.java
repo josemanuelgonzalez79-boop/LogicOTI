@@ -5,14 +5,17 @@ import com.icap.logicoti.user.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -116,6 +119,22 @@ class WebPushSubscriptionServiceTests {
         );
         verify(subscription).markSuccess();
         verify(subscriptionRepository).save(subscription);
+
+        ArgumentCaptor<Object> payloadCaptor =
+                ArgumentCaptor.forClass(Object.class);
+        verify(jsonMapper).writeValueAsString(payloadCaptor.capture());
+
+        Map<?, ?> root = (Map<?, ?>) payloadCaptor.getValue();
+        Map<?, ?> notification = (Map<?, ?>) root.get("notification");
+        Map<?, ?> data = (Map<?, ?>) notification.get("data");
+        Map<?, ?> onActionClick = (Map<?, ?>) data.get("onActionClick");
+        Map<?, ?> defaultAction = (Map<?, ?>) onActionClick.get("default");
+
+        assertEquals(
+                "navigateLastFocusedOrOpen",
+                defaultAction.get("operation")
+        );
+        assertEquals("alarms", defaultAction.get("url"));
     }
 
     @Test

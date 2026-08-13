@@ -1,5 +1,6 @@
 package com.icap.logicoti.exception;
 
+import com.icap.logicoti.camera.CameraAlertLinkException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -64,6 +65,18 @@ public class GlobalExceptionHandler {
     ) {
         return problem(
                 HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(CameraAlertLinkException.class)
+    ProblemDetail handleCameraAlertLink(
+            CameraAlertLinkException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.GONE,
                 exception.getMessage(),
                 request
         );

@@ -94,6 +94,13 @@ public class SecurityConfig {
                                 "/actuator/health/**"
                         ).permitAll()
 
+                        // Acceso temporal y firmado a la cámara de una alerta.
+                        // No concede una sesión ni acceso al catálogo completo.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/camera-alerts/view"
+                        ).permitAll()
+
                         // Administración de usuarios.
                         .requestMatchers(
                                 "/api/users",

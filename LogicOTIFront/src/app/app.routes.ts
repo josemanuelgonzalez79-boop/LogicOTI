@@ -26,6 +26,13 @@ export const routes: Routes = [
     title: 'Iniciar sesión | LogicOTI',
   },
 
+  // Vista temporal abierta desde una notificación de movimiento.
+  {
+    path: 'camera-alert',
+    loadComponent: () => import('./features/camera-alert/camera-alert').then((c) => c.CameraAlert),
+    title: 'Cámara de alerta | LogicOTI',
+  },
+
   // Dashboard
   {
     path: 'dashboard',
