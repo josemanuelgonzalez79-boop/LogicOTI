@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
-import { SensorEventHistoryItem } from '../models/history.model';
+import { AlarmActivity, SensorEventHistoryItem } from '../models/history.model';
 import { AlarmApiService } from './alarm-api.service';
 import { SmokeAlertStateService } from './smoke-alert-state.service';
 import {
@@ -23,6 +23,10 @@ const activatedEvent: SensorEventHistoryItem = {
   severity: 'CRITICAL',
   message: 'Humo detectado en Dirección.',
   detectedAt: '2026-08-03T18:00:00Z',
+  acknowledged: false,
+  acknowledgedBy: null,
+  acknowledgedAt: null,
+  commentCount: 0,
 };
 
 const clearedEvent: SensorEventHistoryItem = {
@@ -48,15 +52,21 @@ class AlarmApiServiceMock {
 
 class SmokeAlertRealtimeServiceMock {
   private readonly alertsSubject = new Subject<SensorEventHistoryItem>();
+  private readonly attentionSubject = new Subject<AlarmActivity>();
   private readonly statusSubject = new BehaviorSubject<RealtimeConnectionStatus>('DISCONNECTED');
 
   readonly alerts$ = this.alertsSubject.asObservable();
+  readonly attention$ = this.attentionSubject.asObservable();
   readonly connectionStatus$ = this.statusSubject.asObservable();
   readonly connect = vi.fn();
   readonly disconnect = vi.fn(async () => undefined);
 
   emit(event: SensorEventHistoryItem): void {
     this.alertsSubject.next(event);
+  }
+
+  emitAttention(activity: AlarmActivity): void {
+    this.attentionSubject.next(activity);
   }
 }
 
@@ -124,5 +134,30 @@ describe('SmokeAlertStateService', () => {
 
     expect(service.activeCount()).toBe(0);
     expect(alarmApi.getActiveAlarms).toHaveBeenCalledTimes(2);
+  });
+
+  it('actualiza reconocimiento y comentarios recibidos por WebSocket', () => {
+    service.start();
+
+    realtime.emitAttention({
+      eventId: 10,
+      acknowledgement: {
+        id: 1,
+        eventId: 10,
+        acknowledgedBy: 'operador',
+        acknowledgedAt: '2026-08-03T18:01:00Z',
+      },
+      comments: [],
+      commentCount: 1,
+      timestamp: '2026-08-03T18:01:00Z',
+    });
+
+    expect(service.activeAlerts()[0]).toEqual(
+      expect.objectContaining({
+        acknowledged: true,
+        acknowledgedBy: 'operador',
+        commentCount: 1,
+      }),
+    );
   });
 });

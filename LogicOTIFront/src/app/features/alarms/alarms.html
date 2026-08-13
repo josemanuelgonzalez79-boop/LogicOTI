@@ -52,7 +52,7 @@
       <div>
         <span>Alarmas activas</span>
         <strong>{{ activeAlerts().length }}</strong>
-        <small>Requieren revisión</small>
+        <small>{{ unacknowledgedActiveAlerts() }} sin reconocer</small>
       </div>
     </article>
 
@@ -134,6 +134,29 @@
               <p>{{ alarm.message }}</p>
             </div>
 
+            <div
+              class="attention-summary"
+              [class.attention-summary--acknowledged]="alarm.acknowledged"
+            >
+              <i
+                class="pi"
+                [class.pi-user-plus]="!alarm.acknowledged"
+                [class.pi-check-circle]="alarm.acknowledged"
+              ></i>
+              <div>
+                @if (alarm.acknowledged) {
+                  <strong>Reconocida por {{ alarm.acknowledgedBy }}</strong>
+                  <span>
+                    {{ alarm.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }} ·
+                    {{ alarm.commentCount }} comentarios
+                  </span>
+                } @else {
+                  <strong>Pendiente de reconocimiento</strong>
+                  <span>Registra quién está atendiendo la alarma.</span>
+                }
+              </div>
+            </div>
+
             <footer class="active-alert-card__footer">
               <span>
                 <i class="pi pi-bell"></i>
@@ -143,6 +166,15 @@
                 {{ alarm.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
               </time>
             </footer>
+
+            <button type="button" class="attention-button" (click)="openAttention(alarm)">
+              <i
+                class="pi"
+                [class.pi-user-plus]="!alarm.acknowledged"
+                [class.pi-comments]="alarm.acknowledged"
+              ></i>
+              {{ alarm.acknowledged ? 'Ver atención y comentarios' : 'Reconocer alarma' }}
+            </button>
           </article>
         }
       </div>
@@ -224,6 +256,7 @@
               <th>Sensor</th>
               <th>Evento</th>
               <th>Severidad</th>
+              <th>Atención</th>
               <th>Detalle</th>
             </tr>
           </thead>
@@ -270,6 +303,28 @@
                     }
                   </span>
                 </td>
+                <td>
+                  @if (event.eventType === 'ACTIVATED') {
+                    <button
+                      type="button"
+                      class="table-attention-button"
+                      [class.table-attention-button--pending]="!event.acknowledged"
+                      (click)="openAttention(event)"
+                    >
+                      <i
+                        class="pi"
+                        [class.pi-check-circle]="event.acknowledged"
+                        [class.pi-clock]="!event.acknowledged"
+                      ></i>
+                      {{ event.acknowledged ? 'Reconocida' : 'Pendiente' }}
+                      @if (event.commentCount > 0) {
+                        <span>{{ event.commentCount }}</span>
+                      }
+                    </button>
+                  } @else {
+                    <span class="not-applicable">—</span>
+                  }
+                </td>
                 <td class="history-table__message">{{ event.message }}</td>
               </tr>
             }
@@ -282,4 +337,159 @@
       Mostrando {{ filteredEvents().length }} de {{ totalEvents() }} registros
     </footer>
   </section>
+
+  @if (selectedAlarm(); as alarm) {
+    <div class="attention-dialog-backdrop" (click)="closeAttention()">
+      <section
+        class="attention-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="attention-dialog-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="attention-dialog__header">
+          <div>
+            <span>Bitácora de atención</span>
+            <h2 id="attention-dialog-title">{{ alarm.areaName }}</h2>
+            <p>{{ alarm.deviceName }} · {{ alarm.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="dialog-close"
+            aria-label="Cerrar"
+            [disabled]="activitySaving()"
+            (click)="closeAttention()"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+        </header>
+
+        <div class="attention-dialog__body">
+          @if (activityLoading()) {
+            <div class="dialog-state">
+              <i class="pi pi-spin pi-spinner"></i>
+              Consultando bitácora...
+            </div>
+          } @else if (alarmActivity(); as activity) {
+            <article
+              class="acknowledgement-card"
+              [class.acknowledgement-card--done]="activity.acknowledgement"
+            >
+              <i
+                class="pi"
+                [class.pi-shield]="!activity.acknowledgement"
+                [class.pi-check-circle]="activity.acknowledgement"
+              ></i>
+              <div>
+                @if (activity.acknowledgement; as acknowledgement) {
+                  <strong>Alarma reconocida</strong>
+                  <span>
+                    {{ acknowledgement.acknowledgedBy }} ·
+                    {{ acknowledgement.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  </span>
+                } @else {
+                  <strong>Alarma pendiente de reconocimiento</strong>
+                  <span>Reconocerla no cambia ni restablece el estado físico del sensor.</span>
+                }
+              </div>
+            </article>
+
+            <section class="comment-timeline">
+              <header>
+                <h3>Comentarios</h3>
+                <span>{{ activity.commentCount }}</span>
+              </header>
+
+              @if (activity.comments.length === 0) {
+                <p class="comment-empty">Todavía no hay observaciones registradas.</p>
+              } @else {
+                <div class="comment-list">
+                  @for (comment of activity.comments; track comment.id) {
+                    <article class="comment-item">
+                      <span class="comment-item__avatar">
+                        <i class="pi pi-user"></i>
+                      </span>
+                      <div>
+                        <header>
+                          <strong>{{ comment.createdBy }}</strong>
+                          <time>{{ comment.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</time>
+                        </header>
+                        <p>{{ comment.comment }}</p>
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+            </section>
+
+            <label class="comment-field">
+              <span>
+                {{
+                  activity.acknowledgement
+                    ? 'Agregar comentario a la bitácora'
+                    : 'Comentario inicial (opcional)'
+                }}
+              </span>
+              <textarea
+                rows="3"
+                maxlength="500"
+                placeholder="Describe la revisión, acción realizada o personal notificado"
+                [ngModel]="draftComment()"
+                (ngModelChange)="draftComment.set($event)"
+              ></textarea>
+              <small>{{ draftComment().length }}/500</small>
+            </label>
+          }
+
+          @if (activityError()) {
+            <div class="dialog-feedback dialog-feedback--error">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ activityError() }}
+            </div>
+          }
+
+          @if (activitySuccess()) {
+            <div class="dialog-feedback dialog-feedback--success">
+              <i class="pi pi-check-circle"></i>
+              {{ activitySuccess() }}
+            </div>
+          }
+        </div>
+
+        <footer class="attention-dialog__footer">
+          <button
+            type="button"
+            class="dialog-secondary-button"
+            [disabled]="activitySaving()"
+            (click)="closeAttention()"
+          >
+            Cerrar
+          </button>
+
+          <button
+            type="button"
+            class="dialog-primary-button"
+            [disabled]="activityLoading() || activitySaving() || !alarmActivity()"
+            (click)="saveAttention()"
+          >
+            <i
+              class="pi"
+              [class.pi-spin]="activitySaving()"
+              [class.pi-spinner]="activitySaving()"
+              [class.pi-user-plus]="!activitySaving() && !alarmActivity()?.acknowledgement"
+              [class.pi-send]="!activitySaving() && !!alarmActivity()?.acknowledgement"
+            ></i>
+            @if (activitySaving()) {
+              Guardando...
+            } @else if (alarmActivity()?.acknowledgement) {
+              Agregar comentario
+            } @else {
+              Reconocer alarma
+            }
+          </button>
+        </footer>
+      </section>
+    </div>
+  }
 </section>

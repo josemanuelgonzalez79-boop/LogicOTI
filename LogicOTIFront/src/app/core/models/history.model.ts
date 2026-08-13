@@ -51,6 +51,33 @@ export interface SensorEventHistoryItem {
   severity: SensorEventSeverity;
   message: string;
   detectedAt: string;
+  acknowledged: boolean;
+  acknowledgedBy: string | null;
+  acknowledgedAt: string | null;
+  commentCount: number;
+}
+
+export interface AlarmAcknowledgement {
+  id: number;
+  eventId: number;
+  acknowledgedBy: string;
+  acknowledgedAt: string;
+}
+
+export interface AlarmComment {
+  id: number;
+  eventId: number;
+  comment: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AlarmActivity {
+  eventId: number;
+  acknowledgement: AlarmAcknowledgement | null;
+  comments: AlarmComment[];
+  commentCount: number;
+  timestamp: string;
 }
 
 export interface CommandHistoryFilters {

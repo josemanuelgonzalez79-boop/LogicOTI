@@ -39,7 +39,11 @@ class ActiveAlarmServiceTests {
                         "ACTIVATED",
                         "CRITICAL",
                         "Humo detectado en Dirección.",
-                        Instant.parse("2026-07-29T22:33:50Z")
+                        Instant.parse("2026-07-29T22:33:50Z"),
+                        false,
+                        null,
+                        null,
+                        0
                 );
 
         when(eventHistory.findActiveSmokeAlarms())

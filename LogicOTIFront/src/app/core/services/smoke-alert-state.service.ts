@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 
-import { SensorEventHistoryItem } from '../models/history.model';
+import { AlarmActivity, SensorEventHistoryItem } from '../models/history.model';
 import { AlarmApiService } from './alarm-api.service';
 import {
   RealtimeConnectionStatus,
@@ -15,6 +15,7 @@ export class SmokeAlertStateService {
 
   private readonly latestByDevice = new Map<string, SensorEventHistoryItem>();
   private readonly notificationSubject = new Subject<SensorEventHistoryItem>();
+  private readonly attentionSubject = new Subject<AlarmActivity>();
   private readonly activeAlertsState = signal<SensorEventHistoryItem[]>([]);
   private readonly connectionStatusState = signal<RealtimeConnectionStatus>('DISCONNECTED');
   private readonly latestEventState = signal<SensorEventHistoryItem | null>(null);
@@ -28,6 +29,7 @@ export class SmokeAlertStateService {
   readonly connectionStatus = this.connectionStatusState.asReadonly();
   readonly latestEvent = this.latestEventState.asReadonly();
   readonly notifications$ = this.notificationSubject.asObservable();
+  readonly attentionUpdates$ = this.attentionSubject.asObservable();
 
   start(): void {
     if (this.started) {
@@ -42,6 +44,10 @@ export class SmokeAlertStateService {
 
     this.subscriptions.add(
       this.realtime.alerts$.subscribe((event) => this.processRealtimeEvent(event)),
+    );
+
+    this.subscriptions.add(
+      this.realtime.attention$.subscribe((activity) => this.applyAlarmActivity(activity)),
     );
 
     this.realtime.connect();
@@ -64,6 +70,31 @@ export class SmokeAlertStateService {
     }
 
     this.loadInitialState();
+  }
+
+  applyAlarmActivity(activity: AlarmActivity): void {
+    let updated = false;
+
+    this.latestByDevice.forEach((event, deviceCode) => {
+      if (event.id !== activity.eventId) {
+        return;
+      }
+
+      this.latestByDevice.set(deviceCode, {
+        ...event,
+        acknowledged: activity.acknowledgement !== null,
+        acknowledgedBy: activity.acknowledgement?.acknowledgedBy ?? null,
+        acknowledgedAt: activity.acknowledgement?.acknowledgedAt ?? null,
+        commentCount: activity.commentCount,
+      });
+      updated = true;
+    });
+
+    if (updated) {
+      this.updateActiveAlerts();
+    }
+
+    this.attentionSubject.next(activity);
   }
 
   async stop(): Promise<void> {

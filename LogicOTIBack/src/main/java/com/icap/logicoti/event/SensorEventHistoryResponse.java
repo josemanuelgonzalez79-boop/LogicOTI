@@ -15,6 +15,10 @@ public record SensorEventHistoryResponse(
         String eventType,
         String severity,
         String message,
-        Instant detectedAt
+        Instant detectedAt,
+        boolean acknowledged,
+        String acknowledgedBy,
+        Instant acknowledgedAt,
+        long commentCount
 ) {
 }

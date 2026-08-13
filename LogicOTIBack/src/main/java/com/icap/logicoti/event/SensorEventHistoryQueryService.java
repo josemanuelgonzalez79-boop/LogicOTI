@@ -29,7 +29,14 @@ public class SensorEventHistoryQueryService {
                 history.event_type,
                 history.severity,
                 history.message,
-                history.detected_at
+                history.detected_at,
+                acknowledgement.acknowledged_by,
+                acknowledgement.acknowledged_at,
+                (
+                    SELECT COUNT(*)
+                    FROM alarm_comment alarm_note
+                    WHERE alarm_note.event_id = history.id
+                ) AS comment_count
             """;
 
     private static final String HISTORY_FROM = """
@@ -38,6 +45,8 @@ public class SensorEventHistoryQueryService {
                 ON device.id = history.device_id
             INNER JOIN building_area area
                 ON area.id = device.area_id
+            LEFT JOIN alarm_acknowledgement acknowledgement
+                ON acknowledgement.event_id = history.id
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -132,6 +141,8 @@ public class SensorEventHistoryQueryService {
                     ON device.id = history.device_id
                 INNER JOIN building_area area
                     ON area.id = device.area_id
+                LEFT JOIN alarm_acknowledgement acknowledgement
+                    ON acknowledgement.event_id = history.id
                 WHERE history.current_state = TRUE
                 ORDER BY history.detected_at DESC, history.id DESC
                 """;
@@ -252,7 +263,15 @@ public class SensorEventHistoryQueryService {
                 resultSet.getString("message"),
                 resultSet
                         .getTimestamp("detected_at")
-                        .toInstant()
+                        .toInstant(),
+                resultSet.getTimestamp("acknowledged_at") != null,
+                resultSet.getString("acknowledged_by"),
+                resultSet.getTimestamp("acknowledged_at") == null
+                        ? null
+                        : resultSet
+                                .getTimestamp("acknowledged_at")
+                                .toInstant(),
+                resultSet.getLong("comment_count")
         );
     }
 

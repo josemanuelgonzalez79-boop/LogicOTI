@@ -29,6 +29,9 @@ export const API_ENDPOINTS = {
 
   alarms: {
     active: '/alarms/active',
+    activity: (eventId: number) => `/alarms/${eventId}/activity`,
+    acknowledgement: (eventId: number) => `/alarms/${eventId}/acknowledgement`,
+    comments: (eventId: number) => `/alarms/${eventId}/comments`,
   },
 
   notifications: {
@@ -67,6 +70,7 @@ export const API_ENDPOINTS = {
     websocket: '/ws',
     status: '/realtime/status',
     smokeAlerts: '/topic/alerts/smoke',
+    alarmAttention: '/topic/alerts/attention',
     areaState: (areaCode: string) => `/topic/areas/${areaCode}/state`,
     sensorDiagnostic: (id: number) => `/topic/diagnostics/sensors/${id}`,
     securityStatus: '/topic/security/status',

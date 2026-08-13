@@ -23,6 +23,10 @@ const smokeAlarm: SensorEventHistoryItem = {
   severity: 'CRITICAL',
   message: 'Humo detectado en Recepción.',
   detectedAt: '2026-08-03T18:00:00Z',
+  acknowledged: false,
+  acknowledgedBy: null,
+  acknowledgedAt: null,
+  commentCount: 0,
 };
 
 const building: Building = {

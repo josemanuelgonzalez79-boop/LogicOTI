@@ -4,7 +4,7 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 
 import { API_ENDPOINTS } from '../http/api.endpoints';
 import { getWebsocketUrl } from '../http/realtime-url';
-import { SensorEventHistoryItem } from '../models/history.model';
+import { AlarmActivity, SensorEventHistoryItem } from '../models/history.model';
 import { AuthService } from './auth.service';
 
 export type RealtimeConnectionStatus =
@@ -15,14 +15,17 @@ export class SmokeAlertRealtimeService {
   private readonly authService = inject(AuthService);
 
   private readonly alertSubject = new Subject<SensorEventHistoryItem>();
+  private readonly attentionSubject = new Subject<AlarmActivity>();
   private readonly connectionStatusSubject = new BehaviorSubject<RealtimeConnectionStatus>(
     'DISCONNECTED',
   );
 
   private client: Client | null = null;
-  private subscription: StompSubscription | null = null;
+  private smokeSubscription: StompSubscription | null = null;
+  private attentionSubscription: StompSubscription | null = null;
 
   readonly alerts$: Observable<SensorEventHistoryItem> = this.alertSubject.asObservable();
+  readonly attention$: Observable<AlarmActivity> = this.attentionSubject.asObservable();
 
   readonly connectionStatus$: Observable<RealtimeConnectionStatus> =
     this.connectionStatusSubject.asObservable();
@@ -55,6 +58,7 @@ export class SmokeAlertRealtimeService {
     client.onConnect = () => {
       this.connectionStatusSubject.next('CONNECTED');
       this.subscribeToSmokeAlerts(client);
+      this.subscribeToAlarmAttention(client);
     };
 
     client.onStompError = (frame) => {
@@ -68,7 +72,8 @@ export class SmokeAlertRealtimeService {
     };
 
     client.onWebSocketClose = () => {
-      this.subscription = null;
+      this.smokeSubscription = null;
+      this.attentionSubscription = null;
 
       this.connectionStatusSubject.next(client.active ? 'RECONNECTING' : 'DISCONNECTED');
     };
@@ -78,8 +83,10 @@ export class SmokeAlertRealtimeService {
   }
 
   async disconnect(): Promise<void> {
-    this.subscription?.unsubscribe();
-    this.subscription = null;
+    this.smokeSubscription?.unsubscribe();
+    this.attentionSubscription?.unsubscribe();
+    this.smokeSubscription = null;
+    this.attentionSubscription = null;
 
     const client = this.client;
     this.client = null;
@@ -92,10 +99,19 @@ export class SmokeAlertRealtimeService {
   }
 
   private subscribeToSmokeAlerts(client: Client): void {
-    this.subscription?.unsubscribe();
+    this.smokeSubscription?.unsubscribe();
 
-    this.subscription = client.subscribe(API_ENDPOINTS.realtime.smokeAlerts, (message) =>
+    this.smokeSubscription = client.subscribe(API_ENDPOINTS.realtime.smokeAlerts, (message) =>
       this.processMessage(message),
+    );
+  }
+
+  private subscribeToAlarmAttention(client: Client): void {
+    this.attentionSubscription?.unsubscribe();
+
+    this.attentionSubscription = client.subscribe(
+      API_ENDPOINTS.realtime.alarmAttention,
+      (message) => this.processAttentionMessage(message),
     );
   }
 
@@ -110,6 +126,20 @@ export class SmokeAlertRealtimeService {
       this.alertSubject.next(event);
     } catch (error) {
       console.error('La alerta de humo no contiene un JSON válido.', error);
+    }
+  }
+
+  private processAttentionMessage(message: IMessage): void {
+    try {
+      const activity = JSON.parse(message.body) as AlarmActivity;
+
+      if (!Number.isInteger(activity.eventId)) {
+        return;
+      }
+
+      this.attentionSubject.next(activity);
+    } catch (error) {
+      console.error('La atención de alarma no contiene un JSON válido.', error);
     }
   }
 }

@@ -150,7 +150,11 @@ public class SensorEventHistoryService {
                                         message,
                                         resultSet
                                                 .getTimestamp("detected_at")
-                                                .toInstant()
+                                                .toInstant(),
+                                        false,
+                                        null,
+                                        null,
+                                        0
                                 ),
                         sensor.id(),
                         sensor.code(),

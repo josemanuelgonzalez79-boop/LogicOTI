@@ -162,6 +162,17 @@ public class SecurityConfig {
                                 "MONITORING"
                         )
 
+                        // Todo el personal operativo puede reconocer y documentar alarmas.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/alarms/*/acknowledgement",
+                                "/api/alarms/*/comments"
+                        ).hasAnyRole(
+                                "ADMIN",
+                                "OPERATOR",
+                                "MONITORING"
+                        )
+
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/notifications/push/subscriptions"

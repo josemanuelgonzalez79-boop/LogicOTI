@@ -141,7 +141,11 @@ class IntrusionMotionAlarmServiceTests {
                         "CLEARED",
                         "INFO",
                         "Movimiento finalizado en Recepción.",
-                        Instant.now()
+                        Instant.now(),
+                        false,
+                        null,
+                        null,
+                        0
                 );
 
         service.process(cleared);
@@ -174,7 +178,11 @@ class IntrusionMotionAlarmServiceTests {
                 "ACTIVATED",
                 "INFO",
                 "Movimiento detectado en Recepción.",
-                Instant.now()
+                Instant.now(),
+                false,
+                null,
+                null,
+                0
         );
     }
 
