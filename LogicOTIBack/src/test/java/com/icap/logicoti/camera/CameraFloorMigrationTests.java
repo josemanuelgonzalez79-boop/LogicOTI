@@ -21,6 +21,7 @@ class CameraFloorMigrationTests {
                 "jdbc:h2:mem:camera_"
                         + UUID.randomUUID()
                         + ";MODE=PostgreSQL"
+                        + ";DB_CLOSE_DELAY=-1"
                         + ";DATABASE_TO_LOWER=TRUE"
         );
         dataSource.setUsername("sa");
