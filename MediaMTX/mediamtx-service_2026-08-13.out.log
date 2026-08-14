@@ -21,3 +21,443 @@
 2026/08/13 11:52:52 INF [RTSP] closing
 2026/08/13 11:52:52 INF [path oti-cam-21] [RTSP source] stopped: path is closing
 2026/08/13 11:52:52 INF waiting for running hooks
+2026/08/13 11:53:43 INF MediaMTX v1.20.0, windows, amd64
+2026/08/13 11:53:43 INF configuration loaded from C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml
+2026/08/13 11:53:43 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/08/13 11:53:43 INF [RTMP] started with listener on :1935 (TCP/RTMP)
+2026/08/13 11:53:43 INF [HLS] started with listener on :8888 (TCP/HTTP)
+2026/08/13 11:53:43 INF [WebRTC] started with listeners on :8889 (TCP/HTTP), :8189 (UDP/ICE)
+2026/08/13 11:53:43 INF [SRT] started with listener on :8890 (UDP/SRT)
+2026/08/13 11:53:43 INF [MoQ] started with listeners on :8892 (TCP/HTTP2), :8892 (UDP/HTTP3), :8893 (UDP/QUIC)
+2026/08/13 11:53:44 INF [WebRTC] [session 9905b9d7] created by [::1]:21516
+2026/08/13 11:53:44 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 11:53:44 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 11:53:44 INF [WebRTC] [session 9905b9d7] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/63140
+2026/08/13 11:53:44 INF [WebRTC] [session 9905b9d7] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:18:42 INF [WebRTC] [session 8faa7f41] created by [::1]:33219
+2026/08/13 12:18:42 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 12:18:42 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 12:18:42 INF [WebRTC] [session 9905b9d7] closed: peer connection closed
+2026/08/13 12:18:43 INF [WebRTC] [session 8faa7f41] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/50025
+2026/08/13 12:18:43 INF [WebRTC] [session 8faa7f41] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 12:18:51 INF [WebRTC] [session d3aa795a] created by [::1]:33219
+2026/08/13 12:18:51 INF [WebRTC] [session 8faa7f41] closed: peer connection closed
+2026/08/13 12:18:51 INF [WebRTC] [session d3aa795a] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.70.70/61836
+2026/08/13 12:18:51 INF [WebRTC] [session d3aa795a] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:19:01 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 12:19:08 INF [WebRTC] [session faaac7b8] created by [::1]:33219
+2026/08/13 12:19:08 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 12:19:08 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 12:19:08 INF [WebRTC] [session d3aa795a] closed: peer connection closed
+2026/08/13 12:19:08 INF [WebRTC] [session faaac7b8] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/56827
+2026/08/13 12:19:08 INF [WebRTC] [session faaac7b8] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 12:19:12 INF [WebRTC] [session 5cb4b345] created by [::1]:33219
+2026/08/13 12:19:12 INF [WebRTC] [session faaac7b8] closed: peer connection closed
+2026/08/13 12:19:13 INF [WebRTC] [session 5cb4b345] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.70.70/61966
+2026/08/13 12:19:13 INF [WebRTC] [session 5cb4b345] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:19:22 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 12:23:29 INF [WebRTC] [session 21100e26] created by [::1]:23593
+2026/08/13 12:23:29 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 12:23:29 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 12:23:29 INF [WebRTC] [session 5cb4b345] closed: peer connection closed
+2026/08/13 12:23:30 INF [WebRTC] [session 21100e26] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/63613
+2026/08/13 12:23:30 INF [WebRTC] [session 21100e26] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 12:23:33 INF [WebRTC] [session f37e20f5] created by [::1]:23593
+2026/08/13 12:23:33 INF [WebRTC] [session 21100e26] closed: peer connection closed
+2026/08/13 12:23:34 INF [WebRTC] [session f37e20f5] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/56657
+2026/08/13 12:23:34 INF [WebRTC] [session f37e20f5] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:23:43 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 12:39:43 INF [WebRTC] [session 9460b323] created by [::1]:61571
+2026/08/13 12:39:43 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 12:39:43 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 12:39:43 INF [WebRTC] [session f37e20f5] closed: peer connection closed
+2026/08/13 12:39:45 INF [WebRTC] [session 9460b323] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/59763
+2026/08/13 12:39:45 INF [WebRTC] [session 9460b323] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 12:39:46 INF [WebRTC] [session beb7c366] created by [::1]:61571
+2026/08/13 12:39:47 INF [WebRTC] [session 9460b323] closed: peer connection closed
+2026/08/13 12:39:47 INF [WebRTC] [session beb7c366] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/57578
+2026/08/13 12:39:47 INF [WebRTC] [session beb7c366] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:39:57 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 12:49:10 INF [WebRTC] [session 5fb9c1b0] created by [::1]:48901
+2026/08/13 12:49:10 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 12:49:10 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 12:49:11 INF [WebRTC] [session beb7c366] closed: peer connection closed
+2026/08/13 12:49:11 INF [WebRTC] [session 5fb9c1b0] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/60909
+2026/08/13 12:49:11 INF [WebRTC] [session 5fb9c1b0] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 12:49:13 INF [WebRTC] [session 113a2e8f] created by [::1]:48901
+2026/08/13 12:49:14 INF [WebRTC] [session 5fb9c1b0] closed: peer connection closed
+2026/08/13 12:49:14 INF [WebRTC] [session 113a2e8f] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/57096
+2026/08/13 12:49:14 INF [WebRTC] [session 113a2e8f] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 12:49:24 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:01 INF [WebRTC] [session 2a0dd46c] created by [::1]:8476
+2026/08/13 13:30:01 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 13:30:01 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 13:30:03 INF [WebRTC] [session 2a0dd46c] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/62423
+2026/08/13 13:30:03 INF [WebRTC] [session 2a0dd46c] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 13:30:08 INF [WebRTC] [session 0ba158f6] created by [::1]:8476
+2026/08/13 13:30:08 INF [path oti-cam-02] [RTSP source] started on demand
+2026/08/13 13:30:08 INF [path oti-cam-02] stream is available and online, 1 track (H265)
+2026/08/13 13:30:08 INF [WebRTC] [session 2a0dd46c] closed: peer connection closed
+2026/08/13 13:30:09 INF [WebRTC] [session 0ba158f6] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.5.54/57672
+2026/08/13 13:30:09 INF [WebRTC] [session 0ba158f6] is reading from path 'oti-cam-02', 1 track (H265)
+2026/08/13 13:30:12 INF [WebRTC] [session 0ba158f6] closed: peer connection closed
+2026/08/13 13:30:13 INF [WebRTC] [session a00314ed] created by [::1]:8476
+2026/08/13 13:30:13 INF [path oti-cam-03] [RTSP source] started on demand
+2026/08/13 13:30:13 WAR [path oti-cam-03] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 13:30:13 INF [path oti-cam-03] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 13:30:13 INF [path oti-cam-03] stream is available and online, 1 track (H264)
+2026/08/13 13:30:14 INF [WebRTC] [session a00314ed] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/53064
+2026/08/13 13:30:14 INF [WebRTC] [session a00314ed] is reading from path 'oti-cam-03', 1 track (H264)
+2026/08/13 13:30:18 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:18 INF [WebRTC] [session a00314ed] closed: peer connection closed
+2026/08/13 13:30:18 INF [WebRTC] [session 4a46f118] created by [::1]:8476
+2026/08/13 13:30:18 INF [path oti-cam-04] [RTSP source] started on demand
+2026/08/13 13:30:18 INF [path oti-cam-04] stream is available and online, 1 track (H265)
+2026/08/13 13:30:20 INF [WebRTC] [session 4a46f118] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/54425
+2026/08/13 13:30:20 INF [WebRTC] [session 4a46f118] is reading from path 'oti-cam-04', 1 track (H265)
+2026/08/13 13:30:22 INF [path oti-cam-02] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:28 INF [path oti-cam-03] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:30 INF [WebRTC] [session 6610c4f4] created by [::1]:8476
+2026/08/13 13:30:30 INF [path oti-cam-05] [RTSP source] started on demand
+2026/08/13 13:30:30 WAR [path oti-cam-05] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 13:30:31 INF [path oti-cam-05] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 13:30:31 INF [path oti-cam-05] stream is available and online, 1 track (H264)
+2026/08/13 13:30:31 INF [WebRTC] [session 4a46f118] closed: peer connection closed
+2026/08/13 13:30:32 INF [WebRTC] [session 6610c4f4] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/49266
+2026/08/13 13:30:32 INF [WebRTC] [session 6610c4f4] is reading from path 'oti-cam-05', 1 track (H264)
+2026/08/13 13:30:40 INF [WebRTC] [session e7061d84] created by [::1]:8476
+2026/08/13 13:30:40 INF [path oti-cam-06] [RTSP source] started on demand
+2026/08/13 13:30:40 INF [path oti-cam-06] stream is available and online, 1 track (H265)
+2026/08/13 13:30:41 INF [WebRTC] [session 6610c4f4] closed: peer connection closed
+2026/08/13 13:30:41 INF [path oti-cam-04] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:42 INF [WebRTC] [session e7061d84] peer connection established, local candidate: host/udp/127.0.0.1/8189, remote candidate: prflx/udp/192.168.5.54/60746
+2026/08/13 13:30:42 INF [WebRTC] [session e7061d84] is reading from path 'oti-cam-06', 1 track (H265)
+2026/08/13 13:30:45 INF [WebRTC] [session ea1f6fd4] created by [::1]:8476
+2026/08/13 13:30:45 INF [path oti-cam-07] [RTSP source] started on demand
+2026/08/13 13:30:45 INF [path oti-cam-07] stream is available and online, 1 track (H265)
+2026/08/13 13:30:45 INF [WebRTC] [session e7061d84] closed: peer connection closed
+2026/08/13 13:30:46 INF [WebRTC] [session ea1f6fd4] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/60674
+2026/08/13 13:30:46 INF [WebRTC] [session ea1f6fd4] is reading from path 'oti-cam-07', 1 track (H265)
+2026/08/13 13:30:51 INF [path oti-cam-05] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:30:51 INF [WebRTC] [session ea1f6fd4] closed: peer connection closed
+2026/08/13 13:30:51 INF [WebRTC] [session 5e1a400e] created by [::1]:8476
+2026/08/13 13:30:51 INF [path oti-cam-08] [RTSP source] started on demand
+2026/08/13 13:30:51 INF [path oti-cam-08] stream is available and online, 1 track (H265)
+2026/08/13 13:30:52 INF [WebRTC] [session 5e1a400e] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.5.54/65207
+2026/08/13 13:30:52 INF [WebRTC] [session 5e1a400e] is reading from path 'oti-cam-08', 1 track (H265)
+2026/08/13 13:30:55 INF [path oti-cam-06] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:01 INF [path oti-cam-07] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:05 INF [WebRTC] [session cdce3ead] created by [::1]:8476
+2026/08/13 13:31:05 INF [path oti-cam-09] [RTSP source] started on demand
+2026/08/13 13:31:05 INF [path oti-cam-09] stream is available and online, 1 track (H265)
+2026/08/13 13:31:05 INF [WebRTC] [session 5e1a400e] closed: peer connection closed
+2026/08/13 13:31:06 INF [WebRTC] [session cdce3ead] peer connection established, local candidate: host/udp/127.0.0.1/8189, remote candidate: prflx/udp/192.168.5.54/64502
+2026/08/13 13:31:06 INF [WebRTC] [session cdce3ead] is reading from path 'oti-cam-09', 1 track (H265)
+2026/08/13 13:31:07 INF [WebRTC] [session b6a268ee] created by [::1]:8476
+2026/08/13 13:31:07 INF [path oti-cam-10] [RTSP source] started on demand
+2026/08/13 13:31:07 WAR [path oti-cam-10] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 13:31:07 INF [path oti-cam-10] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 13:31:07 INF [path oti-cam-10] stream is available and online, 1 track (H264)
+2026/08/13 13:31:07 INF [WebRTC] [session cdce3ead] closed: peer connection closed
+2026/08/13 13:31:08 INF [WebRTC] [session b6a268ee] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.5.54/60785
+2026/08/13 13:31:08 INF [WebRTC] [session b6a268ee] is reading from path 'oti-cam-10', 1 track (H264)
+2026/08/13 13:31:15 INF [path oti-cam-08] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:15 INF [WebRTC] [session c6209b3a] created by [::1]:8476
+2026/08/13 13:31:15 INF [path oti-cam-11] [RTSP source] started on demand
+2026/08/13 13:31:15 INF [path oti-cam-11] stream is available and online, 1 track (H265)
+2026/08/13 13:31:15 INF [WebRTC] [session b6a268ee] closed: peer connection closed
+2026/08/13 13:31:16 INF [WebRTC] [session c6209b3a] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/50786
+2026/08/13 13:31:16 INF [WebRTC] [session c6209b3a] is reading from path 'oti-cam-11', 1 track (H265)
+2026/08/13 13:31:17 INF [path oti-cam-09] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:25 INF [WebRTC] [session c6209b3a] closed: peer connection closed
+2026/08/13 13:31:25 INF [WebRTC] [session 3f441713] created by [::1]:8476
+2026/08/13 13:31:25 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 13:31:25 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 13:31:25 INF [path oti-cam-10] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:26 INF [WebRTC] [session 3f441713] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.5.54/53574
+2026/08/13 13:31:26 INF [WebRTC] [session 3f441713] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 13:31:35 INF [path oti-cam-11] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:36 INF [WebRTC] [session 90d1051e] created by [::1]:8476
+2026/08/13 13:31:36 INF [path oti-cam-05] [RTSP source] started on demand
+2026/08/13 13:31:36 WAR [path oti-cam-05] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 13:31:36 INF [path oti-cam-05] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 13:31:36 INF [path oti-cam-05] stream is available and online, 1 track (H264)
+2026/08/13 13:31:37 INF [WebRTC] [session 3f441713] closed: peer connection closed
+2026/08/13 13:31:38 INF [WebRTC] [session 90d1051e] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.5.54/64447
+2026/08/13 13:31:38 INF [WebRTC] [session 90d1051e] is reading from path 'oti-cam-05', 1 track (H264)
+2026/08/13 13:31:47 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:31:49 INF [WebRTC] [session 0ba7eae9] created by [::1]:8476
+2026/08/13 13:31:49 INF [path oti-cam-02] [RTSP source] started on demand
+2026/08/13 13:31:49 INF [path oti-cam-02] stream is available and online, 1 track (H265)
+2026/08/13 13:31:50 INF [WebRTC] [session 0ba7eae9] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.5.54/56309
+2026/08/13 13:31:50 INF [WebRTC] [session 0ba7eae9] is reading from path 'oti-cam-02', 1 track (H265)
+2026/08/13 13:32:05 INF [WebRTC] [session 79e0f3f1] created by [::1]:8476
+2026/08/13 13:32:06 INF [WebRTC] [session 0ba7eae9] closed: peer connection closed
+2026/08/13 13:32:07 INF [WebRTC] [session 79e0f3f1] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/62575
+2026/08/13 13:32:07 INF [WebRTC] [session 79e0f3f1] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 13:32:16 INF [path oti-cam-02] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:32:18 INF [WebRTC] [session 90d1051e] closed: peer connection closed
+2026/08/13 13:32:28 INF [path oti-cam-05] [RTSP source] stopped: not needed by anyone
+2026/08/13 13:33:25 INF [WebRTC] [session 79e0f3f1] closed: peer connection closed
+2026/08/13 13:35:02 INF [WebRTC] [session 858afacc] created by [::1]:62637
+2026/08/13 13:35:04 INF [WebRTC] [session 858afacc] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/54247
+2026/08/13 13:35:04 INF [WebRTC] [session 858afacc] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 13:35:46 INF [WebRTC] [session 858afacc] closed: peer connection closed
+2026/08/13 14:18:11 WAR [path oti-cam-21] [RTSP source] 2 RTP packets lost
+2026/08/13 14:18:12 WAR [path oti-cam-21] [RTSP source] 7 RTP packets lost
+2026/08/13 14:18:25 WAR [path oti-cam-21] [RTSP source] 2 RTP packets lost
+2026/08/13 14:18:26 WAR [path oti-cam-21] [RTSP source] 3 RTP packets lost
+2026/08/13 14:28:00 INF [WebRTC] [session 113a2e8f] closed: peer connection closed
+2026/08/13 14:28:00 INF [WebRTC] [session 2536345d] created by [::1]:33159
+2026/08/13 14:28:00 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 14:28:00 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 14:28:01 INF [WebRTC] [session 2536345d] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.70.70/58708
+2026/08/13 14:28:01 INF [WebRTC] [session 2536345d] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 14:28:05 INF [WebRTC] [session c928a4cd] created by [::1]:33159
+2026/08/13 14:28:05 INF [WebRTC] [session 2536345d] closed: peer connection closed
+2026/08/13 14:28:06 INF [WebRTC] [session c928a4cd] peer connection established, local candidate: host/udp/127.0.0.1/8189, remote candidate: prflx/udp/192.168.70.70/60241
+2026/08/13 14:28:06 INF [WebRTC] [session c928a4cd] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 14:28:10 INF [path oti-cam-21] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:28:10 INF [WebRTC] [session a37905d4] created by [::1]:33159
+2026/08/13 14:28:10 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 14:28:10 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 14:28:11 INF [WebRTC] [session c928a4cd] closed: peer connection closed
+2026/08/13 14:28:11 INF [WebRTC] [session a37905d4] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/55690
+2026/08/13 14:28:11 INF [WebRTC] [session a37905d4] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 14:28:21 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:30:32 INF [WebRTC] [session aed3ec5b] created by [::1]:24364
+2026/08/13 14:30:32 INF [path oti-cam-20] [RTSP source] started on demand
+2026/08/13 14:30:32 WAR [path oti-cam-20] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 14:30:32 INF [path oti-cam-20] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 14:30:32 INF [path oti-cam-20] stream is available and online, 2 tracks (H264, G711)
+2026/08/13 14:30:32 INF [WebRTC] [session a37905d4] closed: peer connection closed
+2026/08/13 14:30:33 INF [WebRTC] [session aed3ec5b] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/63284
+2026/08/13 14:30:33 INF [WebRTC] [session aed3ec5b] is reading from path 'oti-cam-20', 2 tracks (G711, H264)
+2026/08/13 14:30:42 INF [path oti-cam-21] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:31:38 INF [WebRTC] [session 16fcab6d] created by [::1]:10298
+2026/08/13 14:31:38 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 14:31:38 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 14:31:39 INF [WebRTC] [session aed3ec5b] closed: peer connection closed
+2026/08/13 14:31:39 INF [WebRTC] [session 16fcab6d] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/49211
+2026/08/13 14:31:39 INF [WebRTC] [session 16fcab6d] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 14:31:49 INF [path oti-cam-20] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:32:34 INF [WebRTC] [session db44ca69] created by [::1]:35734
+2026/08/13 14:32:34 INF [path oti-cam-20] [RTSP source] started on demand
+2026/08/13 14:32:34 WAR [path oti-cam-20] [RTSP source] switching to TCP to support H264 packetization-mode=0
+2026/08/13 14:32:34 INF [path oti-cam-20] remuxing in order to change H264 packetization-mode from 0 to 1
+2026/08/13 14:32:34 INF [path oti-cam-20] stream is available and online, 2 tracks (H264, G711)
+2026/08/13 14:32:35 INF [WebRTC] [session 16fcab6d] closed: peer connection closed
+2026/08/13 14:32:35 INF [WebRTC] [session db44ca69] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.70.70/54465
+2026/08/13 14:32:35 INF [WebRTC] [session db44ca69] is reading from path 'oti-cam-20', 2 tracks (H264, G711)
+2026/08/13 14:32:45 INF [path oti-cam-21] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:34:37 INF [WebRTC] [session b76dad8c] created by [::1]:29564
+2026/08/13 14:34:37 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 14:34:37 INF [WebRTC] [session 42710b2c] created by [::1]:29571
+2026/08/13 14:34:37 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 14:34:37 INF [WebRTC] [session 42710b2c] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/55789
+2026/08/13 14:34:37 INF [WebRTC] [session 42710b2c] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:34:38 INF [WebRTC] [session b76dad8c] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/55783
+2026/08/13 14:34:38 INF [WebRTC] [session b76dad8c] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:34:54 INF [WebRTC] [session b76dad8c] closed: peer connection closed
+2026/08/13 14:35:01 INF [WebRTC] [session 42710b2c] closed: peer connection closed
+2026/08/13 14:35:11 INF [WebRTC] [session d92be526] created by [::1]:28126
+2026/08/13 14:35:11 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 14:35:11 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 14:35:11 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:35:11 INF [WebRTC] [session db44ca69] closed: peer connection closed
+2026/08/13 14:35:12 INF [WebRTC] [session d92be526] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/62442
+2026/08/13 14:35:12 INF [WebRTC] [session d92be526] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 14:35:21 INF [path oti-cam-20] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:35:41 INF [WebRTC] [session f5b58462] created by [::1]:28126
+2026/08/13 14:35:41 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 14:35:41 INF [WebRTC] [session b792ec59] created by [::1]:28993
+2026/08/13 14:35:41 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 14:35:42 INF [WebRTC] [session f5b58462] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/51752
+2026/08/13 14:35:42 INF [WebRTC] [session f5b58462] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:35:42 INF [WebRTC] [session b792ec59] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/51758
+2026/08/13 14:35:42 INF [WebRTC] [session b792ec59] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:36:10 INF [WebRTC] [session f5b58462] closed: peer connection closed
+2026/08/13 14:36:14 INF [WebRTC] [session b792ec59] closed: peer connection closed
+2026/08/13 14:36:24 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:36:40 INF [WebRTC] [session 87561bc6] created by [::1]:58443
+2026/08/13 14:36:40 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 14:36:40 INF [WebRTC] [session 49b981b7] created by [::1]:58450
+2026/08/13 14:36:40 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 14:36:41 INF [WebRTC] [session 49b981b7] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/56232
+2026/08/13 14:36:41 INF [WebRTC] [session 49b981b7] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:36:41 INF [WebRTC] [session 87561bc6] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/56226
+2026/08/13 14:36:41 INF [WebRTC] [session 87561bc6] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:36:53 INF [WebRTC] [session 49b981b7] closed: peer connection closed
+2026/08/13 14:36:59 INF [WebRTC] [session 87561bc6] closed: peer connection closed
+2026/08/13 14:37:08 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:37:15 INF [WebRTC] [session ffadfacc] created by [::1]:1631
+2026/08/13 14:37:15 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 14:37:15 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 14:37:16 INF [WebRTC] [session ffadfacc] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.5.54/59204
+2026/08/13 14:37:16 INF [WebRTC] [session ffadfacc] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 14:37:40 INF [WebRTC] [session ffadfacc] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/59204
+2026/08/13 14:38:15 INF [WebRTC] [session ffadfacc] closed: peer connection closed
+2026/08/13 14:38:25 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:40:45 INF [WebRTC] [session fd4dd84a] created by [::1]:24215
+2026/08/13 14:40:45 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 14:40:45 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 14:40:45 INF [WebRTC] [session d92be526] closed: peer connection closed
+2026/08/13 14:40:46 INF [WebRTC] [session fd4dd84a] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.70.70/50817
+2026/08/13 14:40:46 INF [WebRTC] [session fd4dd84a] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 14:40:49 INF [WebRTC] [session b17e968e] created by [::1]:24215
+2026/08/13 14:40:49 INF [WebRTC] [session fd4dd84a] closed: peer connection closed
+2026/08/13 14:40:49 INF [WebRTC] [session b17e968e] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/56797
+2026/08/13 14:40:49 INF [WebRTC] [session b17e968e] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 14:40:59 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:41:07 INF [WebRTC] [session 6f3edd18] created by [::1]:24215
+2026/08/13 14:41:07 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 14:41:07 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 14:41:08 INF [WebRTC] [session 6f3edd18] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.54/63353
+2026/08/13 14:41:08 INF [WebRTC] [session 6f3edd18] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 14:41:10 INF [WebRTC] [session 6f3edd18] closed: peer connection closed
+2026/08/13 14:41:20 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 14:42:15 INF [WebRTC] [session 0d86d08a] created by [::1]:16211
+2026/08/13 14:42:15 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 14:42:15 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 14:42:15 INF [WebRTC] [session 404d389b] created by [::1]:16216
+2026/08/13 14:42:15 INF [WebRTC] [session 404d389b] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.70.70/55237
+2026/08/13 14:42:15 INF [WebRTC] [session 404d389b] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:42:15 INF [WebRTC] [session 0d86d08a] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.70.70/64329
+2026/08/13 14:42:15 INF [WebRTC] [session 0d86d08a] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 14:42:19 INF [WebRTC] [session 0d86d08a] closed: peer connection closed
+2026/08/13 14:42:25 INF [WebRTC] [session 404d389b] closed: peer connection closed
+2026/08/13 14:42:35 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:00:35 INF reloading configuration (file changed)
+2026/08/13 15:00:35 INF [WebRTC] closing
+2026/08/13 15:00:35 INF [WebRTC] [session b17e968e] closed: terminated
+2026/08/13 15:00:35 INF [WebRTC] started with listeners on :8889 (TCP/HTTP), :8189 (UDP/ICE), :8189 (TCP/ICE)
+2026/08/13 15:00:45 INF [path oti-cam-21] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:00:55 INF [WebRTC] [session d8fa7734] created by [::1]:17745
+2026/08/13 15:00:55 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 15:00:55 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:00:56 INF [WebRTC] [session d8fa7734] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/51766
+2026/08/13 15:00:56 INF [WebRTC] [session d8fa7734] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:01:13 INF shutting down gracefully
+2026/08/13 15:01:13 INF [SRT] closing
+2026/08/13 15:01:13 INF [MoQ] closing
+2026/08/13 15:01:13 INF [WebRTC] closing
+2026/08/13 15:01:13 INF [WebRTC] [session d8fa7734] closed: terminated
+2026/08/13 15:01:13 INF [HLS] closing
+2026/08/13 15:01:13 INF [RTMP] closing
+2026/08/13 15:01:13 INF [RTSP] closing
+2026/08/13 15:01:13 INF [path oti-cam-21] [RTSP source] stopped: path is closing
+2026/08/13 15:01:13 INF waiting for running hooks
+2026/08/13 15:01:13 INF MediaMTX v1.20.0, windows, amd64
+2026/08/13 15:01:13 INF configuration loaded from C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml
+2026/08/13 15:01:13 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/08/13 15:01:13 INF [RTMP] started with listener on :1935 (TCP/RTMP)
+2026/08/13 15:01:13 INF [HLS] started with listener on :8888 (TCP/HTTP)
+2026/08/13 15:01:13 INF [WebRTC] started with listeners on :8889 (TCP/HTTP), :8189 (UDP/ICE), :8189 (TCP/ICE)
+2026/08/13 15:01:13 INF [SRT] started with listener on :8890 (UDP/SRT)
+2026/08/13 15:01:13 INF [MoQ] started with listeners on :8892 (TCP/HTTP2), :8892 (UDP/HTTP3), :8893 (UDP/QUIC)
+2026/08/13 15:01:32 INF [WebRTC] [session 66740207] created by [::1]:44683
+2026/08/13 15:01:32 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 15:01:32 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:01:33 INF [WebRTC] [session 66740207] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/53318
+2026/08/13 15:01:33 INF [WebRTC] [session 66740207] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:02:52 INF shutting down gracefully
+2026/08/13 15:02:52 INF [SRT] closing
+2026/08/13 15:02:52 INF [MoQ] closing
+2026/08/13 15:02:52 INF [WebRTC] closing
+2026/08/13 15:02:52 INF [WebRTC] [session 66740207] closed: terminated
+2026/08/13 15:02:52 INF [HLS] closing
+2026/08/13 15:02:52 INF [RTMP] closing
+2026/08/13 15:02:52 INF [RTSP] closing
+2026/08/13 15:02:52 INF [path oti-cam-21] [RTSP source] stopped: path is closing
+2026/08/13 15:02:52 INF waiting for running hooks
+2026/08/13 15:02:52 INF MediaMTX v1.20.0, windows, amd64
+2026/08/13 15:02:52 INF configuration loaded from C:\Users\Erick Emerich\Desktop\LogicOTI\MediaMTX\mediamtx.yml
+2026/08/13 15:02:52 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/08/13 15:02:52 INF [RTMP] started with listener on :1935 (TCP/RTMP)
+2026/08/13 15:02:52 INF [HLS] started with listener on :8888 (TCP/HTTP)
+2026/08/13 15:02:52 INF [WebRTC] started with listeners on :8889 (TCP/HTTP), :8189 (UDP/ICE), :8189 (TCP/ICE)
+2026/08/13 15:02:52 INF [SRT] started with listener on :8890 (UDP/SRT)
+2026/08/13 15:02:52 INF [MoQ] started with listeners on :8892 (TCP/HTTP2), :8892 (UDP/HTTP3), :8893 (UDP/QUIC)
+2026/08/13 15:03:11 INF [WebRTC] [session d0f696cf] created by [::1]:3939
+2026/08/13 15:03:11 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 15:03:11 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:03:11 INF [WebRTC] [session d0f696cf] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/58319
+2026/08/13 15:03:11 INF [WebRTC] [session d0f696cf] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:04:45 INF [WebRTC] [session 80a18aeb] created by [::1]:57555
+2026/08/13 15:04:45 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 15:04:45 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 15:04:45 INF [WebRTC] [session d0f696cf] closed: peer connection closed
+2026/08/13 15:04:45 INF [WebRTC] [session 80a18aeb] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/58298
+2026/08/13 15:04:45 INF [WebRTC] [session 80a18aeb] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 15:04:48 INF [WebRTC] [session 84fec9b9] created by [::1]:57555
+2026/08/13 15:04:48 INF [WebRTC] [session 80a18aeb] closed: peer connection closed
+2026/08/13 15:04:48 INF [WebRTC] [session 84fec9b9] peer connection established, local candidate: host/udp/127.0.0.1/8189, remote candidate: prflx/udp/192.168.5.66/53751
+2026/08/13 15:04:48 INF [WebRTC] [session 84fec9b9] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:04:58 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:06:19 INF [WebRTC] [session 0e920a47] created by [::1]:41312
+2026/08/13 15:06:19 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 15:06:19 INF [WebRTC] [session 20132c84] created by [::1]:41317
+2026/08/13 15:06:19 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 15:06:20 INF [WebRTC] [session 0e920a47] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/62145
+2026/08/13 15:06:20 INF [WebRTC] [session 0e920a47] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 15:06:20 INF [WebRTC] [session 20132c84] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/62151
+2026/08/13 15:06:20 INF [WebRTC] [session 20132c84] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 15:07:26 INF [WebRTC] [session 0e920a47] closed: peer connection closed
+2026/08/13 15:07:27 INF [WebRTC] [session 20132c84] closed: peer connection closed
+2026/08/13 15:07:37 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:20:52 WAR [path oti-cam-21] [RTSP source] 6 RTP packets lost
+2026/08/13 15:22:22 WAR [path oti-cam-21] [RTSP source] 10 RTP packets lost
+2026/08/13 15:22:24 WAR [path oti-cam-21] [RTSP source] 16 RTP packets lost
+2026/08/13 15:30:32 INF [WebRTC] [session dcd3e982] created by [::1]:16527
+2026/08/13 15:30:32 INF [path oti-cam-17] [RTSP source] started on demand
+2026/08/13 15:30:32 INF [path oti-cam-17] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:30:32 INF [WebRTC] [session 84fec9b9] closed: peer connection closed
+2026/08/13 15:30:33 INF [WebRTC] [session dcd3e982] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/52900
+2026/08/13 15:30:33 INF [WebRTC] [session dcd3e982] is reading from path 'oti-cam-17', 2 tracks (H265, G711)
+2026/08/13 15:30:38 INF [WebRTC] [session dcd3e982] closed: peer connection closed
+2026/08/13 15:30:38 INF [WebRTC] [session 784b7b99] created by [::1]:16527
+2026/08/13 15:30:38 INF [path oti-cam-19] [RTSP source] started on demand
+2026/08/13 15:30:38 INF [path oti-cam-19] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:30:38 INF [WebRTC] [session 784b7b99] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/54767
+2026/08/13 15:30:38 INF [WebRTC] [session 784b7b99] is reading from path 'oti-cam-19', 2 tracks (H265, G711)
+2026/08/13 15:30:41 INF [WebRTC] [session 784b7b99] closed: peer connection closed
+2026/08/13 15:30:41 INF [WebRTC] [session 70214edc] created by [::1]:16527
+2026/08/13 15:30:41 INF [path oti-cam-18] [RTSP source] started on demand
+2026/08/13 15:30:42 INF [path oti-cam-18] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:30:42 INF [WebRTC] [session 70214edc] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/50613
+2026/08/13 15:30:42 INF [WebRTC] [session 70214edc] is reading from path 'oti-cam-18', 2 tracks (H265, G711)
+2026/08/13 15:30:42 INF [path oti-cam-21] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:30:46 INF [WebRTC] [session 70214edc] closed: peer connection closed
+2026/08/13 15:30:46 INF [WebRTC] [session 99b864c8] created by [::1]:16527
+2026/08/13 15:30:46 INF [path oti-cam-15] [RTSP source] started on demand
+2026/08/13 15:30:46 INF [path oti-cam-15] stream is available and online, 1 track (H265)
+2026/08/13 15:30:46 INF [WebRTC] [session 99b864c8] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/60974
+2026/08/13 15:30:46 INF [WebRTC] [session 99b864c8] is reading from path 'oti-cam-15', 1 track (H265)
+2026/08/13 15:30:48 INF [path oti-cam-17] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:30:50 INF [WebRTC] [session 99b864c8] closed: peer connection closed
+2026/08/13 15:30:50 INF [WebRTC] [session 2d7f7192] created by [::1]:16527
+2026/08/13 15:30:50 INF [path oti-cam-14] [RTSP source] started on demand
+2026/08/13 15:30:50 INF [path oti-cam-14] stream is available and online, 1 track (H265)
+2026/08/13 15:30:51 INF [WebRTC] [session 2d7f7192] peer connection established, local candidate: host/udp/192.168.5.66/8189, remote candidate: prflx/udp/192.168.5.66/51773
+2026/08/13 15:30:51 INF [WebRTC] [session 2d7f7192] is reading from path 'oti-cam-14', 1 track (H265)
+2026/08/13 15:30:51 INF [path oti-cam-19] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:30:56 INF [path oti-cam-18] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:30:57 INF [WebRTC] [session df7412fa] created by [::1]:16527
+2026/08/13 15:30:57 INF [path oti-cam-21] [RTSP source] started on demand
+2026/08/13 15:30:57 INF [path oti-cam-21] stream is available and online, 2 tracks (H265, G711)
+2026/08/13 15:30:58 INF [WebRTC] [session 2d7f7192] closed: peer connection closed
+2026/08/13 15:30:58 INF [WebRTC] [session df7412fa] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/64664
+2026/08/13 15:30:58 INF [WebRTC] [session df7412fa] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:31:00 INF [path oti-cam-15] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:31:08 INF [path oti-cam-14] [RTSP source] stopped: not needed by anyone
+2026/08/13 15:34:05 INF [WebRTC] [session 1425e434] created by [::1]:33501
+2026/08/13 15:34:05 INF [path oti-cam-01] [RTSP source] started on demand
+2026/08/13 15:34:05 INF [path oti-cam-01] stream is available and online, 1 track (H265)
+2026/08/13 15:34:06 INF [WebRTC] [session df7412fa] closed: peer connection closed
+2026/08/13 15:34:06 INF [WebRTC] [session 1425e434] peer connection established, local candidate: host/udp/192.168.70.70/8189, remote candidate: prflx/udp/192.168.5.66/57102
+2026/08/13 15:34:06 INF [WebRTC] [session 1425e434] is reading from path 'oti-cam-01', 1 track (H265)
+2026/08/13 15:34:11 INF [WebRTC] [session a9296a1b] created by [::1]:33501
+2026/08/13 15:34:12 INF [WebRTC] [session 1425e434] closed: peer connection closed
+2026/08/13 15:34:12 INF [WebRTC] [session a9296a1b] peer connection established, local candidate: host/udp/192.168.200.1/8189, remote candidate: prflx/udp/192.168.5.66/64801
+2026/08/13 15:34:12 INF [WebRTC] [session a9296a1b] is reading from path 'oti-cam-21', 2 tracks (H265, G711)
+2026/08/13 15:34:22 INF [path oti-cam-01] [RTSP source] stopped: not needed by anyone
