@@ -1,4 +1,5 @@
 export type DeviceType = 'LIGHT' | 'MOTION' | 'SMOKE' | 'MINISPLIT' | string;
+export type SignalQuality = 'GOOD' | 'BAD' | 'STALE';
 
 export interface AreaState {
   areaCode: string;
@@ -20,4 +21,7 @@ export interface AreaDevice {
   command: boolean | null;
   state: boolean | null;
   fault: boolean | null;
+  quality: SignalQuality;
+  lastUpdatedAt: string | null;
+  qualityDetail: string;
 }

@@ -81,6 +81,12 @@ const building: Building = {
   ],
 };
 
+const goodSignalMetadata = {
+  quality: 'GOOD' as const,
+  lastUpdatedAt: '2026-08-03T22:00:00Z',
+  qualityDetail: 'Lectura válida recibida desde el PLC.',
+};
+
 const receptionState: AreaState = {
   areaCode: 'PB_A01',
   areaName: 'Recepción',
@@ -97,6 +103,7 @@ const receptionState: AreaState = {
       command: false,
       state: false,
       fault: null,
+      ...goodSignalMetadata,
     },
     {
       id: 2,
@@ -108,6 +115,7 @@ const receptionState: AreaState = {
       command: null,
       state: false,
       fault: null,
+      ...goodSignalMetadata,
     },
   ],
   message: 'Estados leídos correctamente.',
@@ -130,6 +138,7 @@ const directionState: AreaState = {
       command: false,
       state: false,
       fault: null,
+      ...goodSignalMetadata,
     },
     {
       id: 4,
@@ -141,6 +150,7 @@ const directionState: AreaState = {
       command: false,
       state: false,
       fault: null,
+      ...goodSignalMetadata,
     },
     {
       id: 5,
@@ -152,6 +162,7 @@ const directionState: AreaState = {
       command: null,
       state: false,
       fault: null,
+      ...goodSignalMetadata,
     },
   ],
   message: 'Estados leídos correctamente.',
@@ -355,6 +366,41 @@ describe('Control', () => {
     realtime.stateSubject.next(directionState);
 
     expect(fixture.componentInstance.areaState()?.areaCode).toBe('PB_A01');
+  });
+
+  it('muestra la calidad individual y bloquea comandos cuando la señal es BAD', () => {
+    const fixture = TestBed.createComponent(Control);
+    const areaApi = TestBed.inject(AreaApiService) as unknown as AreaApiServiceMock;
+
+    fixture.detectChanges();
+    fixture.componentInstance.areaState.update((state) =>
+      state
+        ? {
+            ...state,
+            devices: state.devices.map((device, index) =>
+              index === 0
+                ? {
+                    ...device,
+                    quality: 'BAD',
+                    qualityDetail: 'El PLC no pudo leer la señal.',
+                  }
+                : device,
+            ),
+          }
+        : null,
+    );
+    fixture.detectChanges();
+
+    const light = fixture.componentInstance.controllableDevices()[0];
+    const qualityBadge = fixture.nativeElement.querySelector(
+      '.device-card--control .signal-quality[data-quality="BAD"]',
+    ) as HTMLElement | null;
+
+    expect(qualityBadge?.textContent).toContain('BAD');
+    expect(fixture.componentInstance.commandDisabled(light)).toBe(true);
+
+    fixture.componentInstance.sendCommand(light, true);
+    expect(areaApi.sendDeviceCommand).not.toHaveBeenCalled();
   });
 
   it('mantiene los controles bloqueados para un usuario de monitoreo', () => {

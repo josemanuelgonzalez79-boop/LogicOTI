@@ -7,6 +7,9 @@ import com.icap.logicoti.exception.ResourceNotFoundException;
 import com.icap.logicoti.intrusion.SecurityScheduleService;
 import com.icap.logicoti.intrusion.SecuritySettingsResponse;
 import com.icap.logicoti.plc.PlcCommunicationService;
+import com.icap.logicoti.signal.SignalQuality;
+import com.icap.logicoti.signal.SignalQualityRegistry;
+import com.icap.logicoti.signal.SignalQualitySnapshot;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
@@ -132,6 +135,7 @@ public class SensorDiagnosticService {
 
     private static final String DUE_SENSORS_QUERY = """
             SELECT
+                device.id AS device_id,
                 device.code AS device_code,
                 device.name AS device_name,
                 area.code AS area_code,
@@ -164,6 +168,7 @@ public class SensorDiagnosticService {
     private final PlcProperties plcProperties;
     private final SecurityScheduleService scheduleService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SignalQualityRegistry signalQualityRegistry;
 
     public SensorDiagnosticService(
             JdbcTemplate jdbcTemplate,
@@ -171,7 +176,8 @@ public class SensorDiagnosticService {
             PlcCommunicationService plcCommunicationService,
             PlcProperties plcProperties,
             SecurityScheduleService scheduleService,
-            SimpMessagingTemplate messagingTemplate
+            SimpMessagingTemplate messagingTemplate,
+            SignalQualityRegistry signalQualityRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.namedJdbcTemplate = namedJdbcTemplate;
@@ -179,6 +185,7 @@ public class SensorDiagnosticService {
         this.plcProperties = plcProperties;
         this.scheduleService = scheduleService;
         this.messagingTemplate = messagingTemplate;
+        this.signalQualityRegistry = signalQualityRegistry;
     }
 
     @Transactional
@@ -347,6 +354,10 @@ public class SensorDiagnosticService {
                 jdbcTemplate.query(
                         DUE_SENSORS_QUERY,
                         (resultSet, rowNumber) -> {
+                            SignalQualitySnapshot quality =
+                                    signalQualityRegistry.snapshot(
+                                            resultSet.getLong("device_id")
+                                    );
                             Instant lastPassedAt = toInstant(
                                     resultSet.getTimestamp("completed_at")
                             );
@@ -377,7 +388,10 @@ public class SensorDiagnosticService {
                                     resultSet.getString("device_type"),
                                     status,
                                     lastPassedAt,
-                                    validUntil
+                                    validUntil,
+                                    quality.quality(),
+                                    quality.lastUpdatedAt(),
+                                    quality.detail()
                             );
                         }
                 );
@@ -385,14 +399,38 @@ public class SensorDiagnosticService {
         int due = (int) sensors.stream()
                 .filter(sensor -> !"VALID".equals(sensor.status()))
                 .count();
+        int goodSignals = countQuality(
+                sensors,
+                SignalQuality.GOOD
+        );
+        int badSignals = countQuality(
+                sensors,
+                SignalQuality.BAD
+        );
+        int staleSignals = countQuality(
+                sensors,
+                SignalQuality.STALE
+        );
 
         return new SensorDiagnosticDueResponse(
                 settings.diagnosticValidityMonths(),
                 sensors.size(),
                 due,
+                goodSignals,
+                badSignals,
+                staleSignals,
                 sensors,
                 now
         );
+    }
+
+    private int countQuality(
+            List<SensorDiagnosticDueResponse.Sensor> sensors,
+            SignalQuality quality
+    ) {
+        return (int) sensors.stream()
+                .filter(sensor -> sensor.quality() == quality)
+                .count();
     }
 
     @Transactional(readOnly = true)

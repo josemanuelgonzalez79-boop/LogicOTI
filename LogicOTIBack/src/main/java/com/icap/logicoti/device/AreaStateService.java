@@ -15,6 +15,9 @@ import com.icap.logicoti.exception.PlcUnavailableException;
 import org.apache.plc4x.java.api.messages.PlcWriteRequest;
 import org.apache.plc4x.java.api.messages.PlcWriteResponse;
 import com.icap.logicoti.plc.PlcCommunicationService;
+import com.icap.logicoti.signal.SignalQuality;
+import com.icap.logicoti.signal.SignalQualityRegistry;
+import com.icap.logicoti.signal.SignalQualitySnapshot;
 
 import java.time.Instant;
 import java.util.List;
@@ -76,15 +79,18 @@ public class AreaStateService {
 
     private final JdbcTemplate jdbcTemplate;
     private final PlcProperties plcProperties;
+    private final SignalQualityRegistry signalQualityRegistry;
 
     public AreaStateService(
             JdbcTemplate jdbcTemplate,
             PlcProperties plcProperties,
-            PlcCommunicationService plcCommunicationService
+            PlcCommunicationService plcCommunicationService,
+            SignalQualityRegistry signalQualityRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.plcProperties = plcProperties;
-         this.plcCommunicationService = plcCommunicationService;
+        this.plcCommunicationService = plcCommunicationService;
+        this.signalQualityRegistry = signalQualityRegistry;
     }
 
     public synchronized AreaStateResponse getAreaState(
@@ -195,34 +201,24 @@ public class AreaStateService {
                                 );
 
                         List<DeviceStateResponse> states = devices.stream()
-                                .map(device -> new DeviceStateResponse(
-                                        device.id(),
-                                        device.code(),
-                                        device.name(),
-                                        device.type(),
-                                        device.number(),
-                                        device.controllable(),
-
-                                        hasText(device.commandTag())
-                                                ? readBoolean(
-                                                        response,
-                                                        commandAlias(device)
-                                                )
-                                                : null,
-
-                                        readBoolean(
-                                                response,
-                                                stateAlias(device)
-                                        ),
-
-                                        hasText(device.faultTag())
-                                                ? readBoolean(
-                                                        response,
-                                                        faultAlias(device)
-                                                )
-                                                : null
+                                .map(device -> toDeviceState(
+                                        response,
+                                        device
                                 ))
                                 .toList();
+
+                        long problemSignals = states.stream()
+                                .filter(device ->
+                                        device.quality()
+                                                != SignalQuality.GOOD
+                                )
+                                .count();
+
+                        String message = problemSignals == 0
+                                ? "Estados leídos correctamente."
+                                : "PLC conectado; "
+                                        + problemSignals
+                                        + " señales requieren revisión.";
 
                         return new AreaStateResponse(
                                 area.code(),
@@ -230,11 +226,68 @@ public class AreaStateService {
                                 true,
                                 true,
                                 states,
-                                "Estados leídos correctamente.",
+                                message,
                                 Instant.now()
                         );
                 });
         }
+
+    private DeviceStateResponse toDeviceState(
+            PlcReadResponse response,
+            DeviceDefinition device
+    ) {
+        Boolean command = hasText(device.commandTag())
+                ? readBooleanResult(
+                        response,
+                        commandAlias(device),
+                        device.commandTag()
+                ).value()
+                : null;
+
+        Boolean fault = hasText(device.faultTag())
+                ? readBooleanResult(
+                        response,
+                        faultAlias(device),
+                        device.faultTag()
+                ).value()
+                : null;
+
+        BooleanReadResult stateRead = readBooleanResult(
+                response,
+                stateAlias(device),
+                device.stateTag()
+        );
+
+        if (stateRead.error() == null) {
+            signalQualityRegistry.recordGood(
+                    device.id(),
+                    stateRead.value()
+            );
+        } else {
+            signalQualityRegistry.recordBad(
+                    device.id(),
+                    stateRead.error()
+            );
+        }
+
+        SignalQualitySnapshot quality =
+                signalQualityRegistry.snapshot(device.id());
+
+        return new DeviceStateResponse(
+                device.id(),
+                device.code(),
+                device.name(),
+                device.type(),
+                device.number(),
+                device.controllable(),
+                command,
+                quality.value(),
+                fault,
+                quality.quality(),
+                quality.lastUpdatedAt(),
+                quality.detail()
+        );
+    }
 
     private AreaInfo findArea(String areaCode) {
 
@@ -276,29 +329,36 @@ public class AreaStateService {
         );
     }
 
-    private Boolean readBoolean(
+    private BooleanReadResult readBooleanResult(
             PlcReadResponse response,
-            String alias
+            String alias,
+            String tag
     ) {
         PlcResponseCode responseCode =
                 response.getResponseCode(alias);
 
         if (responseCode != PlcResponseCode.OK) {
-            throw new IllegalStateException(
-                    "No se pudo leer "
-                            + alias
-                            + ". Respuesta: "
+            return new BooleanReadResult(
+                    null,
+                    "El PLC respondió "
                             + responseCode
+                            + " al leer "
+                            + tag
+                            + "."
             );
         }
 
         if (!response.isValidBoolean(alias)) {
-            throw new IllegalStateException(
-                    alias + " no devolvió un valor BOOL."
+            return new BooleanReadResult(
+                    null,
+                    tag + " no devolvió un BOOL."
             );
         }
 
-        return response.getBoolean(alias);
+        return new BooleanReadResult(
+                response.getBoolean(alias),
+                null
+        );
     }
 
     private AreaStateResponse unavailableResponse(
@@ -306,18 +366,33 @@ public class AreaStateService {
             List<DeviceDefinition> devices,
             String message
     ) {
+        signalQualityRegistry.recordBad(
+                devices.stream()
+                        .map(DeviceDefinition::id)
+                        .toList(),
+                message
+        );
+
         List<DeviceStateResponse> unavailableDevices = devices.stream()
-                .map(device -> new DeviceStateResponse(
-                        device.id(),
-                        device.code(),
-                        device.name(),
-                        device.type(),
-                        device.number(),
-                        device.controllable(),
-                        null,
-                        null,
-                        null
-                ))
+                .map(device -> {
+                    SignalQualitySnapshot quality =
+                            signalQualityRegistry.snapshot(device.id());
+
+                    return new DeviceStateResponse(
+                            device.id(),
+                            device.code(),
+                            device.name(),
+                            device.type(),
+                            device.number(),
+                            device.controllable(),
+                            null,
+                            quality.value(),
+                            null,
+                            quality.quality(),
+                            quality.lastUpdatedAt(),
+                            quality.detail()
+                    );
+                })
                 .toList();
 
         return new AreaStateResponse(
@@ -360,6 +435,12 @@ public class AreaStateService {
             String commandTag,
             String stateTag,
             String faultTag
+    ) {
+    }
+
+    private record BooleanReadResult(
+            Boolean value,
+            String error
     ) {
     }
 

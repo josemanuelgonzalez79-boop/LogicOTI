@@ -212,6 +212,88 @@
   background: color-mix(in srgb, #dc2626 12%, transparent);
 }
 
+.signal-quality-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 1rem;
+  background: var(--p-content-background);
+}
+
+.signal-quality-overview__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  > div {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  strong {
+    color: var(--p-text-color);
+    font-size: 0.84rem;
+  }
+
+  div > span {
+    color: var(--p-text-muted-color);
+    font-size: 0.72rem;
+  }
+}
+
+.signal-quality-overview__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.55rem;
+  height: 2.55rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: #0369a1;
+  background: color-mix(in srgb, #0ea5e9 11%, transparent);
+}
+
+.signal-quality-overview__counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  > span,
+  .signal-quality-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+  }
+
+  > span {
+    padding: 0.4rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+}
+
+.signal-quality-overview__counts > span[data-quality='GOOD'],
+.signal-quality-badge[data-quality='GOOD'] {
+  color: #047857;
+  background: color-mix(in srgb, #059669 12%, transparent);
+}
+
+.signal-quality-overview__counts > span[data-quality='BAD'],
+.signal-quality-badge[data-quality='BAD'] {
+  color: #b91c1c;
+  background: color-mix(in srgb, #dc2626 11%, transparent);
+}
+
+.signal-quality-overview__counts > span[data-quality='STALE'],
+.signal-quality-badge[data-quality='STALE'] {
+  color: #b45309;
+  background: color-mix(in srgb, #f59e0b 13%, transparent);
+}
+
 .warning-strip {
   border-color: color-mix(in srgb, #f59e0b 35%, var(--p-content-border-color));
   color: #b45309;
@@ -531,6 +613,7 @@
 
 .sensor-table {
   width: 100%;
+  min-width: 1120px;
   border-collapse: collapse;
   color: var(--p-text-color);
   font-size: 0.78rem;
@@ -570,6 +653,16 @@
   tbody tr:hover {
     background: color-mix(in srgb, var(--p-primary-color) 4%, transparent);
   }
+}
+
+.signal-quality-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .sensor-table__check {
@@ -1016,6 +1109,20 @@
   .warning-strip {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .signal-quality-overview {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .signal-quality-overview__counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    > span {
+      justify-content: center;
+    }
   }
 
   .warning-strip__count {

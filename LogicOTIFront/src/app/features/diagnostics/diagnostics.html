@@ -99,6 +99,28 @@
     </article>
   </section>
 
+  <section class="signal-quality-overview" aria-label="Calidad actual de señales">
+    <div class="signal-quality-overview__heading">
+      <span class="signal-quality-overview__icon"><i class="pi pi-wave-pulse"></i></span>
+      <div>
+        <strong>Calidad individual de señales</strong>
+        <span>GOOD es lectura vigente; BAD indica error y STALE conserva un dato vencido.</span>
+      </div>
+    </div>
+
+    <div class="signal-quality-overview__counts">
+      <span data-quality="GOOD"
+        ><i class="pi pi-check-circle"></i> GOOD {{ due()?.goodSignals ?? 0 }}</span
+      >
+      <span data-quality="BAD"
+        ><i class="pi pi-times-circle"></i> BAD {{ due()?.badSignals ?? 0 }}</span
+      >
+      <span data-quality="STALE"
+        ><i class="pi pi-clock"></i> STALE {{ due()?.staleSignals ?? 0 }}</span
+      >
+    </div>
+  </section>
+
   @if (activeWarnings().length > 0) {
     <section class="warning-strip">
       <span class="warning-strip__icon"><i class="pi pi-exclamation-triangle"></i></span>
@@ -298,6 +320,7 @@
               <th>Sensor</th>
               <th>Área</th>
               <th>Tipo</th>
+              <th>Calidad PLC</th>
               <th>Diagnóstico</th>
               <th>Vigencia</th>
               <th>Alarma</th>
@@ -343,6 +366,28 @@
                   <small>{{ sensor.areaCode }}</small>
                 </td>
                 <td>{{ sensorTypeLabel(sensor.deviceType) }}</td>
+                <td>
+                  <span
+                    class="signal-quality-badge"
+                    [attr.data-quality]="sensor.quality"
+                    [attr.title]="sensor.qualityDetail"
+                  >
+                    <i
+                      class="pi"
+                      [class.pi-check-circle]="sensor.quality === 'GOOD'"
+                      [class.pi-times-circle]="sensor.quality === 'BAD'"
+                      [class.pi-clock]="sensor.quality === 'STALE'"
+                    ></i>
+                    {{ sensor.quality }}
+                  </span>
+                  <small>
+                    @if (sensor.lastUpdatedAt) {
+                      Última lectura: {{ sensor.lastUpdatedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    } @else {
+                      Sin lectura válida
+                    }
+                  </small>
+                </td>
                 <td>
                   @if (runningSensorCodes().has(sensor.deviceCode)) {
                     <span class="status-badge status-badge--running">

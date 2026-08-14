@@ -25,7 +25,9 @@ public class WebSocketAuthenticationInterceptor
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String SMOKE_ALERT_TOPIC =
-        "/topic/alerts/smoke";
+            "/topic/alerts/smoke";
+    private static final String ALARM_ATTENTION_TOPIC =
+            "/topic/alerts/attention";
     private static final String SECURITY_STATUS_TOPIC =
             "/topic/security/status";
     private static final String SECURITY_WARNING_TOPIC =
@@ -157,6 +159,9 @@ public class WebSocketAuthenticationInterceptor
                 boolean allowedSmokeAlertTopic =
                         SMOKE_ALERT_TOPIC.equals(destination);
 
+                boolean allowedAlarmAttentionTopic =
+                        ALARM_ATTENTION_TOPIC.equals(destination);
+
                 boolean allowedSecurityStatusTopic =
                         SECURITY_STATUS_TOPIC.equals(destination);
 
@@ -180,6 +185,7 @@ public class WebSocketAuthenticationInterceptor
 
                 if (!allowedAreaTopic
                         && !allowedSmokeAlertTopic
+                        && !allowedAlarmAttentionTopic
                         && !allowedSecurityStatusTopic
                         && !allowedSecurityWarningTopic
                         && !allowedSecurityMotionAlertTopic

@@ -3,6 +3,7 @@ package com.icap.logicoti.realtime;
 import com.icap.logicoti.device.AreaStateResponse;
 import com.icap.logicoti.device.AreaStateResponse.DeviceStateResponse;
 import com.icap.logicoti.device.AreaStateService;
+import com.icap.logicoti.signal.SignalQuality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -132,7 +133,8 @@ public class AreaStatePublisher {
                 device.controllable(),
                 device.command(),
                 device.state(),
-                device.fault()
+                device.fault(),
+                device.quality()
         );
     }
 
@@ -179,7 +181,8 @@ public class AreaStatePublisher {
             boolean controllable,
             Boolean command,
             Boolean state,
-            Boolean fault
+            Boolean fault,
+            SignalQuality quality
     ) {
     }
 }
