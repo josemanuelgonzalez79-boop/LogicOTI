@@ -1,6 +1,6 @@
-# Plantilla Angular industrial
+# Frontend LogicOTI
 
-Base reutilizable para proyectos Angular conectados con un backend Spring Boot.
+SPA/PWA de supervisión y operación del edificio OTI.
 
 ## Versiones
 
@@ -8,7 +8,7 @@ Base reutilizable para proyectos Angular conectados con un backend Spring Boot.
 - PrimeNG 21.1.9
 - TypeScript 5.9.x
 - RxJS 7.8.x
-- Node.js 24 LTS recomendado (Node.js 22.12+ también es compatible)
+- Node.js 22.12 o 24
 
 Se eligió Angular 21 porque es la versión más reciente compatible con la última versión estable de PrimeNG. Angular 22 puede adoptarse cuando PrimeNG 22 tenga una versión estable.
 
@@ -19,8 +19,6 @@ node -v
 npm -v
 ```
 
-Para proyectos nuevos usa Node.js 24 LTS. La plantilla también admite Node.js 22.12 o superior dentro de la rama 22.
-
 ## Iniciar
 
 ```powershell
@@ -30,25 +28,27 @@ npm start
 
 La aplicación abre en `http://localhost:4200` y el proxy envía `/api` hacia `http://localhost:3210`.
 
-## Compilar
+## Pruebas y build de producción
 
 ```powershell
-npm run build
+npm ci
+npx ng test --watch=false
+npx ng build --configuration production --base-href /LogicOTI/
 ```
 
 El resultado queda en `dist/industrial-frontend-template/browser`.
-
-## Antes de comenzar un proyecto real
-
-1. Cambia `name` en `package.json`.
-2. Cambia el nombre del proyecto dentro de `angular.json` solamente cuando necesites que el nombre del `dist` también cambie.
-3. Cambia el título y la marca en `src/app/app.html`.
-4. Agrega nuevas pantallas dentro de `src/app/features`.
-5. Mantén servicios, interceptores y guardias dentro de `src/app/core`.
 
 ## Ambientes
 
 - `src/environments/environment.ts`: desarrollo.
 - `src/environments/environment.production.ts`: producción.
 
-La URL recomendada es relativa (`/api`) y debe ser redirigida por el proxy en desarrollo y por IIS, Nginx o Apache en producción.
+Producción usa rutas relativas: `/api` para REST y `/ws` para WebSocket. Caddy debe redirigirlas al
+backend; el navegador nunca debe comunicarse directamente con `http://servidor:3210` desde una
+página HTTPS.
+
+El build queda en `dist/industrial-frontend-template/browser` y se publica en el contexto Tomcat
+`/LogicOTI/`. El Service Worker solamente se genera con la configuración `production`.
+
+Consulta [la guía de operación y despliegue](../docs/OPERACION_Y_DESPLIEGUE.md) para instalar la
+PWA, renovar el frontend y comprobar HTTPS, API, WebSocket, cámaras y notificaciones.
