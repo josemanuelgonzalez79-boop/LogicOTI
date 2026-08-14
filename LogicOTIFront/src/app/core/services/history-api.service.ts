@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../http/api.endpoints';
 import {
   CommandHistoryFilters,
   CommandHistoryItem,
+  ExecutiveMonthlyReport,
   HistoryPage,
   SensorEventHistoryFilters,
   SensorEventHistoryItem,
@@ -30,6 +31,13 @@ export class HistoryApiService {
     return this.http.get<HistoryPage<SensorEventHistoryItem>>(
       `${this.baseUrl}${API_ENDPOINTS.history.events}`,
       { params: this.createParams(filters) },
+    );
+  }
+
+  getExecutiveMonthlyReport(month: string): Observable<ExecutiveMonthlyReport> {
+    return this.http.get<ExecutiveMonthlyReport>(
+      `${this.baseUrl}${API_ENDPOINTS.history.executiveMonthlyReport}`,
+      { params: new HttpParams().set('month', month) },
     );
   }
 

@@ -4,3 +4,8 @@ MediaMTX/mediamtx.exe
 MediaMTX/mediamtx.yml
 MediaMTX/auto.crt
 MediaMTX/auto.key
+
+# Archivos generados por los servicios locales de MediaMTX/WinSW.
+MediaMTX/*.log
+MediaMTX/*.out.log
+MediaMTX/*.backup-*

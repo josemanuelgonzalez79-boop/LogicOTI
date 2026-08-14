@@ -102,3 +102,62 @@ export interface SensorEventHistoryFilters {
   limit: number;
   offset: number;
 }
+
+export interface ExecutiveCountMetric {
+  code: string;
+  label: string;
+  count: number;
+}
+
+export interface ExecutiveDailyMetric {
+  date: string;
+  count: number;
+}
+
+export interface ExecutiveDeviceFailureMetric {
+  deviceCode: string;
+  deviceName: string;
+  areaCode: string;
+  areaName: string;
+  failures: number;
+}
+
+export interface ExecutiveMonthlyReport {
+  month: string;
+  periodStart: string;
+  periodEnd: string;
+  timezone: string;
+  generatedAt: string;
+  alarms: {
+    total: number;
+    smoke: number;
+    motion: number;
+    critical: number;
+    acknowledged: number;
+    acknowledgementRate: number;
+    averageRestoreMinutes: number | null;
+  };
+  commands: {
+    total: number;
+    confirmed: number;
+    failed: number;
+    pending: number;
+    confirmationRate: number;
+    averageLatencyMs: number | null;
+  };
+  maintenance: {
+    diagnosticsPassed: number;
+    diagnosticsRejected: number;
+    diagnosticsCancelled: number;
+    bypassesCreated: number;
+  };
+  security: {
+    rejectedArmings: number;
+  };
+  alarmsByArea: ExecutiveCountMetric[];
+  alarmsBySensor: ExecutiveCountMetric[];
+  alarmsByDay: ExecutiveDailyMetric[];
+  alarmsByTimeSlot: ExecutiveCountMetric[];
+  commandFailures: ExecutiveDeviceFailureMetric[];
+  armRejectionReasons: ExecutiveCountMetric[];
+}

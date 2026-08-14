@@ -10,9 +10,17 @@
       <i class="pi pi-database"></i>
       <div>
         <strong>
-          {{ activeTab() === 'events' ? eventTotal() : commandTotal() }}
+          @if (activeTab() === 'events') {
+            {{ eventTotal() }}
+          } @else if (activeTab() === 'commands') {
+            {{ commandTotal() }}
+          } @else {
+            {{ report()?.alarms?.total ?? 0 }}
+          }
         </strong>
-        <span>registros encontrados</span>
+        <span>
+          {{ activeTab() === 'report' ? 'activaciones del mes' : 'registros encontrados' }}
+        </span>
       </div>
     </div>
   </header>
@@ -36,6 +44,16 @@
     >
       <i class="pi pi-send"></i>
       Comandos
+    </button>
+
+    <button
+      type="button"
+      class="history-tabs__button"
+      [class.history-tabs__button--active]="activeTab() === 'report'"
+      (click)="selectTab('report')"
+    >
+      <i class="pi pi-chart-bar"></i>
+      Reporte mensual
     </button>
   </nav>
 
@@ -214,7 +232,7 @@
         </footer>
       }
     </section>
-  } @else {
+  } @else if (activeTab() === 'commands') {
     <section class="history-panel">
       <div class="filter-grid">
         <label>
@@ -374,6 +392,310 @@
             </button>
           </div>
         </footer>
+      }
+    </section>
+  } @else {
+    <section class="executive-report">
+      <header class="executive-report__toolbar">
+        <div>
+          <span class="history-page__eyebrow">Resumen ejecutivo</span>
+          <h2>Indicadores mensuales de operación</h2>
+          <p>Alarmas, tiempos de respuesta, comandos, diagnósticos y seguridad.</p>
+        </div>
+
+        <div class="report-month-filter">
+          <label for="report-month">Mes del reporte</label>
+          <div>
+            <input id="report-month" type="month" [(ngModel)]="reportMonth" />
+            <button
+              type="button"
+              class="button button--primary"
+              [disabled]="reportLoading()"
+              (click)="searchReport()"
+            >
+              <i
+                class="pi"
+                [class.pi-spin]="reportLoading()"
+                [class.pi-spinner]="reportLoading()"
+                [class.pi-chart-line]="!reportLoading()"
+              ></i>
+              Generar
+            </button>
+          </div>
+        </div>
+      </header>
+
+      @if (reportErrorMessage()) {
+        <div class="history-message history-message--error">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ reportErrorMessage() }}</span>
+        </div>
+      }
+
+      @if (reportLoading()) {
+        <div class="history-message">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Calculando indicadores mensuales...</span>
+        </div>
+      } @else if (report(); as monthlyReport) {
+        <div class="executive-report__period">
+          <div>
+            <strong>{{ reportMonthLabel(monthlyReport.month) }}</strong>
+            <span>
+              Del {{ monthlyReport.periodStart | date: 'dd/MM/yyyy' }} al
+              {{ monthlyReport.periodEnd | date: 'dd/MM/yyyy' }}
+            </span>
+          </div>
+          <small>Zona horaria: {{ monthlyReport.timezone }}</small>
+        </div>
+
+        <section class="report-kpis" aria-label="Indicadores principales">
+          <article class="report-kpi report-kpi--danger">
+            <i class="pi pi-bell"></i>
+            <div>
+              <span>Activaciones registradas</span>
+              <strong>{{ monthlyReport.alarms.total }}</strong>
+              <small>
+                {{ monthlyReport.alarms.smoke }} humo · {{ monthlyReport.alarms.motion }} movimiento
+              </small>
+            </div>
+          </article>
+
+          <article class="report-kpi report-kpi--success">
+            <i class="pi pi-check-circle"></i>
+            <div>
+              <span>Comandos confirmados</span>
+              <strong>{{ monthlyReport.commands.confirmationRate | number: '1.1-1' }}%</strong>
+              <small>
+                {{ monthlyReport.commands.confirmed }} de {{ monthlyReport.commands.total }} órdenes
+              </small>
+            </div>
+          </article>
+
+          <article class="report-kpi report-kpi--info">
+            <i class="pi pi-clock"></i>
+            <div>
+              <span>Restablecimiento promedio</span>
+              <strong>
+                @if (monthlyReport.alarms.averageRestoreMinutes === null) {
+                  Sin dato
+                } @else {
+                  {{ monthlyReport.alarms.averageRestoreMinutes | number: '1.1-1' }} min
+                }
+              </strong>
+              <small>Desde activación hasta restablecimiento</small>
+            </div>
+          </article>
+
+          <article class="report-kpi report-kpi--warning">
+            <i class="pi pi-bolt"></i>
+            <div>
+              <span>Latencia promedio</span>
+              <strong>
+                @if (monthlyReport.commands.averageLatencyMs === null) {
+                  Sin dato
+                } @else {
+                  {{ monthlyReport.commands.averageLatencyMs | number: '1.0-0' }} ms
+                }
+              </strong>
+              <small>Solo comandos confirmados</small>
+            </div>
+          </article>
+        </section>
+
+        <section class="report-status-grid">
+          <article>
+            <span>Alarmas críticas</span>
+            <strong>{{ monthlyReport.alarms.critical }}</strong>
+          </article>
+          <article>
+            <span>Alarmas reconocidas</span>
+            <strong>{{ monthlyReport.alarms.acknowledgementRate | number: '1.1-1' }}%</strong>
+          </article>
+          <article>
+            <span>Comandos con diferencia o falla</span>
+            <strong>{{ monthlyReport.commands.failed }}</strong>
+          </article>
+          <article>
+            <span>Diagnósticos aprobados</span>
+            <strong>{{ monthlyReport.maintenance.diagnosticsPassed }}</strong>
+          </article>
+          <article>
+            <span>Diagnósticos rechazados</span>
+            <strong>{{ monthlyReport.maintenance.diagnosticsRejected }}</strong>
+          </article>
+          <article>
+            <span>Sensores omitidos en el mes</span>
+            <strong>{{ monthlyReport.maintenance.bypassesCreated }}</strong>
+          </article>
+          <article>
+            <span>Armados rechazados</span>
+            <strong>{{ monthlyReport.security.rejectedArmings }}</strong>
+          </article>
+          <article>
+            <span>Comandos pendientes</span>
+            <strong>{{ monthlyReport.commands.pending }}</strong>
+          </article>
+        </section>
+
+        <section class="report-grid report-grid--wide">
+          <article class="report-card">
+            <header>
+              <div>
+                <span class="history-page__eyebrow">Tendencia diaria</span>
+                <h3>Activaciones por día</h3>
+              </div>
+              <strong>{{ monthlyReport.alarms.total }} total</strong>
+            </header>
+
+            <div class="daily-chart" aria-label="Activaciones registradas por día">
+              @for (item of monthlyReport.alarmsByDay; track item.date) {
+                <div class="daily-chart__item" [title]="item.date + ': ' + item.count">
+                  <span class="daily-chart__value">{{ item.count || '' }}</span>
+                  <div class="daily-chart__track">
+                    <span
+                      [style.height.%]="reportBarWidth(item.count, reportDailyMaximum())"
+                    ></span>
+                  </div>
+                  <small>{{ item.date | date: 'd' }}</small>
+                </div>
+              }
+            </div>
+          </article>
+        </section>
+
+        <section class="report-grid">
+          <article class="report-card">
+            <header>
+              <div>
+                <span class="history-page__eyebrow">Distribución</span>
+                <h3>Áreas con más activaciones</h3>
+              </div>
+            </header>
+
+            @if (monthlyReport.alarmsByArea.length === 0) {
+              <p class="report-card__empty">No hubo activaciones durante este mes.</p>
+            } @else {
+              <div class="horizontal-bars">
+                @for (item of monthlyReport.alarmsByArea; track item.code) {
+                  <div class="horizontal-bar">
+                    <div>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.code }}</small>
+                    </div>
+                    <span class="horizontal-bar__track">
+                      <span
+                        [style.width.%]="reportBarWidth(item.count, reportAreaMaximum())"
+                      ></span>
+                    </span>
+                    <b>{{ item.count }}</b>
+                  </div>
+                }
+              </div>
+            }
+          </article>
+
+          <article class="report-card">
+            <header>
+              <div>
+                <span class="history-page__eyebrow">Concentración</span>
+                <h3>Sensores con más activaciones</h3>
+              </div>
+            </header>
+
+            @if (monthlyReport.alarmsBySensor.length === 0) {
+              <p class="report-card__empty">No hubo sensores activados durante este mes.</p>
+            } @else {
+              <div class="horizontal-bars">
+                @for (item of monthlyReport.alarmsBySensor; track item.code) {
+                  <div class="horizontal-bar">
+                    <div>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.code }}</small>
+                    </div>
+                    <span class="horizontal-bar__track">
+                      <span
+                        [style.width.%]="reportBarWidth(item.count, reportSensorMaximum())"
+                      ></span>
+                    </span>
+                    <b>{{ item.count }}</b>
+                  </div>
+                }
+              </div>
+            }
+          </article>
+
+          <article class="report-card">
+            <header>
+              <div>
+                <span class="history-page__eyebrow">Horario</span>
+                <h3>Activaciones por franja del día</h3>
+              </div>
+            </header>
+
+            <div class="horizontal-bars horizontal-bars--compact">
+              @for (item of monthlyReport.alarmsByTimeSlot; track item.code) {
+                <div class="horizontal-bar">
+                  <div>
+                    <strong>{{ item.label }}</strong>
+                    <small>{{ item.code }} h</small>
+                  </div>
+                  <span class="horizontal-bar__track">
+                    <span [style.width.%]="reportBarWidth(item.count, reportTimeMaximum())"></span>
+                  </span>
+                  <b>{{ item.count }}</b>
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="report-card">
+            <header>
+              <div>
+                <span class="history-page__eyebrow">Atención</span>
+                <h3>Equipos con fallas de confirmación</h3>
+              </div>
+            </header>
+
+            @if (monthlyReport.commandFailures.length === 0) {
+              <p class="report-card__empty">Todos los comandos terminaron sin diferencias.</p>
+            } @else {
+              <div class="report-list">
+                @for (item of monthlyReport.commandFailures; track item.deviceCode) {
+                  <div>
+                    <span>
+                      <strong>{{ item.deviceName }}</strong>
+                      <small>{{ item.areaName }} · {{ item.deviceCode }}</small>
+                    </span>
+                    <b>{{ item.failures }}</b>
+                  </div>
+                }
+              </div>
+            }
+          </article>
+        </section>
+
+        <section class="report-card report-card--rejections">
+          <header>
+            <div>
+              <span class="history-page__eyebrow">Seguridad</span>
+              <h3>Causas de armados rechazados</h3>
+            </div>
+          </header>
+
+          @if (monthlyReport.armRejectionReasons.length === 0) {
+            <p class="report-card__empty">No se registraron armados rechazados durante el mes.</p>
+          } @else {
+            <div class="report-list">
+              @for (item of monthlyReport.armRejectionReasons; track item.label) {
+                <div>
+                  <span>{{ item.label }}</span>
+                  <b>{{ item.count }}</b>
+                </div>
+              }
+            </div>
+          }
+        </section>
       }
     </section>
   }

@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   history: {
     commands: '/history/commands',
     events: '/history/events',
+    executiveMonthlyReport: '/reports/executive/monthly',
   },
 
   alarms: {

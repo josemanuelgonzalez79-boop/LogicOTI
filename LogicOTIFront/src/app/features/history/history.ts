@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -7,6 +7,7 @@ import {
   CommandHistoryFilters,
   CommandHistoryItem,
   CommandStatus,
+  ExecutiveMonthlyReport,
   SensorDeviceType,
   SensorEventHistoryFilters,
   SensorEventHistoryItem,
@@ -15,7 +16,7 @@ import {
 } from '../../core/models/history.model';
 import { HistoryApiService } from '../../core/services/history-api.service';
 
-type HistoryTab = 'events' | 'commands';
+type HistoryTab = 'events' | 'commands' | 'report';
 
 interface EventFilterForm {
   areaCode: string;
@@ -39,7 +40,7 @@ interface CommandFilterForm {
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, DecimalPipe, FormsModule],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })
@@ -59,6 +60,11 @@ export class History implements OnInit {
   readonly commandTotal = signal(0);
   readonly commandOffset = signal(0);
 
+  readonly report = signal<ExecutiveMonthlyReport | null>(null);
+  readonly reportLoading = signal(false);
+  readonly reportErrorMessage = signal('');
+  reportMonth = this.currentMonth();
+
   readonly eventPage = computed(() => Math.floor(this.eventOffset() / this.pageSize) + 1);
   readonly eventPageCount = computed(() =>
     Math.max(1, Math.ceil(this.eventTotal() / this.pageSize)),
@@ -66,6 +72,18 @@ export class History implements OnInit {
   readonly commandPage = computed(() => Math.floor(this.commandOffset() / this.pageSize) + 1);
   readonly commandPageCount = computed(() =>
     Math.max(1, Math.ceil(this.commandTotal() / this.pageSize)),
+  );
+  readonly reportDailyMaximum = computed(() =>
+    Math.max(0, ...(this.report()?.alarmsByDay.map((item) => item.count) ?? [])),
+  );
+  readonly reportAreaMaximum = computed(() =>
+    Math.max(0, ...(this.report()?.alarmsByArea.map((item) => item.count) ?? [])),
+  );
+  readonly reportSensorMaximum = computed(() =>
+    Math.max(0, ...(this.report()?.alarmsBySensor.map((item) => item.count) ?? [])),
+  );
+  readonly reportTimeMaximum = computed(() =>
+    Math.max(0, ...(this.report()?.alarmsByTimeSlot.map((item) => item.count) ?? [])),
   );
 
   eventFilters: EventFilterForm = this.emptyEventFilters();
@@ -90,6 +108,14 @@ export class History implements OnInit {
     if (tab === 'commands' && this.commands().length === 0) {
       this.loadCommands();
     }
+
+    if (tab === 'report' && this.report() === null) {
+      this.loadReport();
+    }
+  }
+
+  searchReport(): void {
+    this.loadReport();
   }
 
   searchEvents(): void {
@@ -188,6 +214,23 @@ export class History implements OnInit {
     return value ? 'Encendido' : 'Apagado';
   }
 
+  reportBarWidth(value: number, maximum: number): number {
+    if (value === 0 || maximum === 0) {
+      return 0;
+    }
+
+    return Math.max(5, (value / maximum) * 100);
+  }
+
+  reportMonthLabel(month: string): string {
+    const [year, monthNumber] = month.split('-').map(Number);
+
+    return new Intl.DateTimeFormat('es-MX', {
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(year, monthNumber - 1, 1));
+  }
+
   private loadEvents(): void {
     const filters: SensorEventHistoryFilters = {
       areaCode: this.clean(this.eventFilters.areaCode),
@@ -251,6 +294,27 @@ export class History implements OnInit {
       });
   }
 
+  private loadReport(): void {
+    if (!/^\d{4}-\d{2}$/.test(this.reportMonth)) {
+      this.reportErrorMessage.set('Selecciona un mes válido.');
+      return;
+    }
+
+    this.reportLoading.set(true);
+    this.reportErrorMessage.set('');
+
+    this.historyApi
+      .getExecutiveMonthlyReport(this.reportMonth)
+      .pipe(finalize(() => this.reportLoading.set(false)))
+      .subscribe({
+        next: (response) => this.report.set(response),
+        error: () => {
+          this.report.set(null);
+          this.reportErrorMessage.set('No fue posible generar el reporte ejecutivo mensual.');
+        },
+      });
+  }
+
   private clean(value: string): string | undefined {
     const cleaned = value.trim().toUpperCase();
     return cleaned || undefined;
@@ -285,5 +349,13 @@ export class History implements OnInit {
       from: '',
       to: '',
     };
+  }
+
+  private currentMonth(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+
+    return `${year}-${month}`;
   }
 }
