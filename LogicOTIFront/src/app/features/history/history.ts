@@ -8,12 +8,14 @@ import {
   CommandHistoryItem,
   CommandStatus,
   ExecutiveMonthlyReport,
+  HistoryRetentionPolicy,
   SensorDeviceType,
   SensorEventHistoryFilters,
   SensorEventHistoryItem,
   SensorEventSeverity,
   SensorEventType,
 } from '../../core/models/history.model';
+import { AuthService } from '../../core/services/auth.service';
 import { HistoryApiService } from '../../core/services/history-api.service';
 
 type HistoryTab = 'events' | 'commands' | 'report';
@@ -46,6 +48,7 @@ interface CommandFilterForm {
 })
 export class History implements OnInit {
   private readonly historyApi = inject(HistoryApiService);
+  private readonly authService = inject(AuthService);
 
   readonly pageSize = 20;
   readonly activeTab = signal<HistoryTab>('events');
@@ -63,7 +66,16 @@ export class History implements OnInit {
   readonly report = signal<ExecutiveMonthlyReport | null>(null);
   readonly reportLoading = signal(false);
   readonly reportErrorMessage = signal('');
+  readonly retention = signal<HistoryRetentionPolicy | null>(null);
+  readonly retentionLoading = signal(false);
+  readonly retentionSaving = signal(false);
+  readonly retentionRunning = signal(false);
+  readonly retentionErrorMessage = signal('');
+  readonly retentionSuccessMessage = signal('');
+  readonly canManageRetention = this.authService.getSession()?.user.role === 'ADMIN';
   reportMonth = this.currentMonth();
+  retentionEnabled = false;
+  retentionMonths = 24;
 
   readonly eventPage = computed(() => Math.floor(this.eventOffset() / this.pageSize) + 1);
   readonly eventPageCount = computed(() =>
@@ -112,10 +124,102 @@ export class History implements OnInit {
     if (tab === 'report' && this.report() === null) {
       this.loadReport();
     }
+
+    if (tab === 'report' && this.canManageRetention && this.retention() === null) {
+      this.loadRetentionPolicy();
+    }
   }
 
   searchReport(): void {
     this.loadReport();
+  }
+
+  exportReportToPdf(): void {
+    const monthlyReport = this.report();
+
+    if (!monthlyReport) {
+      return;
+    }
+
+    const previousTitle = document.title;
+
+    document.title = `LogicOTI_Reporte_${monthlyReport.month}`;
+    document.body.classList.add('logicoti-report-print');
+
+    try {
+      window.print();
+    } finally {
+      document.body.classList.remove('logicoti-report-print');
+      document.title = previousTitle;
+    }
+  }
+
+  saveRetentionPolicy(): void {
+    if (
+      !Number.isInteger(this.retentionMonths) ||
+      this.retentionMonths < 6 ||
+      this.retentionMonths > 120
+    ) {
+      this.retentionErrorMessage.set('La conservación debe estar entre 6 y 120 meses.');
+      return;
+    }
+
+    this.retentionSaving.set(true);
+    this.retentionErrorMessage.set('');
+    this.retentionSuccessMessage.set('');
+
+    this.historyApi
+      .updateRetentionPolicy(this.retentionEnabled, this.retentionMonths)
+      .pipe(finalize(() => this.retentionSaving.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.applyRetentionPolicy(response);
+          this.retentionSuccessMessage.set(
+            response.enabled
+              ? 'Política guardada. La limpieza automática queda habilitada.'
+              : 'Política guardada. No se eliminarán registros automáticamente.',
+          );
+        },
+        error: () => {
+          this.retentionErrorMessage.set('No fue posible guardar la política de retención.');
+        },
+      });
+  }
+
+  runRetentionNow(): void {
+    const policy = this.retention();
+
+    if (!policy?.enabled || policy.candidates.total === 0 || this.retentionRunning()) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se eliminarán permanentemente ${policy.candidates.total} registros anteriores al ` +
+        `${new Date(policy.cutoffAt).toLocaleString('es-MX')}. ¿Deseas continuar?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.retentionRunning.set(true);
+    this.retentionErrorMessage.set('');
+    this.retentionSuccessMessage.set('');
+
+    this.historyApi
+      .runRetention()
+      .pipe(finalize(() => this.retentionRunning.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.retentionSuccessMessage.set(
+            `Limpieza terminada: ${response.deleted.total} registros eliminados.`,
+          );
+          this.loadRetentionPolicy(false);
+        },
+        error: () => {
+          this.retentionErrorMessage.set('No fue posible ejecutar la limpieza de históricos.');
+        },
+      });
   }
 
   searchEvents(): void {
@@ -313,6 +417,31 @@ export class History implements OnInit {
           this.reportErrorMessage.set('No fue posible generar el reporte ejecutivo mensual.');
         },
       });
+  }
+
+  private loadRetentionPolicy(clearMessages = true): void {
+    this.retentionLoading.set(true);
+
+    if (clearMessages) {
+      this.retentionErrorMessage.set('');
+      this.retentionSuccessMessage.set('');
+    }
+
+    this.historyApi
+      .getRetentionPolicy()
+      .pipe(finalize(() => this.retentionLoading.set(false)))
+      .subscribe({
+        next: (response) => this.applyRetentionPolicy(response),
+        error: () => {
+          this.retentionErrorMessage.set('No fue posible consultar la política de retención.');
+        },
+      });
+  }
+
+  private applyRetentionPolicy(response: HistoryRetentionPolicy): void {
+    this.retention.set(response);
+    this.retentionEnabled = response.enabled;
+    this.retentionMonths = response.retentionMonths;
   }
 
   private clean(value: string): string | undefined {

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { ExecutiveMonthlyReport } from '../models/history.model';
+import { ExecutiveMonthlyReport, HistoryRetentionPolicy } from '../models/history.model';
 import { HistoryApiService } from './history-api.service';
 
 const report: ExecutiveMonthlyReport = {
@@ -45,6 +45,36 @@ const report: ExecutiveMonthlyReport = {
   armRejectionReasons: [],
 };
 
+const retentionPolicy: HistoryRetentionPolicy = {
+  enabled: false,
+  retentionMonths: 24,
+  cutoffAt: '2024-08-14T18:00:00Z',
+  candidates: {
+    events: 2,
+    commands: 1,
+    securityTransitions: 0,
+    diagnostics: 0,
+    revokedBypasses: 0,
+    notifications: 1,
+    total: 4,
+  },
+  lastRunAt: null,
+  lastRunBy: null,
+  lastCutoffAt: null,
+  lastDeleted: {
+    events: 0,
+    commands: 0,
+    securityTransitions: 0,
+    diagnostics: 0,
+    revokedBypasses: 0,
+    notifications: 0,
+    total: 0,
+  },
+  updatedAt: '2026-08-14T18:00:00Z',
+  updatedBy: 'SYSTEM',
+  timestamp: '2026-08-14T18:00:00Z',
+};
+
 describe('HistoryApiService', () => {
   let service: HistoryApiService;
   let http: HttpTestingController;
@@ -72,5 +102,36 @@ describe('HistoryApiService', () => {
 
     expect(request.request.method).toBe('GET');
     request.flush(report);
+  });
+
+  it('consulta y actualiza la política de retención', () => {
+    service.getRetentionPolicy().subscribe((response) => expect(response).toEqual(retentionPolicy));
+
+    const getRequest = http.expectOne((item) => item.url.endsWith('/history/retention'));
+    expect(getRequest.request.method).toBe('GET');
+    getRequest.flush(retentionPolicy);
+
+    service
+      .updateRetentionPolicy(true, 36)
+      .subscribe((response) => expect(response.enabled).toBe(true));
+
+    const putRequest = http.expectOne((item) => item.url.endsWith('/history/retention'));
+    expect(putRequest.request.method).toBe('PUT');
+    expect(putRequest.request.body).toEqual({ enabled: true, retentionMonths: 36 });
+    putRequest.flush({ ...retentionPolicy, enabled: true, retentionMonths: 36 });
+  });
+
+  it('confirma explícitamente la limpieza manual', () => {
+    service.runRetention().subscribe((response) => expect(response.deleted.total).toBe(4));
+
+    const request = http.expectOne((item) => item.url.endsWith('/history/retention/run'));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ confirmed: true });
+    request.flush({
+      cutoffAt: retentionPolicy.cutoffAt,
+      deleted: retentionPolicy.candidates,
+      executedAt: '2026-08-14T18:00:00Z',
+      executedBy: 'admin',
+    });
   });
 });

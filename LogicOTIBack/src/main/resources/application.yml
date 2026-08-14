@@ -63,6 +63,11 @@ notifications:
     retry-batch-size: ${WEB_PUSH_RETRY_BATCH_SIZE:100}
     retry-poll-ms: ${WEB_PUSH_RETRY_POLL_MS:5000}
 
+history:
+  retention:
+    cron: ${HISTORY_RETENTION_CRON:0 30 3 * * *}
+    scheduler-zone: ${HISTORY_RETENTION_SCHEDULER_ZONE:America/Mazatlan}
+
 management:
   endpoints:
     web:

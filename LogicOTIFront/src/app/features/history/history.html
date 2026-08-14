@@ -421,6 +421,15 @@
               ></i>
               Generar
             </button>
+            <button
+              type="button"
+              class="button button--secondary"
+              [disabled]="!report() || reportLoading()"
+              (click)="exportReportToPdf()"
+            >
+              <i class="pi pi-file-pdf"></i>
+              Exportar PDF
+            </button>
           </div>
         </div>
       </header>
@@ -696,6 +705,141 @@
             </div>
           }
         </section>
+
+        @if (canManageRetention) {
+          <section class="retention-policy" aria-labelledby="retention-policy-title">
+            <header class="retention-policy__header">
+              <div>
+                <span class="history-page__eyebrow">Administración de datos</span>
+                <h3 id="retention-policy-title">Retención de históricos</h3>
+                <p>
+                  Conserva el periodo definido y elimina únicamente registros vencidos. Las
+                  omisiones activas y notificaciones todavía pendientes siempre se protegen.
+                </p>
+              </div>
+
+              <span
+                class="retention-policy__status"
+                [class.retention-policy__status--enabled]="retentionEnabled"
+              >
+                {{ retentionEnabled ? 'Automática' : 'Desactivada' }}
+              </span>
+            </header>
+
+            @if (retentionLoading()) {
+              <div class="retention-policy__loading">
+                <i class="pi pi-spin pi-spinner"></i>
+                Consultando política...
+              </div>
+            } @else if (retention(); as policy) {
+              <div class="retention-policy__form">
+                <label class="retention-toggle">
+                  <input type="checkbox" [(ngModel)]="retentionEnabled" />
+                  <span>
+                    <strong>Ejecutar limpieza automática</strong>
+                    <small>Todos los días a las 03:30, hora del servidor.</small>
+                  </span>
+                </label>
+
+                <label class="retention-months">
+                  <span>Meses que se conservarán</span>
+                  <input type="number" min="6" max="120" step="1" [(ngModel)]="retentionMonths" />
+                </label>
+              </div>
+
+              <div class="retention-policy__preview">
+                <div>
+                  <span>Registros candidatos</span>
+                  <strong>{{ policy.candidates.total }}</strong>
+                  <small> Anteriores al {{ policy.cutoffAt | date: 'dd/MM/yyyy HH:mm' }} </small>
+                </div>
+
+                <dl>
+                  <div>
+                    <dt>Eventos</dt>
+                    <dd>{{ policy.candidates.events }}</dd>
+                  </div>
+                  <div>
+                    <dt>Comandos</dt>
+                    <dd>{{ policy.candidates.commands }}</dd>
+                  </div>
+                  <div>
+                    <dt>Seguridad</dt>
+                    <dd>{{ policy.candidates.securityTransitions }}</dd>
+                  </div>
+                  <div>
+                    <dt>Diagnósticos</dt>
+                    <dd>{{ policy.candidates.diagnostics }}</dd>
+                  </div>
+                  <div>
+                    <dt>Omisiones cerradas</dt>
+                    <dd>{{ policy.candidates.revokedBypasses }}</dd>
+                  </div>
+                  <div>
+                    <dt>Notificaciones</dt>
+                    <dd>{{ policy.candidates.notifications }}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              @if (policy.lastRunAt) {
+                <p class="retention-policy__last-run">
+                  Última limpieza: {{ policy.lastRunAt | date: 'dd/MM/yyyy HH:mm' }} ·
+                  {{ policy.lastDeleted.total }} registros eliminados · ejecutada por
+                  {{ policy.lastRunBy }}.
+                </p>
+              }
+
+              @if (retentionErrorMessage()) {
+                <div class="retention-policy__message retention-policy__message--error">
+                  <i class="pi pi-exclamation-circle"></i>
+                  {{ retentionErrorMessage() }}
+                </div>
+              }
+
+              @if (retentionSuccessMessage()) {
+                <div class="retention-policy__message retention-policy__message--success">
+                  <i class="pi pi-check-circle"></i>
+                  {{ retentionSuccessMessage() }}
+                </div>
+              }
+
+              <footer class="retention-policy__actions">
+                <button
+                  type="button"
+                  class="button button--secondary"
+                  [disabled]="
+                    !policy.enabled || policy.candidates.total === 0 || retentionRunning()
+                  "
+                  (click)="runRetentionNow()"
+                >
+                  <i
+                    class="pi"
+                    [class.pi-spin]="retentionRunning()"
+                    [class.pi-spinner]="retentionRunning()"
+                    [class.pi-trash]="!retentionRunning()"
+                  ></i>
+                  Limpiar ahora
+                </button>
+
+                <button
+                  type="button"
+                  class="button button--primary"
+                  [disabled]="retentionSaving() || retentionRunning()"
+                  (click)="saveRetentionPolicy()"
+                >
+                  <i
+                    class="pi"
+                    [class.pi-spin]="retentionSaving()"
+                    [class.pi-spinner]="retentionSaving()"
+                    [class.pi-save]="!retentionSaving()"
+                  ></i>
+                  Guardar política
+                </button>
+              </footer>
+            }
+          </section>
+        }
       }
     </section>
   }

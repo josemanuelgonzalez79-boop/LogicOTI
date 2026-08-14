@@ -43,3 +43,70 @@ textarea,
 select {
   font: inherit;
 }
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body.logicoti-report-print {
+    color: #111827 !important;
+    background: #fff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body.logicoti-report-print app-navbar,
+  body.logicoti-report-print app-sidebar,
+  body.logicoti-report-print .mobile-navigation-drawer,
+  body.logicoti-report-print .global-alarm-banner,
+  body.logicoti-report-print .motion-alarm-overlay,
+  body.logicoti-report-print .history-page__header,
+  body.logicoti-report-print .history-tabs,
+  body.logicoti-report-print .report-month-filter,
+  body.logicoti-report-print .retention-policy {
+    display: none !important;
+  }
+
+  body.logicoti-report-print .app-shell,
+  body.logicoti-report-print .history-page {
+    display: block !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  body.logicoti-report-print .app-shell__content {
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.logicoti-report-print .executive-report {
+    gap: 7mm !important;
+  }
+
+  body.logicoti-report-print .executive-report__toolbar {
+    padding: 0 0 4mm !important;
+    border: 0 !important;
+  }
+
+  body.logicoti-report-print .executive-report__period,
+  body.logicoti-report-print .report-kpi,
+  body.logicoti-report-print .report-status-grid article,
+  body.logicoti-report-print .report-card {
+    color: #111827 !important;
+    background: #fff !important;
+    break-inside: avoid;
+  }
+
+  body.logicoti-report-print .report-grid,
+  body.logicoti-report-print .report-kpis,
+  body.logicoti-report-print .report-status-grid {
+    break-inside: avoid;
+  }
+
+  body.logicoti-report-print .daily-chart {
+    overflow: visible !important;
+    grid-template-columns: repeat(31, minmax(0, 1fr)) !important;
+  }
+}

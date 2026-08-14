@@ -161,3 +161,34 @@ export interface ExecutiveMonthlyReport {
   commandFailures: ExecutiveDeviceFailureMetric[];
   armRejectionReasons: ExecutiveCountMetric[];
 }
+
+export interface HistoryRetentionCounts {
+  events: number;
+  commands: number;
+  securityTransitions: number;
+  diagnostics: number;
+  revokedBypasses: number;
+  notifications: number;
+  total: number;
+}
+
+export interface HistoryRetentionPolicy {
+  enabled: boolean;
+  retentionMonths: number;
+  cutoffAt: string;
+  candidates: HistoryRetentionCounts;
+  lastRunAt: string | null;
+  lastRunBy: string | null;
+  lastCutoffAt: string | null;
+  lastDeleted: HistoryRetentionCounts;
+  updatedAt: string;
+  updatedBy: string;
+  timestamp: string;
+}
+
+export interface HistoryRetentionRunResponse {
+  cutoffAt: string;
+  deleted: HistoryRetentionCounts;
+  executedAt: string;
+  executedBy: string;
+}

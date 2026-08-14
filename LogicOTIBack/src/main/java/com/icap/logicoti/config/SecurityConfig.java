@@ -188,6 +188,12 @@ public class SecurityConfig {
                                 "/api/notifications/push/deliveries"
                         ).hasRole("ADMIN")
 
+                        // La política de eliminación de históricos es exclusiva de ADMIN.
+                        .requestMatchers(
+                                "/api/history/retention",
+                                "/api/history/retention/**"
+                        ).hasRole("ADMIN")
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,

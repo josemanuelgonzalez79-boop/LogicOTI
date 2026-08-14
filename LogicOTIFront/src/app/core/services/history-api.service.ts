@@ -9,6 +9,8 @@ import {
   CommandHistoryItem,
   ExecutiveMonthlyReport,
   HistoryPage,
+  HistoryRetentionPolicy,
+  HistoryRetentionRunResponse,
   SensorEventHistoryFilters,
   SensorEventHistoryItem,
 } from '../models/history.model';
@@ -38,6 +40,29 @@ export class HistoryApiService {
     return this.http.get<ExecutiveMonthlyReport>(
       `${this.baseUrl}${API_ENDPOINTS.history.executiveMonthlyReport}`,
       { params: new HttpParams().set('month', month) },
+    );
+  }
+
+  getRetentionPolicy(): Observable<HistoryRetentionPolicy> {
+    return this.http.get<HistoryRetentionPolicy>(
+      `${this.baseUrl}${API_ENDPOINTS.history.retention}`,
+    );
+  }
+
+  updateRetentionPolicy(
+    enabled: boolean,
+    retentionMonths: number,
+  ): Observable<HistoryRetentionPolicy> {
+    return this.http.put<HistoryRetentionPolicy>(
+      `${this.baseUrl}${API_ENDPOINTS.history.retention}`,
+      { enabled, retentionMonths },
+    );
+  }
+
+  runRetention(): Observable<HistoryRetentionRunResponse> {
+    return this.http.post<HistoryRetentionRunResponse>(
+      `${this.baseUrl}${API_ENDPOINTS.history.runRetention}`,
+      { confirmed: true },
     );
   }
 
