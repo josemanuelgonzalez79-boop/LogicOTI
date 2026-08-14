@@ -68,3 +68,7 @@ Para Web Push también se requieren `WEB_PUSH_ENABLED`, las dos claves VAPID y
 
 Consulta `.env.example` y [la guía de operación](../docs/OPERACION_Y_DESPLIEGUE.md). No copies
 `target/`, credenciales, direcciones reales de PLC ni archivos `.env` al repositorio.
+
+Para instalar o actualizar el backend como servicio automático de Windows se incluyen scripts
+WinSW en [`deployment/windows`](deployment/windows). El servicio usa una copia local de `.env`,
+registra logs rotativos y reinicia Java ante fallos.

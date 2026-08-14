@@ -1,0 +1,25 @@
+<service>
+  <id>LogicOTIBackend</id>
+  <name>LogicOTI - Backend</name>
+  <description>API Spring Boot, WebSocket, PLC y notificaciones de LogicOTI.</description>
+
+  <executable>__JAVA_EXECUTABLE__</executable>
+  <arguments>-Dfile.encoding=UTF-8 -jar "%BASE%\logicoti-backend.jar"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <stoptimeout>30 sec</stoptimeout>
+  <stopparentprocessfirst>true</stopparentprocessfirst>
+
+  <onfailure action="restart" delay="10 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <resetfailure>1 hour</resetfailure>
+
+  <logpath>%BASE%\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>
