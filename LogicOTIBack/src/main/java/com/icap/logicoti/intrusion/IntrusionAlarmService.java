@@ -14,6 +14,10 @@ import java.util.Objects;
 @Service
 public class IntrusionAlarmService {
 
+    private static final String SYSTEM = "SYSTEM";
+    private static final String SCHEDULE = "SCHEDULE";
+
+
     private static final String STATE_QUERY = """
             SELECT
                 mode,
@@ -107,8 +111,8 @@ public class IntrusionAlarmService {
                         + " en "
                         + event.areaName()
                         + ".",
-                "SYSTEM",
-                "SYSTEM",
+                SYSTEM,
+                SYSTEM,
                 null,
                 current.automaticTransitionKey()
         );
@@ -167,8 +171,8 @@ public class IntrusionAlarmService {
                             .isBefore(now)) {
 
                 arm(
-                        "SYSTEM",
-                        "SCHEDULE",
+                        SYSTEM,
+                        SCHEDULE,
                         decision.transitionKey()
                 );
             }
@@ -187,8 +191,8 @@ public class IntrusionAlarmService {
             }
 
             arm(
-                    "SYSTEM",
-                    "SCHEDULE",
+                    SYSTEM,
+                    SCHEDULE,
                     decision.transitionKey()
             );
             return;
@@ -202,8 +206,8 @@ public class IntrusionAlarmService {
         transition(
                 AlarmMode.DISARMED,
                 "La alarma fue desarmada por el horario configurado.",
-                "SYSTEM",
-                "SCHEDULE",
+                SYSTEM,
+                SCHEDULE,
                 null,
                 decision.transitionKey()
         );
@@ -341,14 +345,14 @@ public class IntrusionAlarmService {
         return "La alarma quedó armada correctamente.";
     }
 
-    private SecurityStatusResponse transition(
-            AlarmMode newMode,
-            String message,
-            String username,
-            String source,
-            Instant armingCompletesAt,
-            String transitionKey
-    ) {
+        private SecurityStatusResponse transition(
+                AlarmMode newMode,
+                String message,
+                String username,
+                String source,
+                Instant armingCompletesAt,
+                String transitionKey
+        ) {
         StateRow previous = findState();
         Instant changedAt = Instant.now();
 
@@ -366,18 +370,19 @@ public class IntrusionAlarmService {
         );
 
         if (previous.mode() != newMode) {
-            jdbcTemplate.update(
-                    INSERT_HISTORY,
-                    previous.mode().name(),
-                    newMode.name(),
-                    message,
-                    username,
-                    source,
-                    Timestamp.from(changedAt)
-            );
+                jdbcTemplate.update(
+                        INSERT_HISTORY,
+                        previous.mode().name(),
+                        newMode.name(),
+                        message,
+                        username,
+                        source,
+                        Timestamp.from(changedAt)
+                );
         }
 
-        SecurityStatusResponse response = getStatus();
+        SecurityStatusResponse response =
+                createStatus(findState());
 
         messagingTemplate.convertAndSend(
                 "/topic/security/status",
@@ -385,7 +390,7 @@ public class IntrusionAlarmService {
         );
 
         return response;
-    }
+        }
 
     private void markTransitionApplied(String transitionKey) {
         jdbcTemplate.update(
@@ -394,34 +399,30 @@ public class IntrusionAlarmService {
         );
     }
 
-    private StateRow findState() {
-        StateRow state = jdbcTemplate.queryForObject(
-                STATE_QUERY,
-                (resultSet, rowNumber) -> new StateRow(
-                        AlarmMode.valueOf(
-                                resultSet.getString("mode")
-                        ),
-                        resultSet.getString("message"),
-                        resultSet.getString("changed_by"),
-                        resultSet.getString("change_source"),
-                        toInstant(resultSet.getTimestamp("changed_at")),
-                        toInstant(resultSet.getTimestamp(
-                                "arming_completes_at"
-                        )),
-                        resultSet.getString(
-                                "automatic_transition_key"
+        private StateRow findState() {
+                return jdbcTemplate.queryForObject(
+                        STATE_QUERY,
+                        (resultSet, rowNumber) -> new StateRow(
+                                AlarmMode.valueOf(
+                                        resultSet.getString("mode")
+                                ),
+                                resultSet.getString("message"),
+                                resultSet.getString("changed_by"),
+                                resultSet.getString("change_source"),
+                                toInstant(
+                                        resultSet.getTimestamp("changed_at")
+                                ),
+                                toInstant(
+                                        resultSet.getTimestamp(
+                                                "arming_completes_at"
+                                        )
+                                ),
+                                resultSet.getString(
+                                        "automatic_transition_key"
+                                )
                         )
-                )
-        );
-
-        if (state == null) {
-            throw new IllegalStateException(
-                    "No existe el estado de la alarma."
-            );
+                );
         }
-
-        return state;
-    }
 
     private SecurityStatusResponse createStatus(StateRow state) {
         SecuritySettingsResponse settings =

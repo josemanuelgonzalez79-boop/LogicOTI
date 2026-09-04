@@ -15,6 +15,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String OPERATOR_ROLE = "OPERATOR";
+    private static final String MONITORING_ROLE = "MONITORING";
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(
@@ -26,11 +30,13 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http
-    ) throws Exception {
+    ) {
 
         http
                 .cors(Customizer.withDefaults())
-
+// Esta API es stateless y utiliza JWT exclusivamente mediante
+// Authorization: Bearer <token>. No utiliza cookies ni sesiones
+// para autenticación, por lo que CSRF se deshabilita intencionalmente.
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session -> session
@@ -105,21 +111,21 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users",
                                 "/api/users/**"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // Endpoints de diagnóstico.
                         .requestMatchers(
                                 "/api/realtime/status",
                                 "/api/plc/test"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // Control de luces y minisplits.
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/devices/*/command"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE
                         )
 
                         // Armado y desarmado manual de la alarma.
@@ -130,26 +136,26 @@ public class SecurityConfig {
                                 "/api/sensor-diagnostics",
                                 "/api/sensor-diagnostics/*/cancel"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE
                         )
 
                         // Omitir un sensor debilita la protección y queda sólo para ADMIN.
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/security/bypasses"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/security/bypasses/*"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // La configuración de horarios queda solo para ADMIN.
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/security/schedules"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // Cada usuario puede activar o desactivar avisos en sus dispositivos.
                         .requestMatchers(
@@ -157,9 +163,9 @@ public class SecurityConfig {
                                 "/api/notifications/push/subscriptions",
                                 "/api/notifications/push/test"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR",
-                                "MONITORING"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
                         )
 
                         // Todo el personal operativo puede reconocer y documentar alarmas.
@@ -168,44 +174,44 @@ public class SecurityConfig {
                                 "/api/alarms/*/acknowledgement",
                                 "/api/alarms/*/comments"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR",
-                                "MONITORING"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
                         )
 
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/notifications/push/subscriptions"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR",
-                                "MONITORING"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
                         )
 
                         // La bitácora de entregas puede contener detalle operativo.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/notifications/push/deliveries"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // La política de eliminación de históricos es exclusiva de ADMIN.
                         .requestMatchers(
                                 "/api/history/retention",
                                 "/api/history/retention/**"
-                        ).hasRole("ADMIN")
+                        ).hasRole(ADMIN_ROLE)
 
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/**"
                         ).hasAnyRole(
-                                "ADMIN",
-                                "OPERATOR",
-                                "MONITORING"
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
                         )
 
                         // Cualquier operación no contemplada queda solo para ADMIN.
-                        .anyRequest().hasRole("ADMIN")
+                        .anyRequest().hasRole(ADMIN_ROLE)
                 )
 
                 .addFilterBefore(

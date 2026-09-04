@@ -4,6 +4,7 @@ import com.icap.logicoti.exception.BadRequestException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.EmptyResultDataAccessException;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -136,8 +137,12 @@ public class SecurityScheduleService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional(readOnly = true)
-    public SecuritySettingsResponse getSettings() {
+        @Transactional(readOnly = true)
+        public SecuritySettingsResponse getSettings() {
+            return getSettingsInternal();
+        }
+
+        private SecuritySettingsResponse getSettingsInternal() {
         SettingsRow settings = jdbcTemplate.queryForObject(
                 SETTINGS_QUERY,
                 (resultSet, rowNumber) -> new SettingsRow(
@@ -177,35 +182,29 @@ public class SecurityScheduleService {
                 )
         );
 
-        if (settings == null) {
-            throw new IllegalStateException(
-                    "No existe la configuración de seguridad."
-            );
-        }
-
         List<SecuritySettingsResponse.ScheduleDay> days =
                 jdbcTemplate.query(
                         DAYS_QUERY,
                         (resultSet, rowNumber) -> {
-                            int dayOfWeek =
-                                    resultSet.getInt("day_of_week");
+                                int dayOfWeek =
+                                        resultSet.getInt("day_of_week");
 
-                            return new SecuritySettingsResponse.ScheduleDay(
-                                    dayOfWeek,
-                                    DAY_NAMES.get(dayOfWeek),
-                                    resultSet.getBoolean("enabled"),
-                                    resultSet.getBoolean(
-                                            "all_day_armed"
-                                    ),
-                                    resultSet.getObject(
-                                            "arm_time",
-                                            LocalTime.class
-                                    ),
-                                    resultSet.getObject(
-                                            "disarm_time",
-                                            LocalTime.class
-                                    )
-                            );
+                                return new SecuritySettingsResponse.ScheduleDay(
+                                        dayOfWeek,
+                                        DAY_NAMES.get(dayOfWeek),
+                                        resultSet.getBoolean("enabled"),
+                                        resultSet.getBoolean(
+                                                "all_day_armed"
+                                        ),
+                                        resultSet.getObject(
+                                                "arm_time",
+                                                LocalTime.class
+                                        ),
+                                        resultSet.getObject(
+                                                "disarm_time",
+                                                LocalTime.class
+                                        )
+                                );
                         }
                 );
 
@@ -226,7 +225,7 @@ public class SecurityScheduleService {
                 settings.updatedAt(),
                 settings.updatedBy()
         );
-    }
+        }
 
     @Transactional
     public SecuritySettingsResponse updateSettings(
@@ -272,13 +271,13 @@ public class SecurityScheduleService {
             );
         }
 
-        return getSettings();
+        return getSettingsInternal();
     }
 
     @Transactional(readOnly = true)
     public ScheduleDecision evaluate(Instant instant) {
         return SecurityScheduleCalculator.evaluate(
-                getSettings(),
+                getSettingsInternal(),
                 instant
         );
     }

@@ -111,73 +111,65 @@ public class SensorEventHistoryService {
         );
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public SensorEventHistoryResponse saveChange(
-            SensorDefinition sensor,
-            Boolean previousState,
-            boolean currentState
-    ) {
-        String eventType = currentState
-                ? "ACTIVATED"
-                : "CLEARED";
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+                public SensorEventHistoryResponse saveChange(
+                        SensorDefinition sensor,
+                        Boolean previousState,
+                        boolean currentState
+                ) {
+                String eventType = currentState
+                        ? "ACTIVATED"
+                        : "CLEARED";
 
-        String severity = determineSeverity(
-                sensor.type(),
-                currentState
-        );
-
-        String message = createMessage(
-                sensor,
-                currentState
-        );
-
-        SensorEventHistoryResponse savedEvent =
-                jdbcTemplate.queryForObject(
-                        INSERT_EVENT_QUERY,
-                        (resultSet, rowNumber) ->
-                                new SensorEventHistoryResponse(
-                                        resultSet.getLong("id"),
-                                        sensor.code(),
-                                        sensor.name(),
-                                        sensor.areaCode(),
-                                        sensor.areaName(),
-                                        sensor.type(),
-                                        sensor.stateTag(),
-                                        previousState,
-                                        currentState,
-                                        eventType,
-                                        severity,
-                                        message,
-                                        resultSet
-                                                .getTimestamp("detected_at")
-                                                .toInstant(),
-                                        false,
-                                        null,
-                                        null,
-                                        0
-                                ),
-                        sensor.id(),
-                        sensor.code(),
-                        sensor.areaCode(),
+                String severity = determineSeverity(
                         sensor.type(),
-                        sensor.stateTag(),
-                        previousState,
-                        currentState,
-                        eventType,
-                        severity,
-                        message
+                        currentState
                 );
 
-        if (savedEvent == null) {
-            throw new IllegalStateException(
-                    "No se pudo guardar el evento de "
-                            + sensor.code()
-                            + "."
-            );
-        }
+                String message = createMessage(
+                        sensor,
+                        currentState
+                );
 
-        return savedEvent;
-    }
+                SensorEventHistoryResponse savedEvent =
+                        jdbcTemplate.queryForObject(
+                                INSERT_EVENT_QUERY,
+                                (resultSet, rowNumber) ->
+                                        new SensorEventHistoryResponse(
+                                                resultSet.getLong("id"),
+                                                sensor.code(),
+                                                sensor.name(),
+                                                sensor.areaCode(),
+                                                sensor.areaName(),
+                                                sensor.type(),
+                                                sensor.stateTag(),
+                                                previousState,
+                                                currentState,
+                                                eventType,
+                                                severity,
+                                                message,
+                                                resultSet
+                                                        .getTimestamp("detected_at")
+                                                        .toInstant(),
+                                                false,
+                                                null,
+                                                null,
+                                                0
+                                        ),
+                                sensor.id(),
+                                sensor.code(),
+                                sensor.areaCode(),
+                                sensor.type(),
+                                sensor.stateTag(),
+                                previousState,
+                                currentState,
+                                eventType,
+                                severity,
+                                message
+                        );
+
+                return savedEvent;
+        }
 
     private String determineSeverity(
             String requestedType,

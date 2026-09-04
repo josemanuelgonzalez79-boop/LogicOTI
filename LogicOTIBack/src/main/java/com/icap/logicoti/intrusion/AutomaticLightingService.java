@@ -80,134 +80,233 @@ public class AutomaticLightingService {
         processMotionActivity(sensorCode);
     }
 
-    private void processMotionActivity(String sensorCode) {
+        private void processMotionActivity(String sensorCode) {
         Instant now = Instant.now();
 
-        if (!reserveMotionWindow(sensorCode, now)
-                || isSensorBypassed(sensorCode)) {
-            return;
+        if (!shouldProcessMotion(sensorCode, now)) {
+                return;
         }
 
         try {
-            SecuritySettingsResponse settings =
-                    scheduleService.getSettings();
+                SecuritySettingsResponse settings =
+                        scheduleService.getSettings();
 
-            LightingWindow window = evaluateWindow(settings, now);
+                LightingWindow window =
+                        evaluateWindow(settings, now);
 
-            if (!settings.automaticLightingEnabled()
-                    || !window.active()) {
+                if (!isAutomaticLightingActive(settings, window)) {
                 return;
-            }
+                }
 
-            List<AutomaticLightingRuntimeService.LightingDevice> targets =
-                    runtimeService.findTargets();
+                List<AutomaticLightingRuntimeService.LightingDevice> targets =
+                        runtimeService.findTargets();
 
-            if (targets.isEmpty()) {
+                if (targets.isEmpty()) {
                 return;
-            }
+                }
 
-            Instant inactivityEnd = now.plus(
-                    Duration.ofMinutes(
-                            settings.lightInactivityMinutes()
-                    )
-            );
+                Instant turnOffAt = calculateTurnOffAt(
+                        settings,
+                        window,
+                        now
+                );
 
-            Instant turnOffAt = inactivityEnd.isBefore(window.endAt())
-                    ? inactivityEnd
-                    : window.endAt();
+                runtimeService.extendAll(
+                        now,
+                        turnOffAt
+                );
 
-            runtimeService.extendAll(now, turnOffAt);
+                Set<String> ownedCodes = findOwnedCodes();
+                Map<String, AreaStateResponse> areaStates =
+                        new HashMap<>();
 
-            Set<String> ownedCodes = new HashSet<>();
-            runtimeService.findOwnedLights().forEach(light ->
-                    ownedCodes.add(
-                            light.code().toUpperCase(Locale.ROOT)
-                    )
-            );
+                for (AutomaticLightingRuntimeService.LightingDevice target
+                        : targets) {
 
-            Map<String, AreaStateResponse> areaStates =
-                    new HashMap<>();
+                processTarget(
+                        target,
+                        ownedCodes,
+                        areaStates,
+                        now,
+                        turnOffAt
+                );
+                }
 
-            for (AutomaticLightingRuntimeService.LightingDevice target
-                    : targets) {
+                publishStatus();
 
-                AreaStateResponse areaState = areaStates.computeIfAbsent(
+        } catch (RuntimeException exception) {
+                LOGGER.warn(
+                        "No se pudo procesar la iluminación automática por {}: {}",
+                        sensorCode,
+                        exception.getMessage()
+                );
+        }
+    }
+    private boolean shouldProcessMotion(
+        String sensorCode,
+        Instant now
+        ) {
+        if (!reserveMotionWindow(sensorCode, now)) {
+                return false;
+        }
+
+        return !isSensorBypassed(sensorCode);
+    }
+
+        private boolean isAutomaticLightingActive(
+                SecuritySettingsResponse settings,
+                LightingWindow window
+        ) {
+        return settings.automaticLightingEnabled()
+                && window.active();
+        }
+
+        private Instant calculateTurnOffAt(
+                SecuritySettingsResponse settings,
+                LightingWindow window,
+                Instant now
+        ) {
+        Instant inactivityEnd = now.plus(
+                Duration.ofMinutes(
+                        settings.lightInactivityMinutes()
+                )
+        );
+
+        return inactivityEnd.isBefore(window.endAt())
+                ? inactivityEnd
+                : window.endAt();
+        }
+
+        private Set<String> findOwnedCodes() {
+        Set<String> ownedCodes = new HashSet<>();
+
+        runtimeService.findOwnedLights().forEach(light ->
+                ownedCodes.add(
+                        light.code().toUpperCase(Locale.ROOT)
+                )
+        );
+
+        return ownedCodes;
+        }
+
+        private void processTarget(
+                AutomaticLightingRuntimeService.LightingDevice target,
+                Set<String> ownedCodes,
+                Map<String, AreaStateResponse> areaStates,
+                Instant now,
+                Instant turnOffAt
+        ) {
+        AreaStateResponse areaState =
+                areaStates.computeIfAbsent(
                         target.areaCode(),
                         areaStateService::getAreaState
                 );
 
-                AreaStateResponse.DeviceStateResponse deviceState =
-                        areaState.devices()
-                                .stream()
-                                .filter(device ->
-                                        device.code().equalsIgnoreCase(
-                                                target.code()
-                                        )
-                                )
-                                .findFirst()
-                                .orElse(null);
-
-                if (deviceState == null || !areaState.connected()) {
-                    continue;
-                }
-
-                boolean alreadyOwned = ownedCodes.contains(
-                        target.code().toUpperCase(Locale.ROOT)
+        AreaStateResponse.DeviceStateResponse deviceState =
+                findDeviceState(
+                        areaState,
+                        target.code()
                 );
 
-                if (Boolean.TRUE.equals(deviceState.state())) {
-                    if (alreadyOwned) {
-                        runtimeService.claim(
-                                target.id(),
-                                now,
-                                turnOffAt
-                        );
-                    }
-
-                    // Una luz encendida manualmente nunca se toma como
-                    // propiedad de la automatización.
-                    continue;
-                }
-
-                AreaStateResponse response =
-                        commandService.executeAutomatic(
-                                target.code(),
-                                true
-                        );
-
-                AreaStateResponse.DeviceStateResponse confirmation =
-                        response.devices()
-                                .stream()
-                                .filter(device ->
-                                        device.code().equalsIgnoreCase(
-                                                target.code()
-                                        )
-                                )
-                                .findFirst()
-                                .orElse(null);
-
-                if (confirmation != null
-                        && Boolean.TRUE.equals(confirmation.command())
-                        && Boolean.TRUE.equals(confirmation.state())) {
-
-                    runtimeService.claim(
-                            target.id(),
-                            now,
-                            turnOffAt
-                    );
-                }
-            }
-
-            publishStatus();
-
-        } catch (RuntimeException exception) {
-            LOGGER.warn(
-                    "No se pudo procesar la iluminación automática por {}: {}",
-                    sensorCode,
-                    exception.getMessage()
-            );
+        if (deviceState == null
+                || !areaState.connected()) {
+                return;
         }
-    }
+
+        if (Boolean.TRUE.equals(deviceState.state())) {
+                handleAlreadyOnLight(
+                        target,
+                        ownedCodes,
+                        now,
+                        turnOffAt
+                );
+                return;
+        }
+
+        turnOnAutomatically(
+                target,
+                now,
+                turnOffAt
+        );
+        }
+
+        private AreaStateResponse.DeviceStateResponse findDeviceState(
+                AreaStateResponse areaState,
+                String deviceCode
+        ) {
+        return areaState.devices()
+                .stream()
+                .filter(device ->
+                        device.code().equalsIgnoreCase(
+                                deviceCode
+                        )
+                )
+                .findFirst()
+                .orElse(null);
+        }
+
+        private void handleAlreadyOnLight(
+                AutomaticLightingRuntimeService.LightingDevice target,
+                Set<String> ownedCodes,
+                Instant now,
+                Instant turnOffAt
+        ) {
+        boolean alreadyOwned = ownedCodes.contains(
+                target.code().toUpperCase(Locale.ROOT)
+        );
+
+        if (!alreadyOwned) {
+                // Una luz encendida manualmente nunca se toma
+                // como propiedad de la automatización.
+                return;
+        }
+
+        runtimeService.claim(
+                target.id(),
+                now,
+                turnOffAt
+        );
+        }
+
+        private void turnOnAutomatically(
+                AutomaticLightingRuntimeService.LightingDevice target,
+                Instant now,
+                Instant turnOffAt
+        ) {
+        AreaStateResponse response =
+                commandService.executeAutomatic(
+                        target.code(),
+                        true
+                );
+
+        AreaStateResponse.DeviceStateResponse confirmation =
+                findDeviceState(
+                        response,
+                        target.code()
+                );
+
+        if (!isTurnOnConfirmed(confirmation)) {
+                return;
+        }
+
+        runtimeService.claim(
+                target.id(),
+                now,
+                turnOffAt
+        );
+        }
+
+        private boolean isTurnOnConfirmed(
+                AreaStateResponse.DeviceStateResponse confirmation
+        ) {
+        return confirmation != null
+                && Boolean.TRUE.equals(
+                        confirmation.command()
+                )
+                && Boolean.TRUE.equals(
+                        confirmation.state()
+                );
+        }
 
     @Scheduled(
             initialDelayString =

@@ -39,16 +39,29 @@ class SensorEventHistoryQueryServiceTests {
 
     @Test
     void includesAcknowledgementAndCommentCountInHistory() {
-        SensorEventHistoryResponse event = service.find(
+        SensorEventHistoryQuery.Criteria criteria =
+                new SensorEventHistoryQuery.Criteria(
                         null,
                         null,
                         "SMOKE",
                         null,
                         null,
                         null,
-                        null,
+                        null
+                );
+
+        SensorEventHistoryQuery.Page page =
+                new SensorEventHistoryQuery.Page(
                         50,
                         0
+                );
+
+        SensorEventHistoryResponse event =
+                service.find(
+                        new SensorEventHistoryQuery(
+                                criteria,
+                                page
+                        )
                 )
                 .items()
                 .getFirst();

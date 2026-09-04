@@ -79,28 +79,40 @@ public class SensorEventHistoryController {
             );
         }
 
+        SensorEventHistoryQuery.Criteria criteria =
+                new SensorEventHistoryQuery.Criteria(
+                        areaCode,
+                        deviceCode,
+                        validate(
+                                "tipo de dispositivo",
+                                deviceType,
+                                DEVICE_TYPES
+                        ),
+                        validate(
+                                "tipo de evento",
+                                eventType,
+                                EVENT_TYPES
+                        ),
+                        validate(
+                                "severidad",
+                                severity,
+                                SEVERITIES
+                        ),
+                        from,
+                        to
+                );
+
+        SensorEventHistoryQuery.Page page =
+                new SensorEventHistoryQuery.Page(
+                        limit,
+                        offset
+                );
+
         return queryService.find(
-                areaCode,
-                deviceCode,
-                validate(
-                        "tipo de dispositivo",
-                        deviceType,
-                        DEVICE_TYPES
-                ),
-                validate(
-                        "tipo de evento",
-                        eventType,
-                        EVENT_TYPES
-                ),
-                validate(
-                        "severidad",
-                        severity,
-                        SEVERITIES
-                ),
-                from,
-                to,
-                limit,
-                offset
+                new SensorEventHistoryQuery(
+                        criteria,
+                        page
+                )
         );
     }
 

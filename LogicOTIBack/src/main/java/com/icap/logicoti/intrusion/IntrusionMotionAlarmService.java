@@ -28,6 +28,8 @@ public class IntrusionMotionAlarmService {
     private final CameraAlertLinkService cameraAlertLinkService;
     private final SimpMessagingTemplate messagingTemplate;
     private final WebPushSubscriptionService webPushSubscriptionService;
+    private static final String MOVIMIENTO = "Se detectó movimiento en ";
+
 
     public IntrusionMotionAlarmService(
             JdbcTemplate jdbcTemplate,
@@ -79,15 +81,15 @@ public class IntrusionMotionAlarmService {
         String message;
 
         if (cameras.items().isEmpty()) {
-            message = "Se detectó movimiento en "
+            message = MOVIMIENTO
                     + event.areaName()
                     + ", pero el área no tiene una cámara asociada.";
         } else if (availableCamera == null) {
-            message = "Se detectó movimiento en "
+            message = MOVIMIENTO
                     + event.areaName()
                     + ", pero la cámara relacionada no está disponible.";
         } else {
-            message = "Se detectó movimiento en "
+            message = MOVIMIENTO
                     + event.areaName()
                     + ". Toca el aviso para ver "
                     + availableCamera.name()

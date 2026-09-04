@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -104,7 +103,9 @@ public class DeviceCommandHistoryService {
             String requestedByRole,
             String sourceIp
     ) {
-        AuditDevice device = findDevice(requestedDeviceCode);
+        AuditDevice device = findDevice(
+                requestedDeviceCode
+        );
 
         Long historyId = jdbcTemplate.queryForObject(
                 INSERT_QUERY,
@@ -150,32 +151,35 @@ public class DeviceCommandHistoryService {
 
         if (updatedRows != 1) {
             throw new IllegalStateException(
-                    "No se encontró el histórico " + historyId + "."
+                    "No se encontró el histórico "
+                            + historyId
+                            + "."
             );
         }
     }
 
     @Transactional(readOnly = true)
     public DeviceCommandHistoryPageResponse find(
-            String requestedAreaCode,
-            String requestedDeviceCode,
-            String requestedStatus,
-            String requestedBy,
-            Instant from,
-            Instant to,
-            int requestedLimit,
-            int requestedOffset
+            DeviceCommandHistoryQuery query
     ) {
-        int limit = Math.max(1, Math.min(requestedLimit, 500));
-        int offset = Math.max(0, requestedOffset);
+        int limit = Math.clamp(
+                query.limit(),
+                1,
+                500
+        );
+
+        int offset = Math.max(
+                0,
+                query.offset()
+        );
 
         HistoryFilter filter = buildFilter(
-                requestedAreaCode,
-                requestedDeviceCode,
-                requestedStatus,
-                requestedBy,
-                from,
-                to
+                query.areaCode(),
+                query.deviceCode(),
+                query.status(),
+                query.requestedBy(),
+                query.from(),
+                query.to()
         );
 
         String dataQuery = HISTORY_COLUMNS
@@ -187,7 +191,9 @@ public class DeviceCommandHistoryService {
                 """;
 
         List<Object> dataParameters =
-                new ArrayList<>(filter.parameters());
+                new ArrayList<>(
+                        filter.parameters()
+                );
 
         dataParameters.add(limit);
         dataParameters.add(offset);
@@ -224,54 +230,70 @@ public class DeviceCommandHistoryService {
             String requestedDeviceCode,
             String requestedStatus,
             String requestedBy,
-            Instant from,
-            Instant to
+            java.time.Instant from,
+            java.time.Instant to
     ) {
-        StringBuilder where = new StringBuilder(
-                " WHERE 1 = 1"
-        );
+        StringBuilder where =
+                new StringBuilder(
+                        " WHERE 1 = 1"
+                );
 
-        List<Object> parameters = new ArrayList<>();
+        List<Object> parameters =
+                new ArrayList<>();
 
-        String areaCode = normalize(requestedAreaCode);
+        String areaCode =
+                normalize(requestedAreaCode);
 
         if (areaCode != null) {
             where.append(
                     " AND UPPER(history.area_code) = ?"
             );
+
             parameters.add(
-                    areaCode.toUpperCase(Locale.ROOT)
+                    areaCode.toUpperCase(
+                            Locale.ROOT
+                    )
             );
         }
 
-        String deviceCode = normalize(requestedDeviceCode);
+        String deviceCode =
+                normalize(requestedDeviceCode);
 
         if (deviceCode != null) {
             where.append(
                     " AND UPPER(history.device_code) = ?"
             );
+
             parameters.add(
-                    deviceCode.toUpperCase(Locale.ROOT)
+                    deviceCode.toUpperCase(
+                            Locale.ROOT
+                    )
             );
         }
 
-        String status = normalize(requestedStatus);
+        String status =
+                normalize(requestedStatus);
 
         if (status != null) {
             where.append(
                     " AND UPPER(history.status) = ?"
             );
+
             parameters.add(
-                    status.toUpperCase(Locale.ROOT)
+                    status.toUpperCase(
+                            Locale.ROOT
+                    )
             );
         }
 
-        String username = normalize(requestedBy);
+        String username =
+                normalize(requestedBy);
 
         if (username != null) {
             where.append(
                     " AND LOWER(history.requested_by) = LOWER(?)"
             );
+
             parameters.add(username);
         }
 
@@ -279,14 +301,20 @@ public class DeviceCommandHistoryService {
             where.append(
                     " AND history.requested_at >= ?"
             );
-            parameters.add(Timestamp.from(from));
+
+            parameters.add(
+                    Timestamp.from(from)
+            );
         }
 
         if (to != null) {
             where.append(
                     " AND history.requested_at <= ?"
             );
-            parameters.add(Timestamp.from(to));
+
+            parameters.add(
+                    Timestamp.from(to)
+            );
         }
 
         return new HistoryFilter(
@@ -299,32 +327,61 @@ public class DeviceCommandHistoryService {
             ResultSet resultSet,
             int rowNumber
     ) throws SQLException {
+
         Timestamp completedAt =
-                resultSet.getTimestamp("completed_at");
+                resultSet.getTimestamp(
+                        "completed_at"
+                );
 
         Number duration =
-                (Number) resultSet.getObject("duration_ms");
+                (Number) resultSet.getObject(
+                        "duration_ms"
+                );
 
         return new DeviceCommandHistoryResponse(
                 resultSet.getLong("id"),
-                resultSet.getString("device_code"),
-                resultSet.getString("device_name"),
-                resultSet.getString("area_code"),
-                resultSet.getString("area_name"),
-                resultSet.getString("plc_command_tag"),
-                resultSet.getBoolean("requested_value"),
-                (Boolean) resultSet.getObject("command_value"),
-                (Boolean) resultSet.getObject("feedback_value"),
+                resultSet.getString(
+                        "device_code"
+                ),
+                resultSet.getString(
+                        "device_name"
+                ),
+                resultSet.getString(
+                        "area_code"
+                ),
+                resultSet.getString(
+                        "area_name"
+                ),
+                resultSet.getString(
+                        "plc_command_tag"
+                ),
+                resultSet.getBoolean(
+                        "requested_value"
+                ),
+                (Boolean) resultSet.getObject(
+                        "command_value"
+                ),
+                (Boolean) resultSet.getObject(
+                        "feedback_value"
+                ),
                 resultSet.getString("status"),
                 resultSet.getString("message"),
-                resultSet.getString("requested_by"),
-                resultSet.getString("requested_by_role"),
-                resultSet.getString("source_ip"),
+                resultSet.getString(
+                        "requested_by"
+                ),
+                resultSet.getString(
+                        "requested_by_role"
+                ),
+                resultSet.getString(
+                        "source_ip"
+                ),
                 duration == null
                         ? null
                         : duration.longValue(),
                 resultSet
-                        .getTimestamp("requested_at")
+                        .getTimestamp(
+                                "requested_at"
+                        )
                         .toInstant(),
                 completedAt == null
                         ? null
@@ -335,20 +392,33 @@ public class DeviceCommandHistoryService {
     private AuditDevice findDevice(
             String requestedDeviceCode
     ) {
-        String deviceCode = requestedDeviceCode
-                .trim()
-                .toUpperCase(Locale.ROOT);
+        String deviceCode =
+                requestedDeviceCode
+                        .trim()
+                        .toUpperCase(
+                                Locale.ROOT
+                        );
 
-        List<AuditDevice> devices = jdbcTemplate.query(
-                DEVICE_QUERY,
-                (resultSet, rowNumber) -> new AuditDevice(
-                        resultSet.getLong("id"),
-                        resultSet.getString("code"),
-                        resultSet.getString("area_code"),
-                        resultSet.getString("plc_command_tag")
-                ),
-                deviceCode
-        );
+        List<AuditDevice> devices =
+                jdbcTemplate.query(
+                        DEVICE_QUERY,
+                        (resultSet, rowNumber) ->
+                                new AuditDevice(
+                                        resultSet.getLong(
+                                                "id"
+                                        ),
+                                        resultSet.getString(
+                                                "code"
+                                        ),
+                                        resultSet.getString(
+                                                "area_code"
+                                        ),
+                                        resultSet.getString(
+                                                "plc_command_tag"
+                                        )
+                                ),
+                        deviceCode
+                );
 
         if (devices.isEmpty()) {
             throw new ResourceNotFoundException(
@@ -361,20 +431,29 @@ public class DeviceCommandHistoryService {
         return devices.getFirst();
     }
 
-    private String normalize(String value) {
-        if (value == null || value.isBlank()) {
+    private String normalize(
+            String value
+    ) {
+        if (value == null
+                || value.isBlank()) {
             return null;
         }
 
         return value.trim();
     }
 
-    private String limitMessage(String message) {
-        if (message == null || message.length() <= 500) {
+    private String limitMessage(
+            String message
+    ) {
+        if (message == null
+                || message.length() <= 500) {
             return message;
         }
 
-        return message.substring(0, 500);
+        return message.substring(
+                0,
+                500
+        );
     }
 
     private record AuditDevice(

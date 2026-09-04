@@ -17,6 +17,8 @@ public class PlcService {
 
     private final PlcProperties plcProperties;
     private final PlcCommunicationService plcCommunicationService;
+    private static final String CONNECTION_DISABLED = "La comunicación con el PLC está deshabilitada.";
+    private static final String LIGHT_COMMAND = "lightCommand";
 
     public PlcService(
             PlcProperties plcProperties,
@@ -32,7 +34,7 @@ public class PlcService {
             return new PlcConnectionResponse(
                     false,
                     false,
-                    "La comunicación con el PLC está deshabilitada.",
+                    CONNECTION_DISABLED,
                     Instant.now()
             );
         }
@@ -62,7 +64,7 @@ public class PlcService {
         if (!plcProperties.isEnabled()) {
             return unavailableTestResponse(
                     false,
-                    "La comunicación con el PLC está deshabilitada."
+                    CONNECTION_DISABLED
             );
         }
 
@@ -79,7 +81,7 @@ public class PlcService {
                         connection.readRequestBuilder();
 
                 builder.addTagAddress(
-                        "lightCommand",
+                        LIGHT_COMMAND,
                         "OTI_TEST_LIGHT_CMD"
                 );
 
@@ -109,7 +111,7 @@ public class PlcService {
                 return new PlcTestResponse(
                         true,
                         true,
-                        readBoolean(response, "lightCommand"),
+                        readBoolean(response, LIGHT_COMMAND),
                         readBoolean(response, "lightFeedback"),
                         readBoolean(response, "motion"),
                         readBoolean(response, "smoke"),
@@ -131,7 +133,7 @@ public class PlcService {
         if (!plcProperties.isEnabled()) {
             return unavailableTestResponse(
                     false,
-                    "La comunicación con el PLC está deshabilitada."
+                    CONNECTION_DISABLED
             );
         }
 
@@ -148,7 +150,7 @@ public class PlcService {
                         connection.writeRequestBuilder();
 
                 builder.addTagAddress(
-                        "lightCommand",
+                        LIGHT_COMMAND,
                         "OTI_TEST_LIGHT_CMD:BOOL",
                         on
                 );
@@ -162,7 +164,7 @@ public class PlcService {
                         );
 
                 PlcResponseCode responseCode =
-                        response.getResponseCode("lightCommand");
+                        response.getResponseCode(LIGHT_COMMAND);
 
                 if (responseCode != PlcResponseCode.OK) {
                     throw new IllegalStateException(

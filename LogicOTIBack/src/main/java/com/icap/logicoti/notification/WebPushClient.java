@@ -8,6 +8,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.jose4j.lang.JoseException;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.concurrent.ExecutionException;
 
 import java.security.Security;
 
@@ -17,18 +22,49 @@ public class WebPushClient {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(WebPushClient.class);
 
-    private final WebPushProperties properties;
-    private volatile PushService pushService;
+    private final PushService pushService;
 
     public WebPushClient(WebPushProperties properties) {
-        this.properties = properties;
         ensureBouncyCastleProvider();
+
+        this.pushService = properties.isConfigured()
+                ? createPushService(properties)
+                : null;
     }
 
-    public int send(
-            WebPushDeliveryTarget target,
-            String payload
-    ) throws Exception {
+    private PushService createPushService(
+            WebPushProperties properties
+    ) {
+        try {
+            return new PushService(
+                    properties.getPublicKey(),
+                    properties.getPrivateKey(),
+                    properties.getSubject()
+            );
+
+        } catch (Exception exception) {
+            throw new IllegalStateException(
+                    "No fue posible inicializar el servicio Web Push.",
+                    exception
+            );
+        }
+    }
+
+        public int send(
+                WebPushDeliveryTarget target,
+                String payload
+        ) throws GeneralSecurityException,
+                IOException,
+                JoseException,
+                ExecutionException,
+                InterruptedException {
+
+        if (pushService == null) {
+                throw new IllegalStateException(
+                        "El servicio Web Push no está configurado."
+                );
+        }
+
         Notification notification = new Notification(
                 target.endpoint(),
                 target.p256dh(),
@@ -36,31 +72,16 @@ public class WebPushClient {
                 payload
         );
 
-        HttpResponse response = getPushService().send(notification);
-        return response.getStatusLine().getStatusCode();
-    }
+        HttpResponse response =
+                pushService.send(notification);
 
-    private PushService getPushService() throws Exception {
-        PushService current = pushService;
-
-        if (current != null) {
-            return current;
+        return response
+                .getStatusLine()
+                .getStatusCode();
         }
-
-        synchronized (this) {
-            if (pushService == null) {
-                pushService = new PushService(
-                        properties.getPublicKey(),
-                        properties.getPrivateKey(),
-                        properties.getSubject()
-                );
-            }
-
-            return pushService;
-        }
-    }
 
     private static synchronized void ensureBouncyCastleProvider() {
+
         if (Security.getProvider(
                 BouncyCastleProvider.PROVIDER_NAME
         ) != null) {
@@ -75,6 +96,7 @@ public class WebPushClient {
                 || Security.getProvider(
                         BouncyCastleProvider.PROVIDER_NAME
                 ) == null) {
+
             throw new IllegalStateException(
                     "No fue posible registrar el proveedor criptográfico BC."
             );

@@ -5,6 +5,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.AlarmSummary;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.CommandSummary;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.CountMetric;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.DailyMetric;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.DeviceFailureMetric;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.MaintenanceSummary;
+import com.icap.logicoti.report.ExecutiveMonthlyReportResponse.SecuritySummary;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -38,6 +46,8 @@ public class ExecutiveMonthlyReportService {
 
     private final JdbcTemplate jdbcTemplate;
     private final Clock clock;
+    private static final String REJECTED = "REJECTED";
+
 
     @Autowired
     public ExecutiveMonthlyReportService(JdbcTemplate jdbcTemplate) {
@@ -328,7 +338,7 @@ public class ExecutiveMonthlyReportService {
 
         return new MaintenanceSummary(
                 diagnostics.getOrDefault("PASSED", 0L),
-                diagnostics.getOrDefault("REJECTED", 0L),
+                diagnostics.getOrDefault(REJECTED, 0L),
                 diagnostics.getOrDefault("CANCELLED", 0L),
                 bypasses == null ? 0 : bypasses
         );
@@ -349,7 +359,7 @@ public class ExecutiveMonthlyReportService {
                 ORDER BY total DESC, message ASC
                 """,
                 (resultSet, rowNumber) -> new CountMetric(
-                        "REJECTED",
+                        REJECTED,
                         resultSet.getString("message"),
                         resultSet.getLong("total")
                 ),
@@ -463,7 +473,7 @@ public class ExecutiveMonthlyReportService {
     private boolean isCommandFailure(CommandRow command) {
         if ("FAILED".equals(command.status())
                 || "NOT_CONFIRMED".equals(command.status())
-                || "REJECTED".equals(command.status())) {
+                || REJECTED.equals(command.status())) {
             return true;
         }
 

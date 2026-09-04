@@ -18,6 +18,9 @@ public class WebPushDeliveryRepository {
     private static final String PENDING_STATUSES =
             "('QUEUED', 'RETRY_PENDING')";
 
+    private static final String FAILED = "FAILED";
+
+
     private static final String TARGET_COLUMNS = """
             SELECT
                 delivery.id AS delivery_id,
@@ -196,10 +199,10 @@ public class WebPushDeliveryRepository {
     ) {
         int attemptNumber = target.attemptCount() + 1;
         String outcome = exhausted
-                ? "FAILED"
+                ? FAILED
                 : "RETRY_SCHEDULED";
         String status = exhausted
-                ? "FAILED"
+                ? FAILED
                 : "RETRY_PENDING";
 
         insertAttempt(
@@ -247,7 +250,7 @@ public class WebPushDeliveryRepository {
         int attemptNumber = target.attemptCount() + 1;
         String outcome = expiredSubscription
                 ? "EXPIRED_SUBSCRIPTION"
-                : "FAILED";
+                : FAILED;
 
         insertAttempt(
                 target.deliveryId(),

@@ -20,6 +20,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class SecurityPrecheckService {
 
+    private static final String ERROR = "ERROR";
+
+
     private static final String MOTION_SENSORS_QUERY = """
             SELECT
                 device.id,
@@ -81,7 +84,7 @@ public class SecurityPrecheckService {
         if (sensors.isEmpty()) {
             initialIssues.add(systemIssue(
                     "NO_MOTION_SENSORS",
-                    "ERROR",
+                    ERROR,
                     true,
                     "No hay sensores de movimiento activos configurados."
             ));
@@ -109,7 +112,7 @@ public class SecurityPrecheckService {
             if (!hasText(sensor.stateTag())) {
                 initialIssues.add(sensorIssue(
                         "TAG_NOT_CONFIGURED",
-                        "ERROR",
+                        ERROR,
                         true,
                         sensor,
                         "El sensor no tiene plc_state_tag configurado."
@@ -120,7 +123,7 @@ public class SecurityPrecheckService {
         if (!plcProperties.isEnabled()) {
             initialIssues.add(systemIssue(
                     "PLC_DISABLED",
-                    "ERROR",
+                    ERROR,
                     true,
                     "La comunicación con el PLC está deshabilitada."
             ));
@@ -136,7 +139,7 @@ public class SecurityPrecheckService {
         if (!hasText(plcProperties.getConnectionString())) {
             initialIssues.add(systemIssue(
                     "PLC_NOT_CONFIGURED",
-                    "ERROR",
+                    ERROR,
                     true,
                     "No se configuró PLC_CONNECTION_STRING."
             ));
@@ -210,7 +213,7 @@ public class SecurityPrecheckService {
         } catch (Exception exception) {
             initialIssues.add(systemIssue(
                     "PLC_UNAVAILABLE",
-                    "ERROR",
+                    ERROR,
                     true,
                     "No fue posible revisar los sensores: "
                             + safeMessage(exception)
@@ -240,7 +243,7 @@ public class SecurityPrecheckService {
             if (responseCode != PlcResponseCode.OK) {
                 issues.add(sensorIssue(
                         "TAG_READ_FAILED",
-                        "ERROR",
+                        ERROR,
                         true,
                         sensor,
                         "El PLC respondió "
@@ -255,7 +258,7 @@ public class SecurityPrecheckService {
             if (!response.isValidBoolean(alias)) {
                 issues.add(sensorIssue(
                         "INVALID_TAG_TYPE",
-                        "ERROR",
+                        ERROR,
                         true,
                         sensor,
                         "El tag "
@@ -332,7 +335,7 @@ public class SecurityPrecheckService {
         if (sensor.lastDiagnosticAt() == null) {
             issues.add(sensorIssue(
                     "DIAGNOSTIC_MISSING",
-                    "ERROR",
+                    ERROR,
                     true,
                     sensor,
                     "El sensor todavía no tiene un diagnóstico aprobado."
@@ -351,7 +354,7 @@ public class SecurityPrecheckService {
         if (!validUntil.isAfter(Instant.now())) {
             issues.add(sensorIssue(
                     "DIAGNOSTIC_EXPIRED",
-                    "ERROR",
+                    ERROR,
                     true,
                     sensor,
                     "El diagnóstico del sensor venció el "

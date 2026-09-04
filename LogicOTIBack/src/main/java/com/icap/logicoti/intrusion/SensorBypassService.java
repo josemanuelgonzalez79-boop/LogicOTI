@@ -20,6 +20,11 @@ import java.util.Locale;
 @Service
 public class SensorBypassService {
 
+    private static final String CREATED = "created_at";
+    private static final String AREA_CODE = "area_code";
+    private static final String AREA_NAME = "area_name";
+
+
     private static final String BYPASS_COLUMNS = """
             SELECT
                 bypass.id,
@@ -203,7 +208,11 @@ public class SensorBypassService {
     public SecurityWarningListResponse findWarnings(
             int requestedLimit
     ) {
-        int limit = Math.max(1, Math.min(requestedLimit, 200));
+        int limit = Math.clamp(
+        requestedLimit,
+        1,
+        200
+        );
         List<SecurityWarningResponse> items = jdbcTemplate.query(
                 WARNING_COLUMNS + """
                  WHERE bypass.active = TRUE
@@ -247,7 +256,7 @@ public class SensorBypassService {
                 """,
                 (resultSet, rowNumber) -> new WarningInsert(
                         resultSet.getLong("id"),
-                        resultSet.getTimestamp("created_at").toInstant()
+                        resultSet.getTimestamp(CREATED).toInstant()
                 ),
                 bypass.id(),
                 warningDate,
@@ -318,8 +327,8 @@ public class SensorBypassService {
                         resultSet.getLong("id"),
                         resultSet.getString("code"),
                         resultSet.getString("name"),
-                        resultSet.getString("area_code"),
-                        resultSet.getString("area_name"),
+                        resultSet.getString(AREA_CODE),
+                        resultSet.getString(AREA_NAME),
                         resultSet.getString("device_type")
                 ),
                 sensorCode
@@ -351,12 +360,12 @@ public class SensorBypassService {
                 resultSet.getLong("id"),
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
-                resultSet.getString("area_code"),
-                resultSet.getString("area_name"),
+                resultSet.getString(AREA_CODE),
+                resultSet.getString(AREA_NAME),
                 resultSet.getString("reason"),
                 resultSet.getBoolean("active"),
                 resultSet.getString("created_by"),
-                resultSet.getTimestamp("created_at").toInstant(),
+                resultSet.getTimestamp(CREATED).toInstant(),
                 resultSet.getString("revoked_by"),
                 toInstant(resultSet.getTimestamp("revoked_at"))
         );
@@ -372,12 +381,12 @@ public class SensorBypassService {
                 "SENSOR_BYPASSED",
                 resultSet.getString("device_code"),
                 resultSet.getString("device_name"),
-                resultSet.getString("area_code"),
-                resultSet.getString("area_name"),
+                resultSet.getString(AREA_CODE),
+                resultSet.getString(AREA_NAME),
                 resultSet.getString("reason"),
                 resultSet.getString("message"),
                 resultSet.getObject("warning_date", LocalDate.class),
-                resultSet.getTimestamp("created_at").toInstant()
+                resultSet.getTimestamp(CREATED).toInstant()
         );
     }
 

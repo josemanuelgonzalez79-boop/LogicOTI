@@ -78,56 +78,67 @@ public class SensorEventMonitor {
         this.enabled = enabled;
     }
 
-    @Scheduled(
-            initialDelayString =
-                    "${sensor.monitor.initial-delay-ms:5000}",
-            fixedDelayString =
-                    "${sensor.monitor.poll-ms:2000}"
-    )
-    public void monitorSensors() {
+        @Scheduled(
+                initialDelayString =
+                        "${sensor.monitor.initial-delay-ms:5000}",
+                fixedDelayString =
+                        "${sensor.monitor.poll-ms:2000}"
+        )
+        public void monitorSensors() {
 
-        if (!enabled || !plcProperties.isEnabled()) {
-            return;
+                if (!enabled || !plcProperties.isEnabled()) {
+                        return;
+                }
+
+                try {
+                        loadHistoryIfNeeded();
+
+                        List<SensorDefinition> sensors =
+                                getSensorDefinitions();
+
+                        if (sensors.isEmpty()) {
+                        return;
+                        }
+
+                        Map<Long, Boolean> currentStates =
+                                readSensorStatesWithQualityTracking(
+                                        sensors
+                                );
+
+                        sensors.forEach(sensor ->
+                                processState(
+                                        sensor,
+                                        currentStates.get(sensor.id())
+                                )
+                        );
+
+                } catch (Exception exception) {
+                        LOGGER.warn(
+                                "No se pudieron vigilar los sensores: {}",
+                                exception.getMessage()
+                        );
+                }
         }
 
-        try {
-            loadHistoryIfNeeded();
+        private Map<Long, Boolean> readSensorStatesWithQualityTracking(
+        List<SensorDefinition> sensors
+        ) {
+                try {
+                        return readSensorStates(sensors);
 
-            List<SensorDefinition> sensors =
-                    getSensorDefinitions();
+                } catch (RuntimeException exception) {
 
-            if (sensors.isEmpty()) {
-                return;
-            }
+                        signalQualityRegistry.recordBad(
+                                sensors.stream()
+                                        .map(SensorDefinition::id)
+                                        .toList(),
+                                exception.getMessage()
+                        );
 
-            Map<Long, Boolean> currentStates;
-
-            try {
-                currentStates = readSensorStates(sensors);
-            } catch (RuntimeException exception) {
-                signalQualityRegistry.recordBad(
-                        sensors.stream()
-                                .map(SensorDefinition::id)
-                                .toList(),
-                        exception.getMessage()
-                );
-                throw exception;
-            }
-
-            sensors.forEach(sensor ->
-                    processState(
-                            sensor,
-                            currentStates.get(sensor.id())
-                    )
-            );
-
-        } catch (Exception exception) {
-            LOGGER.warn(
-                    "No se pudieron vigilar los sensores: {}",
-                    exception.getMessage()
-            );
+                        throw exception;
+                }
         }
-    }
+
 
     private void loadHistoryIfNeeded() {
 

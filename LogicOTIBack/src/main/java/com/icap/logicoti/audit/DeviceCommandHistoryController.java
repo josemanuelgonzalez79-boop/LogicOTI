@@ -75,16 +75,19 @@ public class DeviceCommandHistoryController {
             );
         }
 
-        return historyService.find(
-                areaCode,
-                deviceCode,
-                validateStatus(status),
-                requestedBy,
-                from,
-                to,
-                limit,
-                offset
-        );
+    DeviceCommandHistoryQuery query =
+            new DeviceCommandHistoryQuery(
+                    areaCode,
+                    deviceCode,
+                    validateStatus(status),
+                    requestedBy,
+                    from,
+                    to,
+                    limit,
+                    offset
+            );
+
+    return historyService.find(query);
     }
 
     private String validateStatus(String requestedStatus) {

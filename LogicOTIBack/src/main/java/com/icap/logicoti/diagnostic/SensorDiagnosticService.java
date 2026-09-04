@@ -40,11 +40,23 @@ import java.util.stream.Collectors;
 @Service
 public class SensorDiagnosticService {
 
+    private static final String RUNNING = "RUNNING";
+    private static final String PASSED = "PASSED";
+    private static final String REJECTED = "REJECTED";
+    private static final String CANCELLED = "CANCELLED";
+    private static final String DEVICE_CODE = "device_code";
+    private static final String DEVICE_NAME = "device_name";
+    private static final String AREA_CODE = "area_code";
+    private static final String AREA_NAME = "area_name";
+    private static final String DEVICE_TYPE = "device_type";
+    private static final String PLC_STATE_TAG = "plc_state_tag";
+
+
     private static final Set<String> SESSION_STATUSES = Set.of(
-            "RUNNING",
-            "PASSED",
-            "REJECTED",
-            "CANCELLED"
+            RUNNING,
+            PASSED,
+            REJECTED,
+            CANCELLED
     );
 
     private static final String INSERT_SESSION = """
@@ -239,13 +251,17 @@ public class SensorDiagnosticService {
             );
         }
 
-        SensorDiagnosticResponse response = get(sessionId);
+        SensorDiagnosticResponse response = getInternal(sessionId);
         publish(response);
         return response;
     }
 
     @Transactional(readOnly = true)
     public SensorDiagnosticResponse get(long id) {
+        return getInternal(id);
+    }
+
+    private SensorDiagnosticResponse getInternal(long id) {
         List<SessionRow> sessions = jdbcTemplate.query(
                 SESSION_QUERY,
                 this::mapSession,
@@ -274,7 +290,11 @@ public class SensorDiagnosticService {
             int requestedLimit
     ) {
         String status = normalizeStatus(requestedStatus);
-        int limit = Math.max(1, Math.min(requestedLimit, 100));
+        int limit = Math.clamp(
+            requestedLimit,
+            1,
+            100
+        );
         StringBuilder query = new StringBuilder("""
                 SELECT id
                 FROM sensor_diagnostic_session
@@ -297,7 +317,7 @@ public class SensorDiagnosticService {
         );
 
         List<SensorDiagnosticResponse> items = ids.stream()
-                .map(this::get)
+                .map(this::getInternal)
                 .toList();
 
         return new SensorDiagnosticListResponse(
@@ -312,9 +332,9 @@ public class SensorDiagnosticService {
             long id,
             String username
     ) {
-        SensorDiagnosticResponse current = get(id);
+        SensorDiagnosticResponse current = getInternal(id);
 
-        if (!"RUNNING".equals(current.status())) {
+        if (!RUNNING.equals(current.status())) {
             throw new ConflictException(
                     "El diagnóstico " + id + " ya terminó."
             );
@@ -339,7 +359,7 @@ public class SensorDiagnosticService {
                 id
         );
 
-        SensorDiagnosticResponse response = get(id);
+        SensorDiagnosticResponse response = getInternal(id);
         publish(response);
         return response;
     }
@@ -381,11 +401,11 @@ public class SensorDiagnosticService {
                             }
 
                             return new SensorDiagnosticDueResponse.Sensor(
-                                    resultSet.getString("device_code"),
-                                    resultSet.getString("device_name"),
-                                    resultSet.getString("area_code"),
-                                    resultSet.getString("area_name"),
-                                    resultSet.getString("device_type"),
+                                    resultSet.getString(DEVICE_CODE),
+                                    resultSet.getString(DEVICE_NAME),
+                                    resultSet.getString(AREA_CODE),
+                                    resultSet.getString(AREA_NAME),
+                                    resultSet.getString(DEVICE_TYPE),
                                     status,
                                     lastPassedAt,
                                     validUntil,
@@ -441,12 +461,12 @@ public class SensorDiagnosticService {
                         resultSet.getLong("id"),
                         resultSet.getLong("session_id"),
                         resultSet.getLong("device_id"),
-                        resultSet.getString("device_code"),
-                        resultSet.getString("device_name"),
-                        resultSet.getString("area_code"),
-                        resultSet.getString("area_name"),
-                        resultSet.getString("device_type"),
-                        resultSet.getString("plc_state_tag"),
+                        resultSet.getString(DEVICE_CODE),
+                        resultSet.getString(DEVICE_NAME),
+                        resultSet.getString(AREA_CODE),
+                        resultSet.getString(AREA_NAME),
+                        resultSet.getString(DEVICE_TYPE),
+                        resultSet.getString(PLC_STATE_TAG),
                         resultSet.getBoolean("saw_inactive"),
                         resultSet.getBoolean("saw_active"),
                         resultSet.getTimestamp("expires_at").toInstant()
@@ -516,7 +536,7 @@ public class SensorDiagnosticService {
                     """,
                     sawInactive,
                     sawActive,
-                    passed ? "PASSED" : "RUNNING",
+                    passed ? PASSED : RUNNING,
                     passed,
                     item.id()
             );
@@ -578,7 +598,7 @@ public class SensorDiagnosticService {
     }
 
     void publishSessions(Set<Long> sessionIds) {
-        sessionIds.forEach(id -> publish(get(id)));
+        sessionIds.forEach(id -> publish(getInternal(id)));
     }
 
     private void publish(SensorDiagnosticResponse response) {
@@ -619,10 +639,10 @@ public class SensorDiagnosticService {
                         resultSet.getLong("id"),
                         resultSet.getString("code"),
                         resultSet.getString("name"),
-                        resultSet.getString("area_code"),
-                        resultSet.getString("area_name"),
-                        resultSet.getString("device_type"),
-                        resultSet.getString("plc_state_tag")
+                        resultSet.getString(AREA_CODE),
+                        resultSet.getString(AREA_NAME),
+                        resultSet.getString(DEVICE_TYPE),
+                        resultSet.getString(PLC_STATE_TAG)
                 )
         );
     }
@@ -683,7 +703,7 @@ public class SensorDiagnosticService {
                 """,
                 new MapSqlParameterSource("deviceIds", deviceIds),
                 (resultSet, rowNumber) ->
-                        resultSet.getString("device_code")
+                        resultSet.getString(DEVICE_CODE)
         );
 
         if (!busyCodes.isEmpty()) {
@@ -798,12 +818,12 @@ public class SensorDiagnosticService {
     ) throws SQLException {
         return new SensorDiagnosticResponse.Item(
                 resultSet.getLong("id"),
-                resultSet.getString("device_code"),
-                resultSet.getString("device_name"),
-                resultSet.getString("area_code"),
-                resultSet.getString("area_name"),
-                resultSet.getString("device_type"),
-                resultSet.getString("plc_state_tag"),
+                resultSet.getString(DEVICE_CODE),
+                resultSet.getString(DEVICE_NAME),
+                resultSet.getString(AREA_CODE),
+                resultSet.getString(AREA_NAME),
+                resultSet.getString(DEVICE_TYPE),
+                resultSet.getString(PLC_STATE_TAG),
                 resultSet.getBoolean("initial_state"),
                 resultSet.getBoolean("saw_inactive"),
                 resultSet.getBoolean("saw_active"),
@@ -816,7 +836,7 @@ public class SensorDiagnosticService {
             SessionRow session,
             List<SensorDiagnosticResponse.Item> items
     ) {
-        int remainingSeconds = "RUNNING".equals(session.status())
+        int remainingSeconds = RUNNING.equals(session.status())
                 ? (int) Math.max(
                         0,
                         Duration.between(

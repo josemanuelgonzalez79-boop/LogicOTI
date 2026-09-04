@@ -15,6 +15,9 @@ import java.util.Locale;
 @Service
 public class SensorEventHistoryQueryService {
 
+    private static final String ACKNOWLEDGED_AT = "acknowledged_at";
+
+
     private static final String HISTORY_COLUMNS = """
             SELECT
                 history.id,
@@ -57,41 +60,46 @@ public class SensorEventHistoryQueryService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional(readOnly = true)
-    public SensorEventHistoryPageResponse find(
-            String requestedAreaCode,
-            String requestedDeviceCode,
-            String requestedDeviceType,
-            String requestedEventType,
-            String requestedSeverity,
-            Instant from,
-            Instant to,
-            int requestedLimit,
-            int requestedOffset
-    ) {
-        int limit = Math.max(1, Math.min(requestedLimit, 500));
-        int offset = Math.max(0, requestedOffset);
+        @Transactional(readOnly = true)
+        public SensorEventHistoryPageResponse find(
+                SensorEventHistoryQuery query
+        ) {
+        SensorEventHistoryQuery.Criteria criteria =
+                query.criteria();
+
+        int limit = Math.clamp(
+                query.page().limit(),
+                1,
+                500
+        );
+
+        int offset = Math.max(
+                0,
+                query.page().offset()
+        );
 
         EventFilter filter = buildFilter(
-                requestedAreaCode,
-                requestedDeviceCode,
-                requestedDeviceType,
-                requestedEventType,
-                requestedSeverity,
-                from,
-                to
+                criteria.areaCode(),
+                criteria.deviceCode(),
+                criteria.deviceType(),
+                criteria.eventType(),
+                criteria.severity(),
+                criteria.from(),
+                criteria.to()
         );
 
         String dataQuery = HISTORY_COLUMNS
                 + HISTORY_FROM
                 + filter.whereClause()
                 + """
-                 ORDER BY history.detected_at DESC, history.id DESC
-                 LIMIT ? OFFSET ?
+                ORDER BY history.detected_at DESC, history.id DESC
+                LIMIT ? OFFSET ?
                 """;
 
         List<Object> dataParameters =
-                new ArrayList<>(filter.parameters());
+                new ArrayList<>(
+                        filter.parameters()
+                );
 
         dataParameters.add(limit);
         dataParameters.add(offset);
@@ -121,7 +129,7 @@ public class SensorEventHistoryQueryService {
                 limit,
                 offset
         );
-    }
+        }
 
     @Transactional(readOnly = true)
     public List<SensorEventHistoryResponse> findActiveSmokeAlarms() {
@@ -264,12 +272,12 @@ public class SensorEventHistoryQueryService {
                 resultSet
                         .getTimestamp("detected_at")
                         .toInstant(),
-                resultSet.getTimestamp("acknowledged_at") != null,
+                resultSet.getTimestamp(ACKNOWLEDGED_AT) != null,
                 resultSet.getString("acknowledged_by"),
-                resultSet.getTimestamp("acknowledged_at") == null
+                resultSet.getTimestamp(ACKNOWLEDGED_AT) == null
                         ? null
                         : resultSet
-                                .getTimestamp("acknowledged_at")
+                                .getTimestamp(ACKNOWLEDGED_AT)
                                 .toInstant(),
                 resultSet.getLong("comment_count")
         );
