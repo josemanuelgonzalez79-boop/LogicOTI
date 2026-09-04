@@ -4,8 +4,8 @@
       <span class="page-header__eyebrow">Matriz causa-efecto</span>
       <h1>Seguridad y horarios</h1>
       <p>
-        Arma la alarma del edificio, revisa si los sensores están listos y configura los horarios de
-        operación automática.
+        Arma una o varias zonas, revisa sus sensores y circuitos de iluminación, y configura los
+        horarios de operación automática.
       </p>
     </div>
 
@@ -49,7 +49,7 @@
       <div>
         <strong>Operación manual habilitada</strong>
         <span
-          >Puedes armar o desarmar la alarma. Los horarios solamente los modifica un
+          >Puedes armar o desarmar zonas. Los horarios solamente los modifica un
           administrador.</span
         >
       </div>
@@ -137,24 +137,172 @@
     </div>
   }
 
+  <section class="panel zone-selection-panel">
+    <header class="panel-header zone-selection-panel__header">
+      <div>
+        <span class="section-eyebrow">Armado independiente</span>
+        <h2>Zonas de seguridad</h2>
+        <p>
+          Selecciona una, varias o todas las zonas. Al armarse, sus luces permanecerán encendidas
+          hasta desarmarlas o reconocer una alarma.
+        </p>
+      </div>
+
+      <div class="zone-selection-actions">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="executingAction() || allZonesSelected()"
+          (click)="selectAllZones()"
+        >
+          Seleccionar todas
+        </button>
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="executingAction() || selectedZoneCount() === 0"
+          (click)="clearZoneSelection()"
+        >
+          Limpiar selección
+        </button>
+      </div>
+    </header>
+
+    <div class="zone-summary">
+      <span
+        ><strong>{{ zoneStatus()?.armedZones ?? 0 }}</strong> zonas armadas</span
+      >
+      <span
+        ><strong>{{ zoneStatus()?.alarmZones ?? 0 }}</strong> en alarma</span
+      >
+      <span
+        ><strong>{{ selectedZoneCount() }}</strong> seleccionadas</span
+      >
+    </div>
+
+    <div class="zone-grid">
+      @for (zone of zones(); track trackZone($index, zone)) {
+        <article
+          class="zone-card"
+          [class.zone-card--selected]="isZoneSelected(zone.code)"
+          [attr.data-mode]="zone.mode"
+        >
+          <label class="zone-card__selection">
+            <input
+              type="checkbox"
+              [disabled]="executingAction()"
+              [checked]="isZoneSelected(zone.code)"
+              (change)="updateZoneSelection(zone.code, $any($event.target).checked)"
+            />
+            <span>Incluir zona</span>
+          </label>
+
+          <div class="zone-card__title">
+            <span class="zone-card__icon">
+              <i
+                class="pi"
+                [class.pi-lock-open]="zone.mode === 'DISARMED'"
+                [class.pi-clock]="zone.mode === 'ARMING'"
+                [class.pi-shield]="zone.mode === 'ARMED' || zone.mode === 'ARMED_WITH_BYPASS'"
+                [class.pi-ban]="zone.mode === 'REJECTED'"
+                [class.pi-bell]="zone.mode === 'ALARM'"
+              ></i>
+            </span>
+            <div>
+              <h3>{{ zone.name }}</h3>
+              <span class="zone-card__mode">{{ modeLabel(zone.mode) }}</span>
+            </div>
+          </div>
+
+          <p>{{ zone.message }}</p>
+
+          @if (zone.mode === 'ARMING') {
+            <div class="zone-card__timer">
+              <strong>{{ zoneArmingRemainingSeconds(zone) }}</strong>
+              <span>segundos para completar el armado</span>
+            </div>
+          }
+
+          <dl class="zone-card__metrics">
+            <div>
+              <dt>Sensores</dt>
+              <dd>{{ zone.motionSensorCount }}</dd>
+            </div>
+            <div>
+              <dt>Circuitos listos</dt>
+              <dd>{{ zone.availableLightCircuitCount }}/{{ zone.lightCircuitCount }}</dd>
+            </div>
+            <div>
+              <dt>Luces bajo seguridad</dt>
+              <dd>{{ zone.controlledLightCount }}</dd>
+            </div>
+          </dl>
+
+          @if (!zone.motionDetectionEnabled) {
+            <div class="zone-card__notice">
+              <i class="pi pi-lightbulb"></i>
+              Sin sensores de movimiento; participa como iluminación de seguridad.
+            </div>
+          }
+
+          @if (zone.availableLightCircuitCount < zone.lightCircuitCount) {
+            <div class="zone-card__notice zone-card__notice--warning">
+              <i class="pi pi-exclamation-triangle"></i>
+              Tiene circuitos pendientes de validación con el PLC.
+            </div>
+          }
+
+          @if (zone.alarmActive) {
+            <button
+              type="button"
+              class="button button--danger zone-card__acknowledge"
+              [disabled]="acknowledgingZoneCode() !== null || executingAction()"
+              (click)="acknowledgeZone(zone)"
+            >
+              <i
+                class="pi"
+                [class.pi-check-circle]="acknowledgingZoneCode() !== zone.code"
+                [class.pi-spin]="acknowledgingZoneCode() === zone.code"
+                [class.pi-spinner]="acknowledgingZoneCode() === zone.code"
+              ></i>
+              {{ acknowledgingZoneCode() === zone.code ? 'Reconociendo...' : 'Reconocer alarma' }}
+            </button>
+          }
+        </article>
+      } @empty {
+        <div class="empty-issues">
+          <i class="pi pi-spinner pi-spin"></i>
+          <span>Consultando zonas de seguridad...</span>
+        </div>
+      }
+    </div>
+  </section>
+
   <section class="security-overview">
-    <article class="alarm-card" [attr.data-mode]="status()?.mode ?? 'UNKNOWN'">
+    <article
+      class="alarm-card"
+      [attr.data-mode]="zoneStatus()?.aggregateMode ?? status()?.mode ?? 'UNKNOWN'"
+    >
       <div class="alarm-card__icon">
         <i
           class="pi"
-          [class.pi-lock-open]="status()?.mode === 'DISARMED'"
-          [class.pi-clock]="status()?.mode === 'ARMING'"
-          [class.pi-shield]="status()?.mode === 'ARMED' || status()?.mode === 'ARMED_WITH_BYPASS'"
-          [class.pi-ban]="status()?.mode === 'REJECTED'"
-          [class.pi-bell]="status()?.mode === 'ALARM'"
+          [class.pi-lock-open]="zoneStatus()?.aggregateMode === 'DISARMED'"
+          [class.pi-clock]="zoneStatus()?.aggregateMode === 'ARMING'"
+          [class.pi-shield]="
+            zoneStatus()?.aggregateMode === 'ARMED' ||
+            zoneStatus()?.aggregateMode === 'ARMED_WITH_BYPASS' ||
+            zoneStatus()?.aggregateMode === 'PARTIALLY_ARMED'
+          "
+          [class.pi-ban]="zoneStatus()?.aggregateMode === 'REJECTED'"
+          [class.pi-bell]="zoneStatus()?.aggregateMode === 'ALARM'"
           [class.pi-question-circle]="!status()"
         ></i>
       </div>
 
       <div class="alarm-card__content">
-        <span class="section-eyebrow">Estado actual</span>
-        <h2>{{ modeLabel(status()?.mode) }}</h2>
-        <p>{{ status()?.message ?? 'Consultando el estado de seguridad...' }}</p>
+        <span class="section-eyebrow">Estado general</span>
+        <h2>{{ modeLabel(zoneStatus()?.aggregateMode) }}</h2>
+        <p>{{ zoneStatus()?.message ?? 'Consultando el estado de seguridad...' }}</p>
 
         @if (status()?.mode === 'ARMING') {
           <div class="arming-timer">
@@ -187,23 +335,25 @@
           <button
             type="button"
             class="button button--arm"
-            [disabled]="executingAction() || status()?.armed || status()?.mode === 'ARMING'"
+            [disabled]="
+              executingAction() || acknowledgingZoneCode() !== null || selectedZoneCount() === 0
+            "
             (click)="requestAction('ARM')"
           >
             <i class="pi pi-lock"></i>
-            Armar alarma
+            Armar zonas
           </button>
 
           <button
             type="button"
             class="button button--disarm"
             [disabled]="
-              executingAction() || status()?.mode === 'DISARMED' || status()?.mode === 'REJECTED'
+              executingAction() || acknowledgingZoneCode() !== null || selectedZoneCount() === 0
             "
             (click)="requestAction('DISARM')"
           >
             <i class="pi pi-lock-open"></i>
-            Desarmar
+            Desarmar zonas
           </button>
         </div>
       }
@@ -213,7 +363,7 @@
       <header class="panel-header">
         <div>
           <span class="section-eyebrow">Revisión previa</span>
-          <h2>Sensores necesarios para armar</h2>
+          <h2>Precheck de las zonas seleccionadas</h2>
         </div>
         <button
           type="button"
@@ -782,13 +932,16 @@
           ></i>
         </span>
         <h2 id="security-confirmation-title">
-          {{ action === 'ARM' ? '¿Armar la alarma?' : '¿Desarmar la alarma?' }}
+          {{ action === 'ARM' ? '¿Armar las zonas?' : '¿Desarmar las zonas?' }}
         </h2>
         <p>
           @if (action === 'ARM') {
-            El sistema revisará la conexión con el PLC y los sensores de movimiento antes de armar.
+            El sistema revisará el PLC, los sensores y los circuitos de iluminación antes de armar
+            <strong>{{ selectedZoneNames() }}</strong
+            >. Al terminar el tiempo de salida encenderá sus luces.
           } @else {
-            Al confirmar, dejarán de generarse alarmas por movimiento hasta que vuelva a armarse.
+            Se desarmarán <strong>{{ selectedZoneNames() }}</strong> y se apagarán únicamente las
+            luces que la seguridad haya encendido.
           }
         </p>
 

@@ -45,6 +45,7 @@ public class AutomaticLightingService {
     private final AutomaticLightingRuntimeService runtimeService;
     private final DeviceCommandExecutionService commandService;
     private final AreaStateService areaStateService;
+    private final SecurityZoneLightingService zoneLightingService;
     private final SimpMessagingTemplate messagingTemplate;
 
     private final Map<String, Instant> lastProcessedMotion =
@@ -56,6 +57,7 @@ public class AutomaticLightingService {
             AutomaticLightingRuntimeService runtimeService,
             DeviceCommandExecutionService commandService,
             AreaStateService areaStateService,
+            SecurityZoneLightingService zoneLightingService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -63,6 +65,7 @@ public class AutomaticLightingService {
         this.runtimeService = runtimeService;
         this.commandService = commandService;
         this.areaStateService = areaStateService;
+        this.zoneLightingService = zoneLightingService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -255,6 +258,13 @@ public class AutomaticLightingService {
                 target.code().toUpperCase(Locale.ROOT)
         );
 
+        if (zoneLightingService.isOwned(target.code())) {
+            if (alreadyOwned) {
+                runtimeService.release(target.code());
+            }
+            return;
+        }
+
         if (!alreadyOwned) {
                 // Una luz encendida manualmente nunca se toma
                 // como propiedad de la automatización.
@@ -336,6 +346,11 @@ public class AutomaticLightingService {
         for (AutomaticLightingRuntimeService.RuntimeLight light
                 : expired) {
             try {
+                if (zoneLightingService.isOwned(light.code())) {
+                    runtimeService.release(light.code());
+                    continue;
+                }
+
                 AreaStateResponse response =
                         commandService.executeAutomatic(
                                 light.code(),

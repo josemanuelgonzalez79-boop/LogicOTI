@@ -70,7 +70,7 @@ class ExecutiveMonthlyReportServiceTests {
         assertThat(report.maintenance().diagnosticsPassed()).isEqualTo(1);
         assertThat(report.maintenance().diagnosticsRejected()).isEqualTo(1);
         assertThat(report.maintenance().bypassesCreated()).isEqualTo(1);
-        assertThat(report.security().rejectedArmings()).isEqualTo(2);
+        assertThat(report.security().rejectedArmings()).isEqualTo(3);
 
         assertThat(report.alarmsByArea())
                 .extracting(ExecutiveMonthlyReportResponse.CountMetric::code)
@@ -78,7 +78,7 @@ class ExecutiveMonthlyReportServiceTests {
         assertThat(report.alarmsBySensor()).hasSize(2);
         assertThat(report.commandFailures()).hasSize(1);
         assertThat(report.armRejectionReasons().getFirst().count())
-                .isEqualTo(2);
+                .isEqualTo(3);
     }
 
     private void createSchema() {
@@ -155,6 +155,14 @@ class ExecutiveMonthlyReportServiceTests {
                     changed_at TIMESTAMP WITH TIME ZONE NOT NULL
                 )
                 """);
+        jdbcTemplate.execute("""
+                CREATE TABLE security_zone_history (
+                    id BIGINT PRIMARY KEY,
+                    current_mode VARCHAR(30) NOT NULL,
+                    message VARCHAR(400) NOT NULL,
+                    changed_at TIMESTAMP WITH TIME ZONE NOT NULL
+                )
+                """);
     }
 
     private void seedData() {
@@ -208,6 +216,11 @@ class ExecutiveMonthlyReportServiceTests {
                      '2026-08-08T16:00:00Z'),
                     (2, 'REJECTED', 'Hay sensores sin diagnóstico vigente.',
                      '2026-08-09T16:00:00Z')
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO security_zone_history VALUES
+                    (1, 'REJECTED', 'Hay sensores sin diagnóstico vigente.',
+                     '2026-08-10T16:00:00Z')
                 """);
     }
 }

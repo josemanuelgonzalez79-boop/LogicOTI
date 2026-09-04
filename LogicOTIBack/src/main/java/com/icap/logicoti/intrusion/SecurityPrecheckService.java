@@ -1,6 +1,7 @@
 package com.icap.logicoti.intrusion;
 
 import com.icap.logicoti.config.PlcProperties;
+import com.icap.logicoti.exception.BadRequestException;
 import com.icap.logicoti.intrusion.SecurityPrecheckResponse.Issue;
 import com.icap.logicoti.plc.PlcCommunicationService;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
@@ -14,7 +15,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -30,6 +35,7 @@ public class SecurityPrecheckService {
                 device.name,
                 area.code AS area_code,
                 area.name AS area_name,
+                zone.code AS zone_code,
                 device.plc_state_tag,
                 bypass.id AS bypass_id,
                 bypass.reason AS bypass_reason,
@@ -37,6 +43,10 @@ public class SecurityPrecheckService {
             FROM building_device device
             INNER JOIN building_area area
                 ON area.id = device.area_id
+            INNER JOIN security_zone_area zone_area
+                ON zone_area.area_id = area.id
+            INNER JOIN security_zone zone
+                ON zone.code = zone_area.zone_code
             LEFT JOIN sensor_bypass_history bypass
                 ON bypass.device_id = device.id
                AND bypass.active = TRUE
@@ -53,8 +63,47 @@ public class SecurityPrecheckService {
             ) latest_diagnostic ON TRUE
             WHERE device.active = TRUE
               AND area.active = TRUE
+              AND zone.active = TRUE
               AND device.device_type = 'MOTION'
+              AND zone.code IN (%s)
             ORDER BY area.display_order, device.display_order
+            """;
+
+    private static final String ZONES_QUERY = """
+            SELECT
+                code,
+                name,
+                motion_detection_enabled
+            FROM security_zone
+            WHERE active = TRUE
+              AND code IN (%s)
+            ORDER BY display_order
+            """;
+
+    private static final String LIGHTS_QUERY = """
+            SELECT
+                zone.code AS zone_code,
+                zone.name AS zone_name,
+                area.code AS area_code,
+                area.name AS area_name,
+                device.code AS device_code,
+                device.name AS device_name,
+                device.active,
+                device.controllable,
+                device.plc_command_tag,
+                device.plc_state_tag
+            FROM security_zone zone
+            LEFT JOIN security_zone_area zone_area
+                ON zone_area.zone_code = zone.code
+            LEFT JOIN building_area area
+                ON area.id = zone_area.area_id
+               AND area.active = TRUE
+            LEFT JOIN building_device device
+                ON device.area_id = area.id
+               AND device.device_type = 'LIGHT'
+            WHERE zone.active = TRUE
+              AND zone.code IN (%s)
+            ORDER BY zone.display_order, area.display_order, device.display_order
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -76,19 +125,46 @@ public class SecurityPrecheckService {
 
     @Transactional(readOnly = true)
     public SecurityPrecheckResponse check() {
-        List<MotionSensor> sensors = findMotionSensors();
+        return check(findAllZoneCodes());
+    }
+
+    @Transactional(readOnly = true)
+    public SecurityPrecheckResponse check(
+            Collection<String> requestedZoneCodes
+    ) {
+        List<String> zoneCodes = normalizeZoneCodes(
+                requestedZoneCodes
+        );
+        List<ZoneDefinition> zones = findZones(zoneCodes);
+
+        if (zones.size() != zoneCodes.size()) {
+            throw new BadRequestException(
+                    "Se seleccionó una zona inexistente o inactiva."
+            );
+        }
+
+        List<MotionSensor> sensors = findMotionSensors(zoneCodes);
         List<Issue> initialIssues = new ArrayList<>();
         SecuritySettingsResponse settings =
                 scheduleService.getSettings();
 
-        if (sensors.isEmpty()) {
-            initialIssues.add(systemIssue(
-                    "NO_MOTION_SENSORS",
-                    ERROR,
-                    true,
-                    "No hay sensores de movimiento activos configurados."
-            ));
+        for (ZoneDefinition zone : zones) {
+            boolean hasSensors = sensors.stream()
+                    .anyMatch(sensor -> sensor.zoneCode()
+                            .equals(zone.code()));
+
+            if (zone.motionDetectionEnabled() && !hasSensors) {
+                initialIssues.add(systemIssue(
+                        "NO_MOTION_SENSORS",
+                        ERROR,
+                        true,
+                        "La zona " + zone.name()
+                                + " no tiene sensores de movimiento activos configurados."
+                ));
+            }
         }
+
+        addLightingIssues(zoneCodes, zones, initialIssues);
 
         for (MotionSensor sensor : sensors) {
             if (sensor.bypassed()) {
@@ -308,23 +384,156 @@ public class SecurityPrecheckService {
         );
     }
 
-    private List<MotionSensor> findMotionSensors() {
+    private List<MotionSensor> findMotionSensors(
+            List<String> zoneCodes
+    ) {
+        String query = MOTION_SENSORS_QUERY.formatted(
+                placeholders(zoneCodes.size())
+        );
+
         return jdbcTemplate.query(
-                MOTION_SENSORS_QUERY,
+                query,
                 (resultSet, rowNumber) -> new MotionSensor(
                         resultSet.getLong("id"),
                         resultSet.getString("code"),
                         resultSet.getString("name"),
                         resultSet.getString("area_code"),
                         resultSet.getString("area_name"),
+                        resultSet.getString("zone_code"),
                         resultSet.getString("plc_state_tag"),
                         resultSet.getObject("bypass_id") != null,
                         resultSet.getString("bypass_reason"),
                         toInstant(resultSet.getTimestamp(
                                 "last_diagnostic_at"
                         ))
-                )
+                ),
+                zoneCodes.toArray()
         );
+    }
+
+    private List<String> findAllZoneCodes() {
+        return jdbcTemplate.queryForList(
+                """
+                SELECT code
+                FROM security_zone
+                WHERE active = TRUE
+                ORDER BY display_order
+                """,
+                String.class
+        );
+    }
+
+    private List<ZoneDefinition> findZones(List<String> zoneCodes) {
+        String query = ZONES_QUERY.formatted(
+                placeholders(zoneCodes.size())
+        );
+
+        return jdbcTemplate.query(
+                query,
+                (resultSet, rowNumber) -> new ZoneDefinition(
+                        resultSet.getString("code"),
+                        resultSet.getString("name"),
+                        resultSet.getBoolean(
+                                "motion_detection_enabled"
+                        )
+                ),
+                zoneCodes.toArray()
+        );
+    }
+
+    private void addLightingIssues(
+            List<String> zoneCodes,
+            List<ZoneDefinition> zones,
+            List<Issue> issues
+    ) {
+        String query = LIGHTS_QUERY.formatted(
+                placeholders(zoneCodes.size())
+        );
+
+        List<SecurityLight> lights = jdbcTemplate.query(
+                query,
+                (resultSet, rowNumber) -> new SecurityLight(
+                        resultSet.getString("zone_code"),
+                        resultSet.getString("zone_name"),
+                        resultSet.getString("area_code"),
+                        resultSet.getString("area_name"),
+                        resultSet.getString("device_code"),
+                        resultSet.getString("device_name"),
+                        resultSet.getBoolean("active"),
+                        resultSet.getBoolean("controllable"),
+                        resultSet.getString("plc_command_tag"),
+                        resultSet.getString("plc_state_tag")
+                ),
+                zoneCodes.toArray()
+        );
+
+        for (ZoneDefinition zone : zones) {
+            List<SecurityLight> zoneLights = lights.stream()
+                    .filter(light -> zone.code().equals(light.zoneCode()))
+                    .filter(light -> light.deviceCode() != null)
+                    .toList();
+
+            if (zoneLights.isEmpty()) {
+                issues.add(systemIssue(
+                        "ZONE_WITHOUT_LIGHTS",
+                        ERROR,
+                        true,
+                        "La zona " + zone.name()
+                                + " no tiene circuitos de iluminación configurados."
+                ));
+                continue;
+            }
+
+            zoneLights.stream()
+                    .filter(light -> !light.ready())
+                    .forEach(light -> issues.add(lightIssue(light)));
+        }
+    }
+
+    private Issue lightIssue(SecurityLight light) {
+        return new Issue(
+                "ZONE_LIGHT_PENDING",
+                ERROR,
+                true,
+                light.deviceCode(),
+                light.deviceName(),
+                light.areaCode(),
+                light.areaName(),
+                "El circuito " + light.deviceName()
+                        + " de " + light.zoneName()
+                        + " está pendiente de validación con el PLC."
+        );
+    }
+
+    private List<String> normalizeZoneCodes(
+            Collection<String> requestedZoneCodes
+    ) {
+        if (requestedZoneCodes == null
+                || requestedZoneCodes.isEmpty()) {
+            throw new BadRequestException(
+                    "Selecciona al menos una zona."
+            );
+        }
+
+        Set<String> normalized = new LinkedHashSet<>();
+
+        for (String requestedCode : requestedZoneCodes) {
+            if (requestedCode == null || requestedCode.isBlank()) {
+                throw new BadRequestException(
+                        "El código de zona es obligatorio."
+                );
+            }
+
+            normalized.add(
+                    requestedCode.trim().toUpperCase(Locale.ROOT)
+            );
+        }
+
+        return List.copyOf(normalized);
+    }
+
+    private String placeholders(int size) {
+        return String.join(", ", java.util.Collections.nCopies(size, "?"));
     }
 
     private void addDiagnosticIssue(
@@ -428,11 +637,41 @@ public class SecurityPrecheckService {
             String name,
             String areaCode,
             String areaName,
+            String zoneCode,
             String stateTag,
             boolean bypassed,
             String bypassReason,
             Instant lastDiagnosticAt
     ) {
+    }
+
+    private record ZoneDefinition(
+            String code,
+            String name,
+            boolean motionDetectionEnabled
+    ) {
+    }
+
+    private record SecurityLight(
+            String zoneCode,
+            String zoneName,
+            String areaCode,
+            String areaName,
+            String deviceCode,
+            String deviceName,
+            boolean active,
+            boolean controllable,
+            String commandTag,
+            String stateTag
+    ) {
+        private boolean ready() {
+            return active
+                    && controllable
+                    && commandTag != null
+                    && !commandTag.isBlank()
+                    && stateTag != null
+                    && !stateTag.isBlank();
+        }
     }
 
     private record PlcReadOutcome(

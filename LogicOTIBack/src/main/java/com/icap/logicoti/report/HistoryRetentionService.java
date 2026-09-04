@@ -161,10 +161,15 @@ public class HistoryRetentionService {
                 "DELETE FROM device_command_history WHERE requested_at < ?",
                 cutoffTimestamp
         );
-        long security = jdbcTemplate.update(
+        long legacySecurity = jdbcTemplate.update(
                 "DELETE FROM intrusion_alarm_history WHERE changed_at < ?",
                 cutoffTimestamp
         );
+        long zoneSecurity = jdbcTemplate.update(
+                "DELETE FROM security_zone_history WHERE changed_at < ?",
+                cutoffTimestamp
+        );
+        long security = legacySecurity + zoneSecurity;
         long diagnostics = jdbcTemplate.update(
                 """
                 DELETE FROM sensor_diagnostic_session
@@ -242,7 +247,12 @@ public class HistoryRetentionService {
         return HistoryRetentionCounts.of(
                 count("device_event_history", "detected_at < ?", value),
                 count("device_command_history", "requested_at < ?", value),
-                count("intrusion_alarm_history", "changed_at < ?", value),
+                count("intrusion_alarm_history", "changed_at < ?", value)
+                        + count(
+                                "security_zone_history",
+                                "changed_at < ?",
+                                value
+                        ),
                 count(
                         "sensor_diagnostic_session",
                         "started_at < ? AND status <> 'RUNNING'",

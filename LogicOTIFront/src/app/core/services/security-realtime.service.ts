@@ -8,6 +8,7 @@ import {
   AreaInactivityStatus,
   AutomaticLightingStatus,
   SecurityStatus,
+  SecurityZoneList,
 } from '../models/security.model';
 import { AuthService } from './auth.service';
 import { RealtimeConnectionStatus } from './smoke-alert-realtime.service';
@@ -19,6 +20,7 @@ export class SecurityRealtimeService {
   private readonly statusSubject = new Subject<SecurityStatus>();
   private readonly automaticLightingSubject = new Subject<AutomaticLightingStatus>();
   private readonly areaInactivitySubject = new Subject<AreaInactivityStatus>();
+  private readonly zonesSubject = new Subject<SecurityZoneList>();
   private readonly connectionStatusSubject = new BehaviorSubject<RealtimeConnectionStatus>(
     'DISCONNECTED',
   );
@@ -27,12 +29,14 @@ export class SecurityRealtimeService {
   private subscription: StompSubscription | null = null;
   private automaticLightingSubscription: StompSubscription | null = null;
   private areaInactivitySubscription: StompSubscription | null = null;
+  private zonesSubscription: StompSubscription | null = null;
 
   readonly status$: Observable<SecurityStatus> = this.statusSubject.asObservable();
   readonly automaticLighting$: Observable<AutomaticLightingStatus> =
     this.automaticLightingSubject.asObservable();
   readonly areaInactivity$: Observable<AreaInactivityStatus> =
     this.areaInactivitySubject.asObservable();
+  readonly zones$: Observable<SecurityZoneList> = this.zonesSubject.asObservable();
   readonly connectionStatus$: Observable<RealtimeConnectionStatus> =
     this.connectionStatusSubject.asObservable();
 
@@ -80,6 +84,7 @@ export class SecurityRealtimeService {
       this.subscription = null;
       this.automaticLightingSubscription = null;
       this.areaInactivitySubscription = null;
+      this.zonesSubscription = null;
       this.connectionStatusSubject.next(client.active ? 'RECONNECTING' : 'DISCONNECTED');
     };
 
@@ -94,6 +99,8 @@ export class SecurityRealtimeService {
     this.automaticLightingSubscription = null;
     this.areaInactivitySubscription?.unsubscribe();
     this.areaInactivitySubscription = null;
+    this.zonesSubscription?.unsubscribe();
+    this.zonesSubscription = null;
 
     const client = this.client;
     this.client = null;
@@ -109,6 +116,7 @@ export class SecurityRealtimeService {
     this.subscription?.unsubscribe();
     this.automaticLightingSubscription?.unsubscribe();
     this.areaInactivitySubscription?.unsubscribe();
+    this.zonesSubscription?.unsubscribe();
     this.subscription = client.subscribe(API_ENDPOINTS.realtime.securityStatus, (message) =>
       this.processStatus(message),
     );
@@ -119,6 +127,9 @@ export class SecurityRealtimeService {
     this.areaInactivitySubscription = client.subscribe(
       API_ENDPOINTS.realtime.areaInactivity,
       (message) => this.processAreaInactivity(message),
+    );
+    this.zonesSubscription = client.subscribe(API_ENDPOINTS.realtime.securityZones, (message) =>
+      this.processZones(message),
     );
   }
 
@@ -143,6 +154,14 @@ export class SecurityRealtimeService {
       this.areaInactivitySubject.next(JSON.parse(message.body) as AreaInactivityStatus);
     } catch (error) {
       console.error('El estado de inactividad por área no contiene un JSON válido.', error);
+    }
+  }
+
+  private processZones(message: IMessage): void {
+    try {
+      this.zonesSubject.next(JSON.parse(message.body) as SecurityZoneList);
+    } catch (error) {
+      console.error('El estado de zonas recibido no contiene un JSON válido.', error);
     }
   }
 }

@@ -66,21 +66,22 @@ class HistoryRetentionServiceTests {
         assertThat(enabled.enabled()).isTrue();
         assertThat(enabled.candidates().events()).isEqualTo(1);
         assertThat(enabled.candidates().commands()).isEqualTo(1);
-        assertThat(enabled.candidates().securityTransitions()).isEqualTo(1);
+        assertThat(enabled.candidates().securityTransitions()).isEqualTo(2);
         assertThat(enabled.candidates().diagnostics()).isEqualTo(1);
         assertThat(enabled.candidates().revokedBypasses()).isEqualTo(1);
         assertThat(enabled.candidates().notifications()).isEqualTo(1);
-        assertThat(enabled.candidates().total()).isEqualTo(6);
+        assertThat(enabled.candidates().total()).isEqualTo(7);
 
         HistoryRetentionRunResponse result = service.runManually("admin");
 
-        assertThat(result.deleted().total()).isEqualTo(6);
+        assertThat(result.deleted().total()).isEqualTo(7);
         assertThat(result.executedBy()).isEqualTo("admin");
         assertThat(count("device_event_history")).isEqualTo(1);
         assertThat(count("alarm_acknowledgement")).isZero();
         assertThat(count("alarm_comment")).isZero();
         assertThat(count("device_command_history")).isEqualTo(1);
         assertThat(count("intrusion_alarm_history")).isEqualTo(1);
+        assertThat(count("security_zone_history")).isEqualTo(1);
         assertThat(count("sensor_diagnostic_session")).isEqualTo(2);
         assertThat(count("sensor_diagnostic_item")).isEqualTo(2);
         assertThat(count("sensor_bypass_history")).isEqualTo(2);
@@ -90,7 +91,7 @@ class HistoryRetentionServiceTests {
 
         HistoryRetentionResponse after = service.getPolicy();
         assertThat(after.candidates().total()).isZero();
-        assertThat(after.lastDeleted().total()).isEqualTo(6);
+        assertThat(after.lastDeleted().total()).isEqualTo(7);
         assertThat(after.lastRunAt())
                 .isEqualTo(Instant.parse("2026-08-14T18:00:00Z"));
         assertThat(after.lastRunBy()).isEqualTo("admin");
@@ -160,6 +161,12 @@ class HistoryRetentionServiceTests {
                 """);
         jdbcTemplate.execute("""
                 CREATE TABLE intrusion_alarm_history (
+                    id BIGINT PRIMARY KEY,
+                    changed_at TIMESTAMP WITH TIME ZONE NOT NULL
+                )
+                """);
+        jdbcTemplate.execute("""
+                CREATE TABLE security_zone_history (
                     id BIGINT PRIMARY KEY,
                     changed_at TIMESTAMP WITH TIME ZONE NOT NULL
                 )
@@ -245,6 +252,11 @@ class HistoryRetentionServiceTests {
                 INSERT INTO intrusion_alarm_history VALUES
                     (1, '2025-01-01T00:00:00Z'),
                     (2, '2026-08-01T00:00:00Z')
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO security_zone_history VALUES
+                    (1, '2025-01-02T00:00:00Z'),
+                    (2, '2026-08-02T00:00:00Z')
                 """);
         jdbcTemplate.update("""
                 INSERT INTO sensor_diagnostic_session VALUES

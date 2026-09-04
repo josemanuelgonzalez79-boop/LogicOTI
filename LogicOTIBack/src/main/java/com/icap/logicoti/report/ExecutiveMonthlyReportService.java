@@ -351,7 +351,15 @@ public class ExecutiveMonthlyReportService {
         return jdbcTemplate.query(
                 """
                 SELECT message, COUNT(*) AS total
-                FROM intrusion_alarm_history
+                FROM (
+                    SELECT current_mode, message, changed_at
+                    FROM intrusion_alarm_history
+
+                    UNION ALL
+
+                    SELECT current_mode, message, changed_at
+                    FROM security_zone_history
+                ) security_history
                 WHERE current_mode = 'REJECTED'
                   AND changed_at >= ?
                   AND changed_at < ?

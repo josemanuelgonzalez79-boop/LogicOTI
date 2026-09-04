@@ -4,6 +4,13 @@
 
 ### Incorporado
 
+- Armado independiente o conjunto de Planta Baja, Piso 1, Piso 2 y Patio/Exterior.
+- Encendido de iluminación por zona durante el armado y respuesta conjunta de todas las zonas
+  armadas cuando se detecta movimiento.
+- Reconocimiento de alarma sin desarmar las zonas y apagado exclusivo de las luces que fueron
+  encendidas por seguridad.
+- Protección de las luces bajo Seguridad frente al apagado automático por horario o inactividad.
+- Inventario provisional del patio, entrada exterior y los dos circuitos de la entrada interior.
 - Supervisión del edificio, control PLC y actualización por WebSocket.
 - Cámaras mediante MediaMTX, incluido enlace temporal desde alertas de movimiento.
 - PWA instalable con aviso de nueva versión.
@@ -25,6 +32,8 @@
 
 ### Pendiente para liberar
 
+- Confirmar con el eléctrico/programador PLC los tags de comando y retorno de los cuatro circuitos
+  nuevos; permanecen inactivos hasta completar esa validación.
 - Validación final en el servidor y teléfono.
 - Instalar el backend como servicio automático de Windows.
 - Pull Request de `desarrollo` hacia `main`.

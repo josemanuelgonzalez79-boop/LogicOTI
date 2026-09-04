@@ -1,6 +1,8 @@
 export type AlarmMode =
   'DISARMED' | 'ARMING' | 'ARMED' | 'ARMED_WITH_BYPASS' | 'REJECTED' | 'ALARM';
 
+export type SecurityAggregateMode = AlarmMode | 'PARTIALLY_ARMED';
+
 export interface SecurityStatus {
   mode: AlarmMode;
   armed: boolean;
@@ -41,6 +43,45 @@ export interface SecurityPrecheck {
 
 export interface SecurityActionResponse {
   status: SecurityStatus;
+  precheck: SecurityPrecheck | null;
+}
+
+export interface SecurityZoneStatus {
+  code: string;
+  name: string;
+  displayOrder: number;
+  motionDetectionEnabled: boolean;
+  motionSensorCount: number;
+  lightCircuitCount: number;
+  availableLightCircuitCount: number;
+  controlledLightCount: number;
+  mode: AlarmMode;
+  armed: boolean;
+  alarmActive: boolean;
+  message: string;
+  changedBy: string;
+  changeSource: 'MANUAL' | 'SCHEDULE' | 'SYSTEM';
+  changedAt: string;
+  armingCompletesAt: string | null;
+  alarmEventId: number | null;
+}
+
+export interface SecurityZoneList {
+  aggregateMode: SecurityAggregateMode;
+  message: string;
+  totalZones: number;
+  armedZones: number;
+  alarmZones: number;
+  zones: SecurityZoneStatus[];
+  timestamp: string;
+}
+
+export interface SecurityZoneSelectionRequest {
+  zoneCodes: string[];
+}
+
+export interface SecurityZoneActionResponse {
+  status: SecurityZoneList;
   precheck: SecurityPrecheck | null;
 }
 

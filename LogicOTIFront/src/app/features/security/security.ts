@@ -7,16 +7,18 @@ import { finalize, forkJoin, interval } from 'rxjs';
 
 import { UserRole } from '../../core/models/auth.model';
 import {
-  AlarmMode,
   AreaInactivityStatus,
   AutomaticLightingStatus,
   AutomaticLightingTarget,
-  SecurityActionResponse,
   SecurityPrecheck,
   SecurityScheduleDay,
   SecuritySettings,
   SecuritySettingsUpdateRequest,
   SecurityStatus,
+  SecurityAggregateMode,
+  SecurityZoneActionResponse,
+  SecurityZoneList,
+  SecurityZoneStatus,
 } from '../../core/models/security.model';
 import { AuthService } from '../../core/services/auth.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
@@ -53,6 +55,8 @@ export class Security implements OnInit, OnDestroy {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
   readonly status = signal<SecurityStatus | null>(null);
+  readonly zoneStatus = signal<SecurityZoneList | null>(null);
+  readonly selectedZoneCodes = signal<string[]>([]);
   readonly precheck = signal<SecurityPrecheck | null>(null);
   readonly settings = signal<SecuritySettings | null>(null);
   readonly automaticLightingStatus = signal<AutomaticLightingStatus | null>(null);
@@ -61,6 +65,23 @@ export class Security implements OnInit, OnDestroy {
   readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
   readonly currentTime = signal(Date.now());
   readonly pendingAction = signal<PendingAction | null>(null);
+  readonly acknowledgingZoneCode = signal<string | null>(null);
+  private zoneSelectionInitialized = false;
+
+  readonly zones = computed(() => this.zoneStatus()?.zones ?? []);
+  readonly selectedZones = computed(() => {
+    const selected = new Set(this.selectedZoneCodes());
+    return this.zones().filter((zone) => selected.has(zone.code));
+  });
+  readonly selectedZoneCount = computed(() => this.selectedZones().length);
+  readonly allZonesSelected = computed(
+    () => this.zones().length > 0 && this.selectedZoneCount() === this.zones().length,
+  );
+  readonly selectedZoneNames = computed(() =>
+    this.selectedZones()
+      .map((zone) => zone.name)
+      .join(', '),
+  );
 
   readonly selectedLightingTargets = computed(
     () => this.scheduleForm()?.automaticLightingTargetDeviceCodes.length ?? 0,
@@ -96,6 +117,10 @@ export class Security implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((status) => this.receiveStatus(status));
 
+    this.realtime.zones$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.receiveZoneStatus(status));
+
     this.realtime.automaticLighting$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((status) => this.automaticLightingStatus.set(status));
@@ -123,6 +148,7 @@ export class Security implements OnInit, OnDestroy {
 
     forkJoin({
       status: this.api.getStatus(),
+      zones: this.api.getZones(),
       precheck: this.api.getPrecheck(),
       settings: this.api.getSchedules(),
       automaticLighting: this.api.getAutomaticLightingStatus(),
@@ -130,8 +156,9 @@ export class Security implements OnInit, OnDestroy {
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ status, precheck, settings, automaticLighting, areaInactivity }) => {
+        next: ({ status, zones, precheck, settings, automaticLighting, areaInactivity }) => {
           this.status.set(status);
+          this.receiveZoneStatus(zones);
           this.precheck.set(precheck);
           this.applySettings(settings);
           this.automaticLightingStatus.set(automaticLighting);
@@ -145,11 +172,19 @@ export class Security implements OnInit, OnDestroy {
   }
 
   refreshPrecheck(): void {
+    const zoneCodes = this.selectedZoneCodes();
+
+    if (zoneCodes.length === 0) {
+      this.precheck.set(null);
+      this.errorMessage.set('Selecciona al menos una zona para ejecutar el precheck.');
+      return;
+    }
+
     this.refreshingPrecheck.set(true);
     this.clearMessages();
 
     this.api
-      .getPrecheck()
+      .getZonePrecheck(zoneCodes)
       .pipe(finalize(() => this.refreshingPrecheck.set(false)))
       .subscribe({
         next: (precheck) => this.precheck.set(precheck),
@@ -161,7 +196,12 @@ export class Security implements OnInit, OnDestroy {
   }
 
   requestAction(action: PendingAction): void {
-    if (!this.canOperate || this.executingAction()) {
+    if (
+      !this.canOperate ||
+      this.executingAction() ||
+      this.acknowledgingZoneCode() ||
+      this.selectedZoneCount() === 0
+    ) {
       return;
     }
 
@@ -185,12 +225,14 @@ export class Security implements OnInit, OnDestroy {
     this.executingAction.set(true);
     this.clearMessages();
 
-    const request = action === 'ARM' ? this.api.arm() : this.api.disarm();
+    const zoneCodes = this.selectedZoneCodes();
+    const request =
+      action === 'ARM' ? this.api.armZones(zoneCodes) : this.api.disarmZones(zoneCodes);
 
     request.pipe(finalize(() => this.executingAction.set(false))).subscribe({
       next: (response) => {
         this.pendingAction.set(null);
-        this.applyActionResponse(response, action);
+        this.applyZoneActionResponse(response, action);
       },
       error: (error: HttpErrorResponse) =>
         this.errorMessage.set(
@@ -202,6 +244,73 @@ export class Security implements OnInit, OnDestroy {
           ),
         ),
     });
+  }
+
+  updateZoneSelection(zoneCode: string, selected: boolean): void {
+    this.selectedZoneCodes.update((current) => {
+      const codes = new Set(current);
+
+      if (selected) {
+        codes.add(zoneCode);
+      } else {
+        codes.delete(zoneCode);
+      }
+
+      return this.zones()
+        .map((zone) => zone.code)
+        .filter((code) => codes.has(code));
+    });
+
+    this.refreshPrecheck();
+  }
+
+  selectAllZones(): void {
+    this.selectedZoneCodes.set(this.zones().map((zone) => zone.code));
+    this.refreshPrecheck();
+  }
+
+  clearZoneSelection(): void {
+    this.selectedZoneCodes.set([]);
+    this.precheck.set(null);
+    this.clearMessages();
+  }
+
+  isZoneSelected(zoneCode: string): boolean {
+    return this.selectedZoneCodes().includes(zoneCode);
+  }
+
+  zoneArmingRemainingSeconds(zone: SecurityZoneStatus): number {
+    this.currentTime();
+
+    return zone.armingCompletesAt
+      ? Math.max(0, Math.ceil((new Date(zone.armingCompletesAt).getTime() - Date.now()) / 1000))
+      : 0;
+  }
+
+  acknowledgeZone(zone: SecurityZoneStatus): void {
+    if (!zone.alarmActive || this.acknowledgingZoneCode() || this.executingAction()) {
+      return;
+    }
+
+    this.acknowledgingZoneCode.set(zone.code);
+    this.clearMessages();
+
+    this.api
+      .acknowledgeZone(zone.code)
+      .pipe(finalize(() => this.acknowledgingZoneCode.set(null)))
+      .subscribe({
+        next: (status) => {
+          this.receiveZoneStatus(status);
+          this.successMessage.set(
+            `La alarma de ${zone.name} fue reconocida. La zona permanece armada.`,
+          );
+          this.refreshAggregateStatus();
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, `No fue posible reconocer la alarma de ${zone.name}.`),
+          ),
+      });
   }
 
   updateAutomaticSchedule(enabled: boolean): void {
@@ -351,14 +460,15 @@ export class Security implements OnInit, OnDestroy {
     }
   }
 
-  modeLabel(mode: AlarmMode | undefined): string {
-    const labels: Record<AlarmMode, string> = {
+  modeLabel(mode: SecurityAggregateMode | undefined): string {
+    const labels: Record<SecurityAggregateMode, string> = {
       DISARMED: 'Desarmada',
       ARMING: 'Armándose',
       ARMED: 'Armada',
       ARMED_WITH_BYPASS: 'Armada con omisiones',
       REJECTED: 'Armado rechazado',
       ALARM: 'Alarma activa',
+      PARTIALLY_ARMED: 'Armado parcial',
     };
 
     return mode ? labels[mode] : 'Sin información';
@@ -401,6 +511,10 @@ export class Security implements OnInit, OnDestroy {
     return target.deviceId;
   }
 
+  trackZone(_: number, zone: SecurityZoneStatus): string {
+    return zone.code;
+  }
+
   private receiveStatus(status: SecurityStatus): void {
     this.status.set(status);
 
@@ -411,21 +525,49 @@ export class Security implements OnInit, OnDestroy {
     }
   }
 
-  private applyActionResponse(response: SecurityActionResponse, action: PendingAction): void {
-    this.status.set(response.status);
+  private receiveZoneStatus(status: SecurityZoneList): void {
+    this.zoneStatus.set(status);
+
+    const available = new Set(status.zones.map((zone) => zone.code));
+    const retained = this.selectedZoneCodes().filter((code) => available.has(code));
+
+    if (!this.zoneSelectionInitialized) {
+      this.selectedZoneCodes.set(status.zones.map((zone) => zone.code));
+      this.zoneSelectionInitialized = true;
+      return;
+    }
+
+    this.selectedZoneCodes.set(retained);
+  }
+
+  private applyZoneActionResponse(
+    response: SecurityZoneActionResponse,
+    action: PendingAction,
+  ): void {
+    this.receiveZoneStatus(response.status);
 
     if (response.precheck) {
       this.precheck.set(response.precheck);
     }
 
-    if (response.status.mode === 'REJECTED') {
-      this.errorMessage.set(response.status.message);
+    const selectedCodes = new Set(this.selectedZoneCodes());
+    const rejectedZones = response.status.zones.filter(
+      (zone) => selectedCodes.has(zone.code) && zone.mode === 'REJECTED',
+    );
+
+    if (response.precheck?.ready === false || rejectedZones.length > 0) {
+      this.errorMessage.set(
+        rejectedZones.length > 0
+          ? rejectedZones.map((zone) => zone.message).join(' ')
+          : 'No fue posible armar las zonas seleccionadas. Revisa los puntos del precheck.',
+      );
       return;
     }
 
     this.successMessage.set(
-      action === 'ARM' ? response.status.message : 'La alarma quedó desarmada correctamente.',
+      action === 'ARM' ? response.status.message : 'Las zonas seleccionadas quedaron desarmadas.',
     );
+    this.refreshAggregateStatus();
   }
 
   private applySettings(settings: SecuritySettings): void {
@@ -511,6 +653,13 @@ export class Security implements OnInit, OnDestroy {
   private refreshAreaInactivityStatus(): void {
     this.api.getAreaInactivityStatus().subscribe({
       next: (status) => this.areaInactivityStatus.set(status),
+      error: () => undefined,
+    });
+  }
+
+  private refreshAggregateStatus(): void {
+    this.api.getStatus().subscribe({
+      next: (status) => this.status.set(status),
       error: () => undefined,
     });
   }

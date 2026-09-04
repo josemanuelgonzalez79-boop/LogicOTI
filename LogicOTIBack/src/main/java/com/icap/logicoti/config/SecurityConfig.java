@@ -133,6 +133,8 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/security/arm",
                                 "/api/security/disarm",
+                                "/api/security/zones/arm",
+                                "/api/security/zones/disarm",
                                 "/api/sensor-diagnostics",
                                 "/api/sensor-diagnostics/*/cancel"
                         ).hasAnyRole(
@@ -145,6 +147,16 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/security/bypasses"
                         ).hasRole(ADMIN_ROLE)
+
+                        // El precheck por zonas no modifica el estado.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/security/zones/precheck"
+                        ).hasAnyRole(
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
+                        )
 
                         .requestMatchers(
                                 HttpMethod.DELETE,
@@ -172,7 +184,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/alarms/*/acknowledgement",
-                                "/api/alarms/*/comments"
+                                "/api/alarms/*/comments",
+                                "/api/security/zones/*/acknowledgement"
                         ).hasAnyRole(
                                 ADMIN_ROLE,
                                 OPERATOR_ROLE,

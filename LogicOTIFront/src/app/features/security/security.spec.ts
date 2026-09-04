@@ -5,10 +5,11 @@ import { BehaviorSubject, of, Subject } from 'rxjs';
 import {
   AreaInactivityStatus,
   AutomaticLightingStatus,
-  SecurityActionResponse,
   SecurityPrecheck,
   SecuritySettings,
   SecurityStatus,
+  SecurityZoneActionResponse,
+  SecurityZoneList,
 } from '../../core/models/security.model';
 import { AuthService } from '../../core/services/auth.service';
 import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
@@ -53,6 +54,46 @@ const precheck: SecurityPrecheck = {
   readableMotionSensors: 28,
   issues: [],
   timestamp: '2026-08-07T17:00:00Z',
+};
+
+const zoneStatus: SecurityZoneList = {
+  aggregateMode: 'DISARMED',
+  message: 'Todas las zonas se encuentran desarmadas.',
+  totalZones: 4,
+  armedZones: 0,
+  alarmZones: 0,
+  zones: ['PB', 'P1', 'P2', 'PATIO'].map((code, index) => ({
+    code,
+    name: code === 'PATIO' ? 'Patio y exterior' : code,
+    displayOrder: index + 1,
+    motionDetectionEnabled: code !== 'PATIO',
+    motionSensorCount: code === 'PATIO' ? 0 : 8,
+    lightCircuitCount: 2,
+    availableLightCircuitCount: 2,
+    controlledLightCount: 0,
+    mode: 'DISARMED',
+    armed: false,
+    alarmActive: false,
+    message: 'La zona se encuentra desarmada.',
+    changedBy: 'SYSTEM',
+    changeSource: 'SYSTEM',
+    changedAt: '2026-08-07T17:00:00Z',
+    armingCompletesAt: null,
+    alarmEventId: null,
+  })),
+  timestamp: '2026-08-07T17:00:00Z',
+};
+
+const armingZoneStatus: SecurityZoneList = {
+  ...zoneStatus,
+  aggregateMode: 'ARMING',
+  message: 'Una o más zonas están completando el tiempo de salida.',
+  zones: zoneStatus.zones.map((zone) => ({
+    ...zone,
+    mode: 'ARMING',
+    message: `${zone.name} se está armando.`,
+    armingCompletesAt: '2026-08-07T17:01:00Z',
+  })),
 };
 
 const settings: SecuritySettings = {
@@ -116,17 +157,22 @@ const areaInactivityStatus: AreaInactivityStatus = {
 
 class SecurityApiServiceMock {
   readonly getStatus = vi.fn(() => of(status));
+  readonly getZones = vi.fn(() => of(zoneStatus));
   readonly getPrecheck = vi.fn(() => of(precheck));
+  readonly getZonePrecheck = vi.fn(() => of(precheck));
   readonly getSchedules = vi.fn(() => of(settings));
   readonly getAutomaticLightingStatus = vi.fn(() => of(automaticLightingStatus));
   readonly getAreaInactivityStatus = vi.fn(() => of(areaInactivityStatus));
-  readonly arm = vi.fn(() =>
-    of<SecurityActionResponse>({
-      status: { ...status, mode: 'ARMING', message: 'La alarma se está armando.' },
+  readonly armZones = vi.fn(() =>
+    of<SecurityZoneActionResponse>({
+      status: armingZoneStatus,
       precheck,
     }),
   );
-  readonly disarm = vi.fn(() => of<SecurityActionResponse>({ status, precheck: null }));
+  readonly disarmZones = vi.fn(() =>
+    of<SecurityZoneActionResponse>({ status: zoneStatus, precheck: null }),
+  );
+  readonly acknowledgeZone = vi.fn(() => of(zoneStatus));
   readonly updateSchedules = vi.fn(() => of(settings));
 }
 
@@ -135,16 +181,22 @@ class SecurityRealtimeServiceMock {
   private readonly connectionSubject = new BehaviorSubject<RealtimeConnectionStatus>('CONNECTED');
   private readonly automaticLightingSubject = new Subject<AutomaticLightingStatus>();
   private readonly areaInactivitySubject = new Subject<AreaInactivityStatus>();
+  private readonly zonesSubject = new Subject<SecurityZoneList>();
 
   readonly status$ = this.statusSubject.asObservable();
   readonly connectionStatus$ = this.connectionSubject.asObservable();
   readonly automaticLighting$ = this.automaticLightingSubject.asObservable();
   readonly areaInactivity$ = this.areaInactivitySubject.asObservable();
+  readonly zones$ = this.zonesSubject.asObservable();
   readonly connect = vi.fn();
   readonly disconnect = vi.fn(async () => undefined);
 
   emit(value: SecurityStatus): void {
     this.statusSubject.next(value);
+  }
+
+  emitZones(value: SecurityZoneList): void {
+    this.zonesSubject.next(value);
   }
 }
 
@@ -194,6 +246,7 @@ describe('Security', () => {
     expect(fixture.componentInstance.precheck()?.ready).toBe(true);
     expect(fixture.componentInstance.scheduleForm()?.days).toHaveLength(7);
     expect(fixture.componentInstance.selectedLightingTargets()).toBe(1);
+    expect(fixture.componentInstance.selectedZoneCount()).toBe(4);
     fixture.destroy();
   });
 
@@ -207,8 +260,8 @@ describe('Security', () => {
     expect(component.pendingAction()).toBe('ARM');
 
     component.confirmAction();
-    expect(api.arm).toHaveBeenCalledTimes(1);
-    expect(component.status()?.mode).toBe('ARMING');
+    expect(api.armZones).toHaveBeenCalledWith(['PB', 'P1', 'P2', 'PATIO']);
+    expect(component.zoneStatus()?.aggregateMode).toBe('ARMING');
     fixture.destroy();
   });
 
@@ -247,6 +300,76 @@ describe('Security', () => {
     });
 
     expect(fixture.componentInstance.status()?.mode).toBe('ARMED');
+    fixture.destroy();
+  });
+
+  it('conserva una selección vacía cuando llega el estado por WebSocket', () => {
+    const fixture = TestBed.createComponent(Security);
+    const component = fixture.componentInstance;
+    const realtime = TestBed.inject(
+      SecurityRealtimeService,
+    ) as unknown as SecurityRealtimeServiceMock;
+    fixture.detectChanges();
+
+    component.clearZoneSelection();
+    realtime.emitZones(zoneStatus);
+
+    expect(component.selectedZoneCodes()).toEqual([]);
+    expect(component.selectedZoneCount()).toBe(0);
+    fixture.destroy();
+  });
+
+  it('reconoce una alarma de zona sin desarmarla', () => {
+    const alarmZone = {
+      ...zoneStatus.zones[0],
+      mode: 'ALARM' as const,
+      armed: true,
+      alarmActive: true,
+      alarmEventId: 24,
+    };
+    const fixture = TestBed.createComponent(Security);
+    const component = fixture.componentInstance;
+    const api = TestBed.inject(SecurityApiService) as unknown as SecurityApiServiceMock;
+    fixture.detectChanges();
+
+    component.acknowledgeZone(alarmZone);
+
+    expect(api.acknowledgeZone).toHaveBeenCalledWith('PB');
+    expect(component.successMessage()).toContain('permanece armada');
+    fixture.destroy();
+  });
+
+  it('muestra el rechazo de una zona aunque otra permanezca armada', () => {
+    const fixture = TestBed.createComponent(Security);
+    const component = fixture.componentInstance;
+    const api = TestBed.inject(SecurityApiService) as unknown as SecurityApiServiceMock;
+    fixture.detectChanges();
+
+    const rejectedStatus: SecurityZoneList = {
+      ...zoneStatus,
+      aggregateMode: 'PARTIALLY_ARMED',
+      armedZones: 1,
+      zones: zoneStatus.zones.map((zone) =>
+        zone.code === 'PB'
+          ? { ...zone, mode: 'REJECTED', message: 'Planta Baja tiene circuitos pendientes.' }
+          : zone.code === 'P1'
+            ? { ...zone, mode: 'ARMED', armed: true }
+            : zone,
+      ),
+    };
+    api.armZones.mockReturnValueOnce(
+      of({
+        status: rejectedStatus,
+        precheck: { ...precheck, ready: false },
+      }),
+    );
+    component.selectedZoneCodes.set(['PB']);
+
+    component.requestAction('ARM');
+    component.confirmAction();
+
+    expect(component.errorMessage()).toContain('circuitos pendientes');
+    expect(component.successMessage()).toBe('');
     fixture.destroy();
   });
 });

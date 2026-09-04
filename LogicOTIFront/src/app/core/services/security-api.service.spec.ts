@@ -9,6 +9,7 @@ import {
   SecuritySettings,
   SecuritySettingsUpdateRequest,
   SecurityStatus,
+  SecurityZoneList,
 } from '../models/security.model';
 import { SecurityApiService } from './security-api.service';
 
@@ -87,6 +88,16 @@ const areaInactivityStatus: AreaInactivityStatus = {
   timestamp: '2026-08-10T17:00:00Z',
 };
 
+const zoneStatus: SecurityZoneList = {
+  aggregateMode: 'PARTIALLY_ARMED',
+  message: '1 de 4 zonas están armadas.',
+  totalZones: 4,
+  armedZones: 1,
+  alarmZones: 0,
+  zones: [],
+  timestamp: '2026-08-10T17:00:00Z',
+};
+
 describe('SecurityApiService', () => {
   let service: SecurityApiService;
   let http: HttpTestingController;
@@ -132,6 +143,49 @@ describe('SecurityApiService', () => {
     const request = http.expectOne((item) => item.url.endsWith('/security/disarm'));
     expect(request.request.method).toBe('POST');
     request.flush({ status, precheck: null });
+  });
+
+  it('consulta el estado de las zonas', () => {
+    service.getZones().subscribe((response) => expect(response.totalZones).toBe(4));
+
+    const request = http.expectOne((item) => item.url.endsWith('/security/zones'));
+    expect(request.request.method).toBe('GET');
+    request.flush(zoneStatus);
+  });
+
+  it('envía las zonas seleccionadas al precheck', () => {
+    service.getZonePrecheck(['P1', 'PATIO']).subscribe((response) => {
+      expect(response.ready).toBe(true);
+    });
+
+    const request = http.expectOne((item) => item.url.endsWith('/security/zones/precheck'));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ zoneCodes: ['P1', 'PATIO'] });
+    request.flush(precheck);
+  });
+
+  it('arma solamente las zonas seleccionadas', () => {
+    service.armZones(['PB', 'P2']).subscribe((response) => {
+      expect(response.status.aggregateMode).toBe('PARTIALLY_ARMED');
+    });
+
+    const request = http.expectOne((item) => item.url.endsWith('/security/zones/arm'));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ zoneCodes: ['PB', 'P2'] });
+    request.flush({ status: zoneStatus, precheck });
+  });
+
+  it('reconoce la alarma de una zona', () => {
+    service.acknowledgeZone('PATIO').subscribe((response) => {
+      expect(response.alarmZones).toBe(0);
+    });
+
+    const request = http.expectOne((item) =>
+      item.url.endsWith('/security/zones/PATIO/acknowledgement'),
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush(zoneStatus);
   });
 
   it('consulta los horarios', () => {
