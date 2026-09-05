@@ -91,10 +91,8 @@ public class SensorEventHistoryQueryService {
         String dataQuery = HISTORY_COLUMNS
                 + HISTORY_FROM
                 + filter.whereClause()
-                + """
-                ORDER BY history.detected_at DESC, history.id DESC
-                LIMIT ? OFFSET ?
-                """;
+                + "\nORDER BY history.detected_at DESC, history.id DESC"
+                + "\nLIMIT ? OFFSET ?";
 
         List<Object> dataParameters =
                 new ArrayList<>(

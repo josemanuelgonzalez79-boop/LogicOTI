@@ -185,10 +185,8 @@ public class DeviceCommandHistoryService {
         String dataQuery = HISTORY_COLUMNS
                 + HISTORY_FROM
                 + filter.whereClause()
-                + """
-                 ORDER BY history.requested_at DESC, history.id DESC
-                 LIMIT ? OFFSET ?
-                """;
+                + "\nORDER BY history.requested_at DESC, history.id DESC"
+                + "\nLIMIT ? OFFSET ?";
 
         List<Object> dataParameters =
                 new ArrayList<>(
