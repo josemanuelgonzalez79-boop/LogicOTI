@@ -30,6 +30,8 @@ public class WebSocketAuthenticationInterceptor
             "/topic/alerts/attention";
     private static final String SECURITY_STATUS_TOPIC =
             "/topic/security/status";
+    private static final String SECURITY_ZONES_TOPIC =
+            "/topic/security/zones";
     private static final String SECURITY_WARNING_TOPIC =
             "/topic/security/warnings";
     private static final String SECURITY_MOTION_ALERT_TOPIC =
@@ -165,6 +167,9 @@ public class WebSocketAuthenticationInterceptor
                 boolean allowedSecurityStatusTopic =
                         SECURITY_STATUS_TOPIC.equals(destination);
 
+                boolean allowedSecurityZonesTopic =
+                        SECURITY_ZONES_TOPIC.equals(destination);
+
                 boolean allowedSecurityWarningTopic =
                         SECURITY_WARNING_TOPIC.equals(destination);
 
@@ -187,6 +192,7 @@ public class WebSocketAuthenticationInterceptor
                         && !allowedSmokeAlertTopic
                         && !allowedAlarmAttentionTopic
                         && !allowedSecurityStatusTopic
+                        && !allowedSecurityZonesTopic
                         && !allowedSecurityWarningTopic
                         && !allowedSecurityMotionAlertTopic
                         && !allowedAutomaticLightingTopic

@@ -43,6 +43,16 @@ class WebSocketAuthenticationInterceptorTests {
     }
 
     @Test
+    void permitsSecurityZoneSubscriptions() {
+        Message<byte[]> message = subscription(
+                "/topic/security/zones"
+        );
+
+        assertThat(interceptor.preSend(message, channel))
+                .isSameAs(message);
+    }
+
+    @Test
     void continuesRejectingUnknownTopics() {
         Message<byte[]> message = subscription(
                 "/topic/alerts/not-allowed"

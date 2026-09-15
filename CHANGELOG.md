@@ -10,7 +10,9 @@
 - Reconocimiento de alarma sin desarmar las zonas y apagado exclusivo de las luces que fueron
   encendidas por seguridad.
 - Protección de las luces bajo Seguridad frente al apagado automático por horario o inactividad.
-- Inventario provisional del patio, entrada exterior y los dos circuitos de la entrada interior.
+- Inventario y activación de los circuitos del patio, entrada exterior y los dos circuitos de la
+  entrada interior, con tags de comando y retroalimentación confirmados en el PLC.
+- Suscripción WebSocket de las zonas de seguridad autorizada y validada.
 - Supervisión del edificio, control PLC y actualización por WebSocket.
 - Cámaras mediante MediaMTX, incluido enlace temporal desde alertas de movimiento.
 - PWA instalable con aviso de nueva versión.
@@ -32,8 +34,6 @@
 
 ### Pendiente para liberar
 
-- Confirmar con el eléctrico/programador PLC los tags de comando y retorno de los cuatro circuitos
-  nuevos; permanecen inactivos hasta completar esa validación.
 - Validación final en el servidor y teléfono.
 - Instalar el backend como servicio automático de Windows.
 - Pull Request de `desarrollo` hacia `main`.
