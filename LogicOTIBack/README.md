@@ -76,11 +76,31 @@ registra logs rotativos y reinicia Java ante fallos.
 
 ## Seguridad por zonas y circuitos pendientes
 
-Las zonas `PB`, `P1`, `P2` y `PATIO` pueden armarse individualmente o en conjunto. Al completar el
-armado se encienden las luces de las zonas elegidas. Un movimiento en cualquier zona armada activa
-la alarma de esa zona y ordena encender la iluminación de todas las zonas que estén armadas. El
+Las zonas `PB`, `P1`, `P2` y `PATIO` pueden armarse individualmente o en conjunto. El armado no
+enciende luces. Un movimiento en cualquier zona armada activa la alarma de esa zona y ordena
+encender solo los circuitos seleccionados en **Encendido automático por movimiento** que pertenezcan
+a las zonas armadas. La selección se usa a cualquier hora para alarmas; el interruptor y horario de
+la automatización habitual solo controlan el movimiento en zonas desarmadas. El
 reconocimiento conserva las zonas armadas y apaga únicamente luces que el módulo de seguridad
 encendió; una luz que ya estaba encendida manualmente no se toma bajo su control.
+
+Con varias alarmas simultáneas, las luces permanecen encendidas hasta reconocerlas todas o desarmar
+la zona correspondiente. Sin luces seleccionadas se puede armar, con aviso de que no habrá iluminación
+por alarma. Los contadores de circuitos en Seguridad muestran la selección configurada.
+
+### Pruebas de sensores
+
+Iniciar un diagnóstico exige que todos los sensores seleccionados estén en reposo. Se aprueba cada
+uno tras observar reposo → activación → reposo; activar el sensor no termina la prueba. Durante ese
+intervalo solo esos sensores generan `TEST_ACTIVATED` / `TEST_CLEARED` informativos, sin avisos Web Push,
+alarmas de humo/intrusión ni acciones automáticas por movimiento. El historial permite filtrarlos.
+
+La vigilancia normal vuelve por sensor al aprobar, cancelar o vencer el diagnóstico. Si queda activo
+al cancelar/vencer, la siguiente lectura válida lo trata como alarma real aunque no haya cambiado el
+BOOL. El estado persiste ante reinicios. Esta función no modifica sirenas ni protecciones físicas del PLC.
+
+El backend aplica `V28__classify_sensor_diagnostic_events.sql` al actualizar. Debe actualizarse también
+el frontend. Para validar la instalación véase [la guía de comprobación](../VALIDACION_DIAGNOSTICOS_Y_ZONAS.md).
 
 La migración `V26__create_zoned_intrusion_security.sql` incorpora cuatro circuitos nuevos:
 

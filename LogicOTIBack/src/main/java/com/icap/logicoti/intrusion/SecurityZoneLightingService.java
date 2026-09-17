@@ -38,6 +38,8 @@ public class SecurityZoneLightingService {
                 ON area.id = zone_area.area_id
             INNER JOIN building_device device
                 ON device.area_id = area.id
+            INNER JOIN security_automatic_lighting_target target
+                ON target.device_id = device.id
             WHERE zone.active = TRUE
               AND area.active = TRUE
               AND device.active = TRUE

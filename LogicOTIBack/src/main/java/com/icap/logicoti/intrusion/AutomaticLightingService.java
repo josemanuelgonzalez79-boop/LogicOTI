@@ -102,7 +102,7 @@ public class AutomaticLightingService {
                 }
 
                 List<AutomaticLightingRuntimeService.LightingDevice> targets =
-                        runtimeService.findTargets();
+                        runtimeService.findUnarmedTargets();
 
                 if (targets.isEmpty()) {
                 return;
@@ -153,7 +153,8 @@ public class AutomaticLightingService {
                 return false;
         }
 
-        return !isSensorBypassed(sensorCode);
+        return !isSensorBypassed(sensorCode)
+                && !runtimeService.isSecurityManagedSensor(sensorCode);
     }
 
         private boolean isAutomaticLightingActive(

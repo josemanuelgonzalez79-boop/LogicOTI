@@ -24,7 +24,7 @@ public class SensorEventHistoryController {
             Set.of("MOTION", "SMOKE");
 
     private static final Set<String> EVENT_TYPES =
-            Set.of("ACTIVATED", "CLEARED");
+            Set.of("ACTIVATED", "CLEARED", "TEST_ACTIVATED", "TEST_CLEARED");
 
     private static final Set<String> SEVERITIES =
             Set.of("INFO", "WARNING", "CRITICAL");

@@ -1,7 +1,7 @@
 export type CommandStatus = 'PENDING' | 'CONFIRMED' | 'NOT_CONFIRMED' | 'FAILED' | 'REJECTED';
 
 export type SensorDeviceType = 'MOTION' | 'SMOKE';
-export type SensorEventType = 'ACTIVATED' | 'CLEARED';
+export type SensorEventType = 'ACTIVATED' | 'CLEARED' | 'TEST_ACTIVATED' | 'TEST_CLEARED';
 export type SensorEventSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 
 export interface HistoryPage<T> {

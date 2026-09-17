@@ -143,8 +143,9 @@
         <span class="section-eyebrow">Armado independiente</span>
         <h2>Zonas de seguridad</h2>
         <p>
-          Selecciona una, varias o todas las zonas. Al armarse, sus luces permanecerán encendidas
-          hasta desarmarlas o reconocer una alarma.
+          Selecciona una, varias o todas las zonas. Armar no enciende las luces. Cuando se detecte
+          movimiento en una zona armada, se encenderán solo las luces seleccionadas en
+          Encendido automático por movimiento que pertenezcan a las zonas armadas.
         </p>
       </div>
 
@@ -229,7 +230,7 @@
               <dd>{{ zone.motionSensorCount }}</dd>
             </div>
             <div>
-              <dt>Circuitos listos</dt>
+              <dt>Seleccionados listos</dt>
               <dd>{{ zone.availableLightCircuitCount }}/{{ zone.lightCircuitCount }}</dd>
             </div>
             <div>
@@ -249,6 +250,13 @@
             <div class="zone-card__notice zone-card__notice--warning">
               <i class="pi pi-exclamation-triangle"></i>
               Tiene circuitos pendientes de validación con el PLC.
+            </div>
+          }
+
+          @if (zone.lightCircuitCount === 0) {
+            <div class="zone-card__notice">
+              <i class="pi pi-lightbulb"></i>
+              Sin luces seleccionadas; esta zona no encenderá iluminación por alarma.
             </div>
           }
 
@@ -520,9 +528,10 @@
             <span class="section-eyebrow">Iluminación de áreas comunes</span>
             <h3>Encendido automático por movimiento</h3>
             <p>
-              Durante el horario configurado, cualquier sensor de movimiento incluido en el sistema
-              puede encender las luces seleccionadas. Se apagarán después del tiempo sin actividad
-              indicado abajo.
+              En zonas desarmadas, esta automatización usa el horario y el tiempo sin actividad
+              indicados abajo. En zonas armadas, la misma selección de luces se usa al detectar una
+              alarma de movimiento, a cualquier hora. Las luces encendidas por seguridad se apagan
+              al reconocer todas las alarmas activas o al desarmar su zona.
             </p>
           </div>
 
@@ -545,8 +554,8 @@
             />
             <span class="switch-control__track"><span></span></span>
             <span>
-              <strong>Automatización habilitada</strong>
-              <small>Funciona aunque la alarma de intrusión esté desarmada.</small>
+              <strong>Encendido por horario habilitado</strong>
+              <small>Aplica a zonas desarmadas. La selección también se usa en alarmas de zonas armadas.</small>
             </span>
           </label>
 
@@ -938,7 +947,7 @@
           @if (action === 'ARM') {
             El sistema revisará el PLC, los sensores y los circuitos de iluminación antes de armar
             <strong>{{ selectedZoneNames() }}</strong
-            >. Al terminar el tiempo de salida encenderá sus luces.
+            >. Al terminar el tiempo de salida quedarán armadas sin encender luces.
           } @else {
             Se desarmarán <strong>{{ selectedZoneNames() }}</strong> y se apagarán únicamente las
             luces que la seguridad haya encendido.

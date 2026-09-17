@@ -101,6 +101,10 @@ public class SecurityPrecheckService {
             LEFT JOIN building_device device
                 ON device.area_id = area.id
                AND device.device_type = 'LIGHT'
+               AND EXISTS (
+                   SELECT 1 FROM security_automatic_lighting_target target
+                   WHERE target.device_id = device.id
+               )
             WHERE zone.active = TRUE
               AND zone.code IN (%s)
             ORDER BY zone.display_order, area.display_order, device.display_order
@@ -475,11 +479,12 @@ public class SecurityPrecheckService {
 
             if (zoneLights.isEmpty()) {
                 issues.add(systemIssue(
-                        "ZONE_WITHOUT_LIGHTS",
-                        ERROR,
-                        true,
+                        "ZONE_WITHOUT_SELECTED_LIGHTS",
+                        "WARNING",
+                        false,
                         "La zona " + zone.name()
-                                + " no tiene circuitos de iluminación configurados."
+                                + " no tiene luces seleccionadas en Encendido automático por movimiento; "
+                                + "se armará sin encender luces cuando haya alarma."
                 ));
                 continue;
             }

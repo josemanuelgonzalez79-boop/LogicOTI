@@ -281,7 +281,13 @@ export class History implements OnInit {
   }
 
   eventTypeLabel(eventType: SensorEventType): string {
-    return eventType === 'ACTIVATED' ? 'Activado' : 'Restablecido';
+    const labels: Record<SensorEventType, string> = {
+      ACTIVATED: 'Activado',
+      CLEARED: 'Restablecido',
+      TEST_ACTIVATED: 'Diagnóstico: activado',
+      TEST_CLEARED: 'Diagnóstico: restablecido',
+    };
+    return labels[eventType];
   }
 
   deviceTypeLabel(deviceType: SensorDeviceType): string {

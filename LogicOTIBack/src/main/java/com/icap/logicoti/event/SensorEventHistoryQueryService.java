@@ -150,6 +150,7 @@ public class SensorEventHistoryQueryService {
                 LEFT JOIN alarm_acknowledgement acknowledgement
                     ON acknowledgement.event_id = history.id
                 WHERE history.current_state = TRUE
+                  AND history.event_type = 'ACTIVATED'
                 ORDER BY history.detected_at DESC, history.id DESC
                 """;
 
