@@ -41,7 +41,9 @@ public class SensorEventHistoryService {
     private static final String LATEST_STATES_QUERY = """
             SELECT DISTINCT ON (device_id)
                 device_id,
-                current_state
+                current_state,
+                detected_at,
+                id
             FROM device_event_history
             ORDER BY
                 device_id,
@@ -118,7 +120,7 @@ public class SensorEventHistoryService {
         return new HashSet<>(jdbcTemplate.query("""
                 SELECT latest.device_id
                 FROM (
-                    SELECT DISTINCT ON (device_id) device_id, event_type
+                    SELECT DISTINCT ON (device_id) device_id, event_type, detected_at, id
                     FROM device_event_history
                     ORDER BY device_id, detected_at DESC, id DESC
                 ) latest
