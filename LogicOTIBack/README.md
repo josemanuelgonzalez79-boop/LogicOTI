@@ -74,7 +74,7 @@ Para instalar o actualizar el backend como servicio automático de Windows se in
 WinSW en [`deployment/windows`](deployment/windows). El servicio usa una copia local de `.env`,
 registra logs rotativos y reinicia Java ante fallos.
 
-## Seguridad por zonas y circuitos pendientes
+## Seguridad por zonas y circuitos exteriores
 
 Las zonas `PB`, `P1`, `P2` y `PATIO` pueden armarse individualmente o en conjunto. El armado no
 enciende luces. Un movimiento en cualquier zona armada activa la alarma de esa zona y ordena
@@ -111,19 +111,12 @@ La migración `V26__create_zoned_intrusion_security.sql` incorpora cuatro circui
 | `PB_A06_LUZ01` | Entrada interior, circuito A | Inactivo |
 | `PB_A06_LUZ02` | Entrada interior, circuito B | Inactivo |
 
-Los tags incluidos son nombres provisionales. No se debe cambiar `active` a `TRUE` hasta que el
-eléctrico o programador PLC confirme para cada circuito el cableado, el tag BOOL de comando y el tag
-BOOL de retorno. Una vez confirmados, el administrador actualiza cada dispositivo en PostgreSQL:
+La migración V27 activa esos cuatro circuitos con los tags BOOL de comando y retorno confirmados
+por el responsable del PLC. En una instalación ya actualizada no hay que volver a crear los tags ni
+activar manualmente los circuitos. Si cambia el cableado o la nomenclatura del PLC, se debe actualizar
+el catálogo para que el comando y el retorno correspondan al mismo circuito físico.
 
-```sql
-UPDATE building_device
-SET plc_command_tag = '<TAG_CMD_REAL>',
-    plc_state_tag = '<TAG_FB_REAL>',
-    active = TRUE
-WHERE code = '<CODIGO_DEL_CIRCUITO>';
-```
-
-Después se reinicia el backend y se ejecuta el precheck de la zona correspondiente. Mientras un
-circuito permanezca pendiente, el sistema mostrará `ZONE_LIGHT_PENDING` y no permitirá armar esa
-zona. El patio no necesita sensores de movimiento: participa como iluminación de respuesta, pero no
+La revisión de armado valida los circuitos **seleccionados**. Si uno de esos circuitos está pendiente,
+mostrará `ZONE_LIGHT_PENDING`; un circuito no seleccionado no impide armar. El patio no necesita
+sensores de movimiento: participa como iluminación de respuesta de las zonas armadas, pero no
 origina alarmas de movimiento.

@@ -4,6 +4,10 @@ Cambios preparados sobre `desarrollo` en `c715bfc`, conservando las correcciones
 WebSocket, tags exteriores y SonarQube. Estas comprobaciones de instalación complementan las pruebas
 automáticas; requieren acceso al PLC/Echo y a la aplicación instalada.
 
+Validación de software: 70 pruebas del backend, 73 del frontend y ambos builds aprobados en
+[GitHub Actions](https://github.com/josemanuelgonzalez79-boop/LogicOTI/actions/runs/35281715026).
+La comprobación física y la actualización del servidor siguen pendientes.
+
 ## Actualización
 
 1. Actualizar backend y frontend juntos. Al arrancar, Flyway aplica V28; no editar migraciones anteriores.
