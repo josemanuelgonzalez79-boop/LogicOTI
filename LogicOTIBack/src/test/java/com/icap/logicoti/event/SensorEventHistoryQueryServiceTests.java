@@ -73,6 +73,22 @@ class SensorEventHistoryQueryServiceTests {
         assertThat(event.commentCount()).isEqualTo(2);
     }
 
+    @Test
+    void latestDiagnosticActivationIsVisibleInHistoryButNotInActiveSmokeAlarms() {
+        jdbcTemplate.update("""
+                INSERT INTO device_event_history
+                SELECT 71, device_id, device_code, area_code, device_type, plc_state_tag,
+                    FALSE, TRUE, 'TEST_ACTIVATED', 'INFO', 'Diagnóstico',
+                    detected_at + INTERVAL '1' SECOND
+                FROM device_event_history WHERE id = 70
+                """);
+
+        assertThat(service.findActiveSmokeAlarms()).isEmpty();
+        SensorEventHistoryService history = new SensorEventHistoryService(jdbcTemplate);
+        assertThat(history.findLatestStates()).containsEntry(7L, true);
+        assertThat(history.findLatestDiagnosticDeviceIds()).containsExactly(7L);
+    }
+
     private void createSchema() {
         jdbcTemplate.execute("""
                 CREATE TABLE building_area (

@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class SensorEventHistoryService {
@@ -39,7 +41,9 @@ public class SensorEventHistoryService {
     private static final String LATEST_STATES_QUERY = """
             SELECT DISTINCT ON (device_id)
                 device_id,
-                current_state
+                current_state,
+                detected_at,
+                id
             FROM device_event_history
             ORDER BY
                 device_id,
@@ -111,22 +115,53 @@ public class SensorEventHistoryService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Set<Long> findLatestDiagnosticDeviceIds() {
+        return new HashSet<>(jdbcTemplate.query("""
+                SELECT latest.device_id
+                FROM (
+                    SELECT DISTINCT ON (device_id) device_id, event_type, detected_at, id
+                    FROM device_event_history
+                    ORDER BY device_id, detected_at DESC, id DESC
+                ) latest
+                WHERE latest.event_type IN ('TEST_ACTIVATED', 'TEST_CLEARED')
+                """, (resultSet, rowNumber) -> resultSet.getLong("device_id")));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public SensorEventHistoryResponse saveDiagnosticChange(
+            SensorDefinition sensor,
+            Boolean previousState,
+            boolean currentState
+    ) {
+        return saveEvent(sensor, previousState, currentState, true);
+    }
+
         @Transactional(propagation = Propagation.REQUIRES_NEW)
                 public SensorEventHistoryResponse saveChange(
                         SensorDefinition sensor,
                         Boolean previousState,
                         boolean currentState
                 ) {
-                String eventType = currentState
-                        ? "ACTIVATED"
-                        : "CLEARED";
+                return saveEvent(sensor, previousState, currentState, false);
+        }
 
-                String severity = determineSeverity(
+    private SensorEventHistoryResponse saveEvent(
+            SensorDefinition sensor, Boolean previousState,
+            boolean currentState, boolean diagnostic
+    ) {
+                String eventType = (diagnostic ? "TEST_" : "")
+                        + (currentState ? "ACTIVATED" : "CLEARED");
+
+                String severity = diagnostic ? "INFO" : determineSeverity(
                         sensor.type(),
                         currentState
                 );
 
-                String message = createMessage(
+                String message = diagnostic
+                        ? "Diagnóstico: " + sensor.name()
+                            + (currentState ? " activado en prueba." : " restablecido en prueba.")
+                        : createMessage(
                         sensor,
                         currentState
                 );

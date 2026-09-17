@@ -1,6 +1,7 @@
 package com.icap.logicoti.event;
 
 import com.icap.logicoti.config.PlcProperties;
+import com.icap.logicoti.diagnostic.SensorDiagnosticService;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
 import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.intrusion.AreaInactivityService;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +42,8 @@ public class SensorEventMonitor {
     private final AreaInactivityService areaInactivityService;
     private final WebPushSubscriptionService webPushSubscriptionService;
     private final SignalQualityRegistry signalQualityRegistry;
+    private final SensorDiagnosticService diagnosticService;
+    private final Set<Long> diagnosticStates = ConcurrentHashMap.newKeySet();
 
     private final ConcurrentMap<Long, Boolean> lastStates =
             new ConcurrentHashMap<>();
@@ -62,6 +66,7 @@ public class SensorEventMonitor {
             AreaInactivityService areaInactivityService,
             WebPushSubscriptionService webPushSubscriptionService,
             SignalQualityRegistry signalQualityRegistry,
+            SensorDiagnosticService diagnosticService,
 
             @Value("${sensor.monitor.enabled:true}")
             boolean enabled
@@ -75,6 +80,7 @@ public class SensorEventMonitor {
         this.areaInactivityService = areaInactivityService;
         this.webPushSubscriptionService = webPushSubscriptionService;
         this.signalQualityRegistry = signalQualityRegistry;
+        this.diagnosticService = diagnosticService;
         this.enabled = enabled;
     }
 
@@ -100,15 +106,18 @@ public class SensorEventMonitor {
                         return;
                         }
 
+                        Instant sampledAt = Instant.now();
                         Map<Long, Boolean> currentStates =
                                 readSensorStatesWithQualityTracking(
                                         sensors
                                 );
+                        Set<Long> testingSensors = findTestingSensors(sampledAt);
 
                         sensors.forEach(sensor ->
                                 processState(
                                         sensor,
-                                        currentStates.get(sensor.id())
+                                        currentStates.get(sensor.id()),
+                                        testingSensors.contains(sensor.id())
                                 )
                         );
 
@@ -119,6 +128,16 @@ public class SensorEventMonitor {
                         );
                 }
         }
+
+    private Set<Long> findTestingSensors(Instant sampledAt) {
+        try {
+            return diagnosticService.findTestingSensorIds(sampledAt);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("No se pudo comprobar el diagnóstico; se mantiene la vigilancia normal: {}",
+                    exception.getMessage());
+            return Set.of();
+        }
+    }
 
         private Map<Long, Boolean> readSensorStatesWithQualityTracking(
         List<SensorDefinition> sensors
@@ -149,6 +168,7 @@ public class SensorEventMonitor {
         lastStates.putAll(
                 historyService.findLatestStates()
         );
+        diagnosticStates.addAll(historyService.findLatestDiagnosticDeviceIds());
 
         historyLoaded = true;
 
@@ -260,9 +280,10 @@ public class SensorEventMonitor {
         });
     }
 
-    private void processState(
+    void processState(
             SensorDefinition sensor,
-            Boolean currentState
+            Boolean currentState,
+            boolean testing
     ) {
         if (currentState == null) {
             return;
@@ -280,10 +301,11 @@ public class SensorEventMonitor {
         if (previousState == null) {
 
             if (currentState) {
-                saveChange(
+                recordChange(
                         sensor,
                         null,
-                        true
+                        true,
+                        testing
                 );
             }
 
@@ -296,7 +318,14 @@ public class SensorEventMonitor {
         }
 
         if (previousState.equals(currentState)) {
+            if (currentState && diagnosticStates.contains(sensor.id()) && !testing) {
+                // Una prueba cancelada/vencida no puede ocultar un sensor que
+                // sigue activo. Es la primera observación en vigilancia normal.
+                recordChange(sensor, null, true, false);
+                return;
+            }
             if (currentState
+                    && !testing
                     && "MOTION".equalsIgnoreCase(sensor.type())) {
                 automaticLightingService.refreshActiveMotion(
                         sensor.code()
@@ -309,16 +338,30 @@ public class SensorEventMonitor {
             return;
         }
 
-        saveChange(
+        recordChange(
                 sensor,
                 previousState,
-                currentState
+                currentState,
+                currentState ? testing : diagnosticStates.contains(sensor.id())
         );
 
         lastStates.put(
                 sensor.id(),
                 currentState
         );
+    }
+
+    private void recordChange(
+            SensorDefinition sensor, Boolean previousState,
+            boolean currentState, boolean diagnostic
+    ) {
+        if (diagnostic) {
+            historyService.saveDiagnosticChange(sensor, previousState, currentState);
+            diagnosticStates.add(sensor.id());
+            return;
+        }
+        saveChange(sensor, previousState, currentState);
+        diagnosticStates.remove(sensor.id());
     }
 
     private void saveChange(

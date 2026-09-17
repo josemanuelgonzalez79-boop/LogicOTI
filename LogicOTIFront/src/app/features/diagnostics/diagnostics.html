@@ -165,8 +165,15 @@
             </div>
 
             <p>
-              Activa y restablece cada sensor. La prueba se aprobará cuando ambos estados hayan sido
-              detectados.
+              Activa y restablece cada sensor. La prueba se aprobará al completar el ciclo
+              reposo → activación → reposo. Mientras su prueba esté en curso, las activaciones de
+              los sensores seleccionados se registran como diagnóstico, sin alarmas ni avisos de
+              LogicOTI. Los demás sensores siguen vigilados.
+            </p>
+            <p>
+              Al aprobar, cancelar o vencer la prueba se reanuda la vigilancia normal. Si el sensor
+              sigue activo al cancelar o vencer, generará una alarma. Esto no desactiva sirenas
+              ni protecciones conectadas directamente al PLC.
             </p>
 
             <div class="diagnostic-sensors">
@@ -178,15 +185,15 @@
                   </div>
                   <span
                     class="test-state"
-                    [class.test-state--complete]="sensor.sawInactive && sensor.sawActive"
-                    [class.test-state--partial]="sensor.sawInactive !== sensor.sawActive"
+                    [class.test-state--complete]="sensor.status === 'PASSED'"
+                    [class.test-state--partial]="sensor.status === 'RUNNING' && sensor.sawActive"
                   >
-                    @if (sensor.sawInactive && sensor.sawActive) {
+                    @if (sensor.status === 'PASSED') {
                       <i class="pi pi-check"></i> Comprobado
-                    } @else if (sensor.sawInactive || sensor.sawActive) {
-                      <i class="pi pi-clock"></i> Falta un estado
+                    } @else if (sensor.sawActive) {
+                      <i class="pi pi-clock"></i> Esperando restablecimiento
                     } @else {
-                      <i class="pi pi-circle"></i> Sin actividad
+                      <i class="pi pi-circle"></i> Esperando activación
                     }
                   </span>
                 </div>

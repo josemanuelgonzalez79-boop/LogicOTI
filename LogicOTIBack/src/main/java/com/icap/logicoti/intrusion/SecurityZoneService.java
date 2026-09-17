@@ -62,6 +62,8 @@ public class SecurityZoneService {
                         ON light_area.id = light_zone_area.area_id
                     INNER JOIN building_device light
                         ON light.area_id = light_area.id
+                    INNER JOIN security_automatic_lighting_target target
+                        ON target.device_id = light.id
                     WHERE light_zone_area.zone_code = zone.code
                       AND light_area.active = TRUE
                       AND light.device_type = 'LIGHT'
@@ -73,6 +75,8 @@ public class SecurityZoneService {
                         ON ready_area.id = ready_zone_area.area_id
                     INNER JOIN building_device ready_light
                         ON ready_light.area_id = ready_area.id
+                    INNER JOIN security_automatic_lighting_target ready_target
+                        ON ready_target.device_id = ready_light.id
                     WHERE ready_zone_area.zone_code = zone.code
                       AND ready_area.active = TRUE
                       AND ready_light.active = TRUE
@@ -377,33 +381,6 @@ public class SecurityZoneService {
                 continue;
             }
 
-            SecurityZoneLightingService.LightingActionResult lights =
-                    lightingService.turnOnZones(
-                            List.of(zone.code()),
-                            "ARMING",
-                            null
-                    );
-
-            if (!lights.successful()) {
-                lightingService.turnOffOwnedZones(
-                        List.of(zone.code())
-                );
-                transition(
-                        zone,
-                        AlarmMode.REJECTED,
-                        "El armado de " + zone.name()
-                                + " fue rechazado porque la iluminación no confirmó el encendido; "
-                                + "se intentó revertir las luces activadas.",
-                        zone.changedBy(),
-                        zone.changeSource(),
-                        null,
-                        zone.automaticTransitionKey(),
-                        null,
-                        null
-                );
-                continue;
-            }
-
             AlarmMode armedMode = determineArmedMode(zone.code());
             transition(
                     zone,
@@ -489,33 +466,6 @@ public class SecurityZoneService {
             }
 
             if (exitDelay == 0) {
-                SecurityZoneLightingService.LightingActionResult lights =
-                        lightingService.turnOnZones(
-                                List.of(zoneCode),
-                                "ARMING",
-                                null
-                        );
-
-                if (!lights.successful()) {
-                    lightingService.turnOffOwnedZones(
-                            List.of(zoneCode)
-                    );
-                    transition(
-                            state,
-                            AlarmMode.REJECTED,
-                            "No se pudo armar " + state.name()
-                                    + " porque la iluminación no confirmó el encendido; "
-                                    + "se intentó revertir las luces activadas.",
-                            username,
-                            source,
-                            null,
-                            transitionKey,
-                            null,
-                            null
-                    );
-                    continue;
-                }
-
                 AlarmMode armedMode = determineArmedMode(zoneCode);
                 transition(
                         state,

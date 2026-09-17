@@ -16,12 +16,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.any;
 
 class SecurityZoneServiceTests {
 
     private JdbcTemplate jdbcTemplate;
     private SecurityZoneLightingService lightingService;
     private SecurityZoneService service;
+    private SecurityScheduleService scheduleService;
+    private SecurityPrecheckService precheckService;
 
     @BeforeEach
     void setUp() {
@@ -38,10 +42,10 @@ class SecurityZoneServiceTests {
         dataSource.setPassword("");
 
         jdbcTemplate = new JdbcTemplate(dataSource);
-        SecurityScheduleService scheduleService = mock(
+        scheduleService = mock(
                 SecurityScheduleService.class
         );
-        SecurityPrecheckService precheckService = mock(
+        precheckService = mock(
                 SecurityPrecheckService.class
         );
         lightingService = mock(SecurityZoneLightingService.class);
@@ -61,6 +65,40 @@ class SecurityZoneServiceTests {
 
         createSchema();
         seedZones();
+    }
+
+    @Test
+    void immediateArmingDoesNotSwitchLights() {
+        when(scheduleService.getSettings()).thenReturn(settings(0));
+        readyToArm();
+
+        service.armManually(List.of("PB", "PATIO"), "operador");
+
+        assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
+        assertThat(stateValue("PATIO", "mode")).isEqualTo("ARMED");
+        verifyNoInteractions(lightingService);
+    }
+
+    @Test
+    void delayedArmingDoesNotSwitchLightsAtEitherStage() {
+        readyToArm();
+        service.armManually(List.of("PB"), "operador");
+        assertThat(stateValue("PB", "mode")).isEqualTo("ARMING");
+        verifyNoInteractions(lightingService);
+        jdbcTemplate.update("UPDATE security_zone_state SET arming_completes_at = ? WHERE zone_code = 'PB'",
+                java.sql.Timestamp.from(Instant.now().minusSeconds(1)));
+
+        service.completeArmingIfDue();
+
+        assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
+        verifyNoInteractions(lightingService);
+    }
+
+    private void readyToArm() {
+        when(scheduleService.evaluate(any())).thenReturn(
+                new ScheduleDecision(false, false, "manual", Instant.now()));
+        when(precheckService.check(any())).thenReturn(new SecurityPrecheckResponse(
+                true, true, true, 0, 0, List.of(), Instant.now()));
     }
 
     @Test
@@ -126,6 +164,7 @@ class SecurityZoneServiceTests {
     }
 
     private void createSchema() {
+        jdbcTemplate.execute("CREATE TABLE security_automatic_lighting_target (device_id BIGINT PRIMARY KEY)");
         jdbcTemplate.execute("""
                 CREATE TABLE security_zone (
                     code VARCHAR(20) PRIMARY KEY,
@@ -322,6 +361,10 @@ class SecurityZoneServiceTests {
     }
 
     private SecuritySettingsResponse settings() {
+        return settings(60);
+    }
+
+    private SecuritySettingsResponse settings(int exitDelay) {
         return new SecuritySettingsResponse(
                 true,
                 false,
@@ -329,7 +372,7 @@ class SecurityZoneServiceTests {
                 LocalTime.of(8, 0),
                 false,
                 "America/Mazatlan",
-                60,
+                exitDelay,
                 10,
                 30,
                 120,

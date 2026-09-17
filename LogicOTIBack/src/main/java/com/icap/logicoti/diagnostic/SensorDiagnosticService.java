@@ -213,6 +213,16 @@ public class SensorDiagnosticService {
         validateNoRunningDiagnostics(sensors);
 
         Map<Long, Boolean> initialStates = readStates(sensors);
+        List<String> activeSensors = sensors.stream()
+                .filter(sensor -> Boolean.TRUE.equals(initialStates.get(sensor.id())))
+                .map(DiagnosticSensor::code)
+                .toList();
+        if (!activeSensors.isEmpty()) {
+            throw new ConflictException(
+                    "Antes de iniciar el diagnóstico, restablezca los sensores activos: "
+                            + String.join(", ", activeSensors) + "."
+            );
+        }
         SecuritySettingsResponse settings = scheduleService.getSettings();
         Instant expiresAt = Instant.now()
                 .plusSeconds(settings.diagnosticTimeoutSeconds());
@@ -454,6 +464,27 @@ public class SensorDiagnosticService {
     }
 
     @Transactional(readOnly = true)
+    public Set<Long> findTestingSensorIds(Instant sampledAt) {
+        // Consultar el intervalo de la muestra evita que otro monitor finalice
+        // la prueba entre la lectura del PLC y la clasificación del evento.
+        Timestamp sample = Timestamp.from(sampledAt);
+        return new LinkedHashSet<>(jdbcTemplate.query("""
+                SELECT item.device_id
+                FROM sensor_diagnostic_item item
+                INNER JOIN sensor_diagnostic_session session
+                    ON session.id = item.session_id
+                WHERE session.started_at <= ?
+                  AND session.expires_at > ?
+                  AND (session.completed_at IS NULL OR session.completed_at > ?)
+                  AND (item.passed_at IS NULL OR item.passed_at > ?)
+                  AND item.initial_state = FALSE
+                """,
+                (resultSet, rowNumber) -> resultSet.getLong("device_id"),
+                sample, sample, sample, sample
+        ));
+    }
+
+    @Transactional(readOnly = true)
     List<RunningItem> findRunningItems() {
         return jdbcTemplate.query(
                 RUNNING_ITEMS_QUERY,
@@ -515,10 +546,11 @@ public class SensorDiagnosticService {
 
             boolean sawInactive = item.sawInactive() || !currentState;
             boolean sawActive = item.sawActive() || currentState;
-            boolean passed = sawInactive && sawActive;
+            boolean passed = sawInactive && sawActive && !currentState;
 
             if (sawInactive == item.sawInactive()
-                    && sawActive == item.sawActive()) {
+                    && sawActive == item.sawActive()
+                    && !passed) {
                 continue;
             }
 
@@ -533,6 +565,12 @@ public class SensorDiagnosticService {
                         END
                     WHERE id = ?
                       AND status = 'RUNNING'
+                      AND EXISTS (
+                          SELECT 1 FROM sensor_diagnostic_session session
+                          WHERE session.id = sensor_diagnostic_item.session_id
+                            AND session.status = 'RUNNING'
+                            AND session.expires_at > CURRENT_TIMESTAMP
+                      )
                     """,
                     sawInactive,
                     sawActive,
