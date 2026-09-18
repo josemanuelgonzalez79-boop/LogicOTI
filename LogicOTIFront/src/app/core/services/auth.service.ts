@@ -4,7 +4,15 @@ import { map, Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../http/api.endpoints';
-import { AuthSession, LoginCredentials, LoginResponse } from '../models/auth.model';
+import {
+  AuthSession,
+  LoginCredentials,
+  LoginOutcome,
+  LoginResponse,
+  TwoFactorConfirmation,
+  TwoFactorSetup,
+  TwoFactorStatus,
+} from '../models/auth.model';
 
 const SESSION_KEY = 'logicoti_session';
 
@@ -23,7 +31,7 @@ export class AuthService {
     this.authenticatedState.set(this.hasValidStoredSession());
   }
 
-  login(credentials: LoginCredentials, rememberSession: boolean): Observable<AuthSession> {
+  login(credentials: LoginCredentials, rememberSession: boolean): Observable<LoginOutcome> {
     const request: LoginCredentials = {
       username: credentials.username.trim(),
       password: credentials.password,
@@ -31,28 +39,54 @@ export class AuthService {
 
     return this.http
       .post<LoginResponse>(`${this.baseUrl}${API_ENDPOINTS.auth.login}`, request)
+      .pipe(map((response) => this.processLoginResponse(response, rememberSession)));
+  }
+
+  verifyTwoFactor(
+    challengeToken: string,
+    code: string,
+    rememberSession: boolean,
+  ): Observable<AuthSession> {
+    return this.http
+      .post<LoginResponse>(`${this.baseUrl}${API_ENDPOINTS.auth.twoFactorVerify}`, {
+        challengeToken,
+        code: code.trim(),
+      })
       .pipe(
         map((response) => {
-          const jwtExpiresAt = this.getJwtExpiration(response.token);
+          const outcome = this.processLoginResponse(response, rememberSession);
 
-          if (jwtExpiresAt === null || jwtExpiresAt <= Date.now()) {
-            throw new Error('El servidor devolvió un token de sesión inválido.');
+          if (!outcome.authenticated) {
+            throw new Error('El servidor no completó la autenticación en dos pasos.');
           }
 
-          const session: AuthSession = {
-            token: response.token,
-            expiresIn: response.expiresIn,
-            expiresAt: Math.min(Date.now() + response.expiresIn * 1000, jwtExpiresAt),
-            user: response.user,
-            authenticated: true,
-          };
-
-          this.storeSession(session, rememberSession);
-          this.authenticatedState.set(true);
-
-          return session;
+          return outcome;
         }),
       );
+  }
+
+  getTwoFactorStatus(): Observable<TwoFactorStatus> {
+    return this.http.get<TwoFactorStatus>(`${this.baseUrl}${API_ENDPOINTS.auth.twoFactorStatus}`);
+  }
+
+  beginTwoFactorSetup(currentPassword: string): Observable<TwoFactorSetup> {
+    return this.http.post<TwoFactorSetup>(`${this.baseUrl}${API_ENDPOINTS.auth.twoFactorSetup}`, {
+      currentPassword,
+    });
+  }
+
+  confirmTwoFactorSetup(code: string): Observable<TwoFactorConfirmation> {
+    return this.http.post<TwoFactorConfirmation>(
+      `${this.baseUrl}${API_ENDPOINTS.auth.twoFactorConfirm}`,
+      { code: code.trim() },
+    );
+  }
+
+  disableTwoFactor(currentPassword: string, code: string): Observable<TwoFactorStatus> {
+    return this.http.post<TwoFactorStatus>(
+      `${this.baseUrl}${API_ENDPOINTS.auth.twoFactorDisable}`,
+      { currentPassword, code: code.trim() },
+    );
   }
 
   logout(): void {
@@ -98,6 +132,42 @@ export class AuthService {
     const storage = rememberSession ? localStorage : sessionStorage;
 
     storage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+
+  private processLoginResponse(response: LoginResponse, rememberSession: boolean): LoginOutcome {
+    if (response.requiresTwoFactor) {
+      if (!response.challengeToken || response.challengeExpiresIn <= 0) {
+        throw new Error('El servidor devolvió un desafío de 2FA inválido.');
+      }
+
+      return {
+        challengeToken: response.challengeToken,
+        expiresIn: response.challengeExpiresIn,
+        authenticated: false,
+      };
+    }
+
+    if (!response.token || !response.user) {
+      throw new Error('El servidor devolvió una sesión incompleta.');
+    }
+
+    const jwtExpiresAt = this.getJwtExpiration(response.token);
+
+    if (jwtExpiresAt === null || jwtExpiresAt <= Date.now()) {
+      throw new Error('El servidor devolvió un token de sesión inválido.');
+    }
+
+    const session: AuthSession = {
+      token: response.token,
+      expiresIn: response.expiresIn,
+      expiresAt: Math.min(Date.now() + response.expiresIn * 1000, jwtExpiresAt),
+      user: response.user,
+      authenticated: true,
+    };
+
+    this.storeSession(session, rememberSession);
+    this.authenticatedState.set(true);
+    return session;
   }
 
   private hasValidStoredSession(): boolean {

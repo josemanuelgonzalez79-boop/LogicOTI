@@ -12,7 +12,7 @@ Plataforma web para supervisar y operar la automatización del edificio OTI de I
 - Actualización en tiempo real con WebSocket/STOMP.
 - PWA instalable y notificaciones Web Push con bitácora y reintentos.
 - Diagnósticos de sensores, históricos, reporte ejecutivo mensual, PDF y retención automática.
-- Administración de usuarios y roles.
+- Administración de usuarios y roles, con autenticación TOTP en dos pasos opcional por cuenta.
 
 Los contactos eléctricos y apagadores se conservan únicamente como inventario físico. No forman
 parte del control PLC. Los minisplits solamente admiten energizar y desenergizar; temperatura y modo
@@ -80,6 +80,7 @@ Requests hacia `desarrollo` o `main`.
 - [Alcance y levantamiento](docs/ALCANCE_Y_LEVANTAMIENTO.md)
 - [Operación y despliegue](docs/OPERACION_Y_DESPLIEGUE.md)
 - [Cambios de la versión](CHANGELOG.md)
+- [Validación de autenticación en dos pasos](VALIDACION_2FA.md)
 
 Nunca se deben subir `.env`, claves VAPID, secretos JWT, contraseñas, certificados privados ni
 credenciales del NVR.

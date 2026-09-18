@@ -5,11 +5,10 @@
 ### Incorporado
 
 - Armado independiente o conjunto de Planta Baja, Piso 1, Piso 2 y Patio/Exterior.
-- Armado sin encender luces y respuesta conjunta de las zonas armadas ante movimiento, limitada
-  a los circuitos seleccionados en Encendido automático por movimiento.
-- Reconocimiento de alarma sin desarmar las zonas y apagado exclusivo de las luces que fueron
-  encendidas por seguridad.
-- Protección de las luces bajo Seguridad frente al apagado automático por horario o inactividad.
+- Armado por zonas limitado a habilitar alarmas, sin encender ni tomar control de luces.
+- Iluminación de áreas comunes independiente del armado: cualquier sensor de movimiento válido
+  utiliza la selección global, el horario y el tiempo sin actividad configurados.
+- Reconocimiento de alarma sin desarmar las zonas ni modificar la iluminación automática.
 - Inventario y activación de los circuitos del patio, entrada exterior y los dos circuitos de la
   entrada interior, con tags de comando y retroalimentación confirmados en el PLC.
 - Suscripción WebSocket de las zonas de seguridad autorizada y validada.
@@ -22,8 +21,8 @@
 - Diagnóstico con ciclo reposo → activación → reposo y eventos de prueba identificados en historial.
   Solo los sensores en prueba dejan de generar alarmas y avisos de LogicOTI; al finalizar o vencer
   el diagnóstico vuelven a vigilancia normal, incluso si permanecen activos.
-- La iluminación por horario excluye zonas armadas para evitar que vuelva a encender sus luces
-  después de reconocer una alarma sin una nueva activación.
+- Autenticación TOTP en dos pasos opcional por usuario, con QR, códigos de recuperación de un solo
+  uso, secretos cifrados, prevención de reutilización y límite de intentos.
 - Calidad individual `GOOD`, `BAD` y `STALE` con última actualización.
 - Reporte ejecutivo mensual, tendencias y exportación PDF.
 - Política configurable de retención y limpieza histórica.

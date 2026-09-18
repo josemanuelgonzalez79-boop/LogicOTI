@@ -80,36 +80,6 @@ public class SecurityPrecheckService {
             ORDER BY display_order
             """;
 
-    private static final String LIGHTS_QUERY = """
-            SELECT
-                zone.code AS zone_code,
-                zone.name AS zone_name,
-                area.code AS area_code,
-                area.name AS area_name,
-                device.code AS device_code,
-                device.name AS device_name,
-                device.active,
-                device.controllable,
-                device.plc_command_tag,
-                device.plc_state_tag
-            FROM security_zone zone
-            LEFT JOIN security_zone_area zone_area
-                ON zone_area.zone_code = zone.code
-            LEFT JOIN building_area area
-                ON area.id = zone_area.area_id
-               AND area.active = TRUE
-            LEFT JOIN building_device device
-                ON device.area_id = area.id
-               AND device.device_type = 'LIGHT'
-               AND EXISTS (
-                   SELECT 1 FROM security_automatic_lighting_target target
-                   WHERE target.device_id = device.id
-               )
-            WHERE zone.active = TRUE
-              AND zone.code IN (%s)
-            ORDER BY zone.display_order, area.display_order, device.display_order
-            """;
-
     private final JdbcTemplate jdbcTemplate;
     private final PlcProperties plcProperties;
     private final PlcCommunicationService plcCommunicationService;
@@ -167,8 +137,6 @@ public class SecurityPrecheckService {
                 ));
             }
         }
-
-        addLightingIssues(zoneCodes, zones, initialIssues);
 
         for (MotionSensor sensor : sensors) {
             if (sensor.bypassed()) {
@@ -445,71 +413,6 @@ public class SecurityPrecheckService {
         );
     }
 
-    private void addLightingIssues(
-            List<String> zoneCodes,
-            List<ZoneDefinition> zones,
-            List<Issue> issues
-    ) {
-        String query = LIGHTS_QUERY.formatted(
-                placeholders(zoneCodes.size())
-        );
-
-        List<SecurityLight> lights = jdbcTemplate.query(
-                query,
-                (resultSet, rowNumber) -> new SecurityLight(
-                        resultSet.getString("zone_code"),
-                        resultSet.getString("zone_name"),
-                        resultSet.getString("area_code"),
-                        resultSet.getString("area_name"),
-                        resultSet.getString("device_code"),
-                        resultSet.getString("device_name"),
-                        resultSet.getBoolean("active"),
-                        resultSet.getBoolean("controllable"),
-                        resultSet.getString("plc_command_tag"),
-                        resultSet.getString("plc_state_tag")
-                ),
-                zoneCodes.toArray()
-        );
-
-        for (ZoneDefinition zone : zones) {
-            List<SecurityLight> zoneLights = lights.stream()
-                    .filter(light -> zone.code().equals(light.zoneCode()))
-                    .filter(light -> light.deviceCode() != null)
-                    .toList();
-
-            if (zoneLights.isEmpty()) {
-                issues.add(systemIssue(
-                        "ZONE_WITHOUT_SELECTED_LIGHTS",
-                        "WARNING",
-                        false,
-                        "La zona " + zone.name()
-                                + " no tiene luces seleccionadas en Encendido automático por movimiento; "
-                                + "se armará sin encender luces cuando haya alarma."
-                ));
-                continue;
-            }
-
-            zoneLights.stream()
-                    .filter(light -> !light.ready())
-                    .forEach(light -> issues.add(lightIssue(light)));
-        }
-    }
-
-    private Issue lightIssue(SecurityLight light) {
-        return new Issue(
-                "ZONE_LIGHT_PENDING",
-                ERROR,
-                true,
-                light.deviceCode(),
-                light.deviceName(),
-                light.areaCode(),
-                light.areaName(),
-                "El circuito " + light.deviceName()
-                        + " de " + light.zoneName()
-                        + " está pendiente de validación con el PLC."
-        );
-    }
-
     private List<String> normalizeZoneCodes(
             Collection<String> requestedZoneCodes
     ) {
@@ -655,28 +558,6 @@ public class SecurityPrecheckService {
             String name,
             boolean motionDetectionEnabled
     ) {
-    }
-
-    private record SecurityLight(
-            String zoneCode,
-            String zoneName,
-            String areaCode,
-            String areaName,
-            String deviceCode,
-            String deviceName,
-            boolean active,
-            boolean controllable,
-            String commandTag,
-            String stateTag
-    ) {
-        private boolean ready() {
-            return active
-                    && controllable
-                    && commandTag != null
-                    && !commandTag.isBlank()
-                    && stateTag != null
-                    && !stateTag.isBlank();
-        }
     }
 
     private record PlcReadOutcome(

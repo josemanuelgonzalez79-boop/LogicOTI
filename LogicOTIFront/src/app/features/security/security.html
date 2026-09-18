@@ -143,9 +143,8 @@
         <span class="section-eyebrow">Armado independiente</span>
         <h2>Zonas de seguridad</h2>
         <p>
-          Selecciona una, varias o todas las zonas. Armar no enciende las luces. Cuando se detecte
-          movimiento en una zona armada, se encenderán solo las luces seleccionadas en
-          Encendido automático por movimiento que pertenezcan a las zonas armadas.
+          Selecciona una, varias o todas las zonas. Armar una zona habilita únicamente sus alarmas
+          de movimiento; no enciende ni controla circuitos de iluminación.
         </p>
       </div>
 
@@ -229,34 +228,12 @@
               <dt>Sensores</dt>
               <dd>{{ zone.motionSensorCount }}</dd>
             </div>
-            <div>
-              <dt>Seleccionados listos</dt>
-              <dd>{{ zone.availableLightCircuitCount }}/{{ zone.lightCircuitCount }}</dd>
-            </div>
-            <div>
-              <dt>Luces bajo seguridad</dt>
-              <dd>{{ zone.controlledLightCount }}</dd>
-            </div>
           </dl>
 
           @if (!zone.motionDetectionEnabled) {
             <div class="zone-card__notice">
-              <i class="pi pi-lightbulb"></i>
-              Sin sensores de movimiento; participa como iluminación de seguridad.
-            </div>
-          }
-
-          @if (zone.availableLightCircuitCount < zone.lightCircuitCount) {
-            <div class="zone-card__notice zone-card__notice--warning">
-              <i class="pi pi-exclamation-triangle"></i>
-              Tiene circuitos pendientes de validación con el PLC.
-            </div>
-          }
-
-          @if (zone.lightCircuitCount === 0) {
-            <div class="zone-card__notice">
-              <i class="pi pi-lightbulb"></i>
-              Sin luces seleccionadas; esta zona no encenderá iluminación por alarma.
+              <i class="pi pi-info-circle"></i>
+              Zona sin sensores de movimiento; puede armarse, pero no originará alarmas de movimiento.
             </div>
           }
 
@@ -528,10 +505,9 @@
             <span class="section-eyebrow">Iluminación de áreas comunes</span>
             <h3>Encendido automático por movimiento</h3>
             <p>
-              En zonas desarmadas, esta automatización usa el horario y el tiempo sin actividad
-              indicados abajo. En zonas armadas, la misma selección de luces se usa al detectar una
-              alarma de movimiento, a cualquier hora. Las luces encendidas por seguridad se apagan
-              al reconocer todas las alarmas activas o al desarmar su zona.
+              Esta automatización es independiente del armado por zonas. Cualquier sensor de
+              movimiento válido puede encender únicamente las luces seleccionadas durante el horario
+              configurado; se apagan al cumplirse el tiempo sin actividad.
             </p>
           </div>
 
@@ -555,7 +531,7 @@
             <span class="switch-control__track"><span></span></span>
             <span>
               <strong>Encendido por horario habilitado</strong>
-              <small>Aplica a zonas desarmadas. La selección también se usa en alarmas de zonas armadas.</small>
+              <small>Aplica al movimiento de cualquier zona, esté armada o desarmada.</small>
             </span>
           </label>
 

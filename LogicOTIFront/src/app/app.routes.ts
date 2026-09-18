@@ -117,6 +117,15 @@ export const routes: Routes = [
     title: 'Diagnóstico | OTI',
   },
 
+  // Seguridad de la cuenta actual
+  {
+    path: 'account/security',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/account-security/account-security').then((c) => c.AccountSecurity),
+    title: 'Mi seguridad | OTI',
+  },
+
   // Administración
   {
     path: 'administration',

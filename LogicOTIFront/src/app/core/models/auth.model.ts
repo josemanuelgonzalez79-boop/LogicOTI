@@ -13,9 +13,12 @@ export interface AuthUser {
 }
 
 export interface LoginResponse {
-  token: string;
+  token: string | null;
   expiresIn: number;
-  user: AuthUser;
+  user: AuthUser | null;
+  requiresTwoFactor: boolean;
+  challengeToken: string | null;
+  challengeExpiresIn: number;
 }
 
 export interface AuthSession {
@@ -23,5 +26,31 @@ export interface AuthSession {
   expiresIn: number;
   expiresAt: number;
   user: AuthUser;
-  authenticated: boolean;
+  authenticated: true;
+}
+
+export interface TwoFactorChallenge {
+  challengeToken: string;
+  expiresIn: number;
+  authenticated: false;
+}
+
+export type LoginOutcome = AuthSession | TwoFactorChallenge;
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  unusedRecoveryCodes: number;
+}
+
+export interface TwoFactorSetup {
+  manualKey: string;
+  qrCodeDataUrl: string;
+  accountName: string;
+  issuer: string;
+  expiresAt: string;
+}
+
+export interface TwoFactorConfirmation {
+  enabled: boolean;
+  recoveryCodes: string[];
 }

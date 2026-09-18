@@ -61,11 +61,16 @@ PLC_ENABLED=true
 PLC_CONNECTION_STRING=logix:tcp://direccion-del-plc?backplane=1&slot=0
 SWAGGER_ENABLED=false
 JWT_SECRET=SECRETO_ALEATORIO_DE_64_BYTES_O_MAS
+TWO_FACTOR_ENCRYPTION_KEY=OTRO_SECRETO_ALEATORIO_DE_64_BYTES_O_MAS
 ```
 
 Para Web Push también se requieren `WEB_PUSH_ENABLED`, las dos claves VAPID y
 `WEB_PUSH_SUBJECT`. Para cámaras se configuran `CAMERAS_ENABLED`, `CAMERA_PLAYBACK_BASE_URL` y
 `CAMERA_AVAILABLE_STREAMS`.
+
+`TWO_FACTOR_ENCRYPTION_KEY` protege los secretos TOTP de los usuarios. Si se omite, el backend
+deriva una clave separada desde `JWT_SECRET`, pero en producción se recomienda configurarla
+explícitamente y conservarla sin cambios. Perderla impide validar los códigos temporales ya inscritos.
 
 Consulta `.env.example`. No copies `target/`, credenciales, direcciones reales de PLC ni archivos
 `.env` al repositorio.
@@ -74,19 +79,30 @@ Para instalar o actualizar el backend como servicio automático de Windows se in
 WinSW en [`deployment/windows`](deployment/windows). El servicio usa una copia local de `.env`,
 registra logs rotativos y reinicia Java ante fallos.
 
-## Seguridad por zonas y circuitos exteriores
+## Seguridad por zonas e iluminación de áreas comunes
 
 Las zonas `PB`, `P1`, `P2` y `PATIO` pueden armarse individualmente o en conjunto. El armado no
-enciende luces. Un movimiento en cualquier zona armada activa la alarma de esa zona y ordena
-encender solo los circuitos seleccionados en **Encendido automático por movimiento** que pertenezcan
-a las zonas armadas. La selección se usa a cualquier hora para alarmas; el interruptor y horario de
-la automatización habitual solo controlan el movimiento en zonas desarmadas. El
-reconocimiento conserva las zonas armadas y apaga únicamente luces que el módulo de seguridad
-encendió; una luz que ya estaba encendida manualmente no se toma bajo su control.
+enciende luces: únicamente habilita las alarmas de movimiento de la zona. La automatización
+**Encendido automático por movimiento** es global e independiente. Cualquier sensor de movimiento
+válido, pertenezca a una zona armada o desarmada, puede encender exclusivamente los circuitos
+seleccionados en **Iluminación de áreas comunes**, siempre que la automatización esté habilitada y
+dentro de su horario. Esos circuitos se apagan al cumplirse el tiempo configurado sin actividad.
 
-Con varias alarmas simultáneas, las luces permanecen encendidas hasta reconocerlas todas o desarmar
-la zona correspondiente. Sin luces seleccionadas se puede armar, con aviso de que no habrá iluminación
-por alarma. Los contadores de circuitos en Seguridad muestran la selección configurada.
+## Autenticación en dos pasos
+
+Cada usuario puede activar TOTP desde **Mi seguridad** usando una aplicación autenticadora compatible.
+La contraseña correcta no crea una sesión para cuentas con 2FA: primero se emite un desafío opaco de
+cinco minutos y el JWT se entrega solo después de validar el segundo factor. Los códigos temporales son
+de un solo uso por ventana, cada desafío admite cinco intentos y diez fallos consecutivos bloquean la
+verificación durante quince minutos.
+
+Al activar 2FA se entregan ocho códigos de recuperación de un solo uso. El backend guarda esos códigos
+con BCrypt y cifra el secreto TOTP con AES-GCM. La migración `V29__create_user_two_factor_authentication.sql`
+crea las tablas necesarias. Backend y frontend deben actualizarse juntos; véase
+[la validación de 2FA](../VALIDACION_2FA.md).
+
+El reconocimiento conserva armada la zona y no modifica la iluminación. La selección o disponibilidad
+de circuitos de luz tampoco forma parte del precheck de armado.
 
 ### Pruebas de sensores
 
@@ -116,7 +132,6 @@ por el responsable del PLC. En una instalación ya actualizada no hay que volver
 activar manualmente los circuitos. Si cambia el cableado o la nomenclatura del PLC, se debe actualizar
 el catálogo para que el comando y el retorno correspondan al mismo circuito físico.
 
-La revisión de armado valida los circuitos **seleccionados**. Si uno de esos circuitos está pendiente,
-mostrará `ZONE_LIGHT_PENDING`; un circuito no seleccionado no impide armar. El patio no necesita
-sensores de movimiento: participa como iluminación de respuesta de las zonas armadas, pero no
-origina alarmas de movimiento.
+La revisión de armado valida únicamente los sensores de movimiento de las zonas seleccionadas. El
+patio no tiene sensores de movimiento, por lo que puede armarse pero no origina alarmas de movimiento.
+Sus circuitos pueden seleccionarse de forma independiente en **Iluminación de áreas comunes**.

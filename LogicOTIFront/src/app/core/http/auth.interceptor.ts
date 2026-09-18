@@ -12,6 +12,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   const isPublicRequest =
     request.url.includes(API_ENDPOINTS.auth.login) ||
+    request.url.includes(API_ENDPOINTS.auth.twoFactorVerify) ||
     request.url.includes(API_ENDPOINTS.cameras.alertView);
 
   if (isPublicRequest) {

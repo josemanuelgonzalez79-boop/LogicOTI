@@ -1,19 +1,15 @@
-# Comprobación de diagnósticos e iluminación por zonas
+# Comprobación de diagnósticos, zonas e iluminación común
 
-Cambios preparados sobre `desarrollo` en `c715bfc`, conservando las correcciones anteriores de
-WebSocket, tags exteriores y SonarQube. Estas comprobaciones de instalación complementan las pruebas
-automáticas; requieren acceso al PLC/Echo y a la aplicación instalada.
-
-Validación de software: 70 pruebas del backend, 73 del frontend y ambos builds aprobados en
-[GitHub Actions](https://github.com/josemanuelgonzalez79-boop/LogicOTI/actions/runs/35281715026).
-La comprobación física y la actualización del servidor siguen pendientes.
+Estas comprobaciones de instalación complementan las pruebas automáticas y requieren acceso al
+PLC/Echo y a la aplicación instalada. La comprobación física y la actualización del servidor siguen
+pendientes hasta que esta versión quede aprobada en GitHub Actions.
 
 ## Actualización
 
 1. Actualizar backend y frontend juntos. Al arrancar, Flyway aplica V28; no editar migraciones anteriores.
-2. Revisar en Seguridad los circuitos seleccionados en **Encendido automático por movimiento** y guardar.
-3. Si hay zonas armadas o luces bajo control de la versión anterior, desarmarlas antes de la prueba.
-   Armar no apaga luces manuales; comenzar con los circuitos de prueba apagados.
+2. Revisar en Seguridad los circuitos seleccionados en **Iluminación de áreas comunes** y guardar.
+3. Comenzar con los circuitos de prueba apagados. La migración V30 elimina cualquier propiedad de
+   luces conservada por la lógica anterior de alarmas por zona.
 4. No hacen falta nuevos tags PLC ni cambios de `.env` para estas correcciones.
 
 ## Diagnóstico
@@ -38,23 +34,22 @@ o una central de incendio. Confirmar esa conexión antes de una prueba física d
 | Comprobación | Resultado esperado |
 | --- | --- |
 | Seleccionar una luz de Piso 1 y una del Patio y armar ambas zonas | Ningún encendido al armar ni al terminar el tiempo de salida. |
-| Detectar movimiento en Piso 1 armado | Se encienden únicamente las luces seleccionadas de Piso 1 y Patio. |
-| Dejar una luz sin seleccionar o su zona desarmada | No recibe encendido por esa alarma. |
-| Armar una zona sin luces seleccionadas | Aviso informativo; armado permitido si pasa el resto de la revisión. |
-| Reconocer la única alarma | Apaga las luces encendidas por seguridad; las zonas permanecen armadas. |
-| Mantener el sensor activo tras reconocer | El automatismo por horario no vuelve a encender las luces de las zonas armadas. |
-| Restablecer el sensor y activarlo de nuevo | Nueva alarma y nuevo encendido de los circuitos seleccionados. |
-| Tener varias zonas en alarma | Mantiene la iluminación de seguridad mientras quede una alarma sin reconocer. |
-| Luz ya encendida manualmente antes de la alarma | No se toma bajo control de seguridad ni se apaga al reconocer. |
+| Detectar movimiento en Piso 1 armado dentro del horario | Alarma de Piso 1 y encendido de todas las luces seleccionadas globalmente, incluidas las del Patio. |
+| Armar solo Planta Baja y activar movimiento de Piso 2 dentro del horario | No se genera alarma de Piso 2; sí se encienden las luces seleccionadas globalmente. |
+| Activar movimiento fuera del horario o con la automatización deshabilitada | No se encienden luces, sin importar qué zonas estén armadas. |
+| Dejar una luz sin seleccionar | No recibe comandos de la automatización, aunque su zona esté armada. |
+| Armar una zona sin luces seleccionadas | Armado permitido; la iluminación no forma parte del precheck. |
+| Reconocer una alarma | La zona permanece armada y la iluminación no cambia por el reconocimiento. |
+| Cumplir el tiempo sin actividad | Se apagan solo las luces que encendió la automatización. |
+| Luz ya encendida manualmente antes del movimiento | No se toma bajo control automático ni se apaga al vencer el tiempo. |
 
-El interruptor y horario de encendido automático siguen disponibles para zonas desarmadas. Las
-alarmas usan la misma lista de circuitos a cualquier hora. Para que el edificio permanezca apagado
-también en zonas desarmadas, deshabilitar el encendido por horario cuando no se necesite.
+El interruptor, horario, selección de circuitos y tiempo sin actividad son globales. El estado armado
+o desarmado solo decide si el movimiento genera una alarma; no cambia el comportamiento de luces.
 
 ## Pendientes siguientes
 
 - Validar estas dos correcciones en PLC/Echo y en la instalación.
-- Diseñar inicio de sesión en dos pasos: método, enrolamiento y recuperación de acceso.
+- Validar el inicio de sesión TOTP y la recuperación de acceso descritos en `VALIDACION_2FA.md`.
 - Identificar modelo y firmware de NVR/cámaras para evaluar histórico y eventos de movimiento.
 - Confirmar modelo de UPS y tarjeta NMC compatible; definir acceso a red y datos disponibles.
 - Definir router/SIM, cobertura y alimentación de respaldo para avisos durante cortes eléctricos.

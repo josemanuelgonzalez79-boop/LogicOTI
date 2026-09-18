@@ -1,6 +1,11 @@
 export const API_ENDPOINTS = {
   auth: {
     login: '/auth/login',
+    twoFactorVerify: '/auth/2fa/verify',
+    twoFactorStatus: '/auth/2fa/status',
+    twoFactorSetup: '/auth/2fa/setup',
+    twoFactorConfirm: '/auth/2fa/confirm',
+    twoFactorDisable: '/auth/2fa/disable',
   },
 
   users: {

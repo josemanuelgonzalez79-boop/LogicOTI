@@ -52,9 +52,6 @@ export interface SecurityZoneStatus {
   displayOrder: number;
   motionDetectionEnabled: boolean;
   motionSensorCount: number;
-  lightCircuitCount: number;
-  availableLightCircuitCount: number;
-  controlledLightCount: number;
   mode: AlarmMode;
   armed: boolean;
   alarmActive: boolean;

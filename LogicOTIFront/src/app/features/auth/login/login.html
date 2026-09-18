@@ -14,15 +14,13 @@
     </div>
 
     <div class="visual-content">
-      <span class="visual-content__eyebrow">
-        Plataforma de supervisión y control
-      </span>
+      <span class="visual-content__eyebrow"> Plataforma de supervisión y control </span>
 
       <h1>Control centralizado para un edificio más seguro y eficiente.</h1>
 
       <p>
-        Supervisa sensores, alarmas, iluminación, climatización y estados
-        operativos desde una sola plataforma.
+        Supervisa sensores, alarmas, iluminación, climatización y estados operativos desde una sola
+        plataforma.
       </p>
 
       <div class="visual-features">
@@ -67,12 +65,15 @@
 
         <div>
           <span class="login-card__eyebrow">Acceso seguro</span>
-          <h2>Iniciar sesión</h2>
-          <p>Ingresa tus credenciales para acceder a LogicOTI.</p>
+          <h2>{{ challengeToken ? 'Verificar identidad' : 'Iniciar sesión' }}</h2>
+          <p *ngIf="!challengeToken">Ingresa tus credenciales para acceder a LogicOTI.</p>
+          <p *ngIf="challengeToken">
+            Escribe el código de tu aplicación autenticadora o uno de tus códigos de recuperación.
+          </p>
         </div>
       </div>
 
-      <form class="login-form" (ngSubmit)="login()">
+      <form *ngIf="!challengeToken" class="login-form" (ngSubmit)="login()">
         <div class="form-field">
           <label for="username">Usuario</label>
 
@@ -119,16 +120,11 @@
             <span>Mantener sesión iniciada</span>
           </label>
 
-          <button type="button" class="forgot-password">
-            ¿Olvidaste tu contraseña?
-          </button>
+          <button type="button" class="forgot-password">¿Olvidaste tu contraseña?</button>
         </div>
 
         <!-- Mensaje de error -->
-        <div
-          class="login-form__error"
-          *ngIf="errorMessage"
-        >
+        <div class="login-form__error" *ngIf="errorMessage">
           <i class="pi pi-exclamation-circle"></i>
           <span>{{ errorMessage }}</span>
         </div>
@@ -142,6 +138,55 @@
           [disabled]="!username.trim() || !password.trim()"
           styleClass="login-button"
         />
+      </form>
+
+      <form *ngIf="challengeToken" class="login-form" (ngSubmit)="verifyTwoFactor()">
+        <div class="two-factor-summary">
+          <i class="pi pi-mobile"></i>
+          <span>
+            Segundo paso para <strong>{{ username }}</strong
+            >. El desafío vence en {{ challengeExpiresIn / 60 }} minutos.
+          </span>
+        </div>
+
+        <div class="form-field">
+          <label for="verificationCode">Código de verificación</label>
+
+          <div class="input-wrapper">
+            <i class="pi pi-key"></i>
+
+            <input
+              id="verificationCode"
+              name="verificationCode"
+              type="text"
+              pInputText
+              [(ngModel)]="verificationCode"
+              placeholder="000000 o código de recuperación"
+              autocomplete="one-time-code"
+              autocapitalize="characters"
+              spellcheck="false"
+            />
+          </div>
+        </div>
+
+        <div class="login-form__error" *ngIf="errorMessage">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <p-button
+          type="submit"
+          label="Verificar e ingresar"
+          icon="pi pi-shield"
+          [loading]="loading"
+          [disabled]="!verificationCode.trim()"
+          styleClass="login-button"
+        />
+
+        <button type="button" class="login-form__back" (click)="restartLogin()">
+          <i class="pi pi-arrow-left"></i>
+          Volver al usuario y contraseña
+        </button>
       </form>
 
       <div class="login-card__footer">

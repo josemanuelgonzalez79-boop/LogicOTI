@@ -19,24 +19,6 @@ public class AutomaticLightingRuntimeService {
 
     @Transactional(readOnly = true)
     public List<LightingDevice> findTargets() {
-        return findTargets(false);
-    }
-
-    @Transactional(readOnly = true)
-    public List<LightingDevice> findUnarmedTargets() {
-        return findTargets(true);
-    }
-
-    private List<LightingDevice> findTargets(boolean unarmedOnly) {
-        String securityFilter = unarmedOnly ? """
-                  AND NOT EXISTS (
-                      SELECT 1 FROM security_zone_area zone_area
-                      INNER JOIN security_zone zone ON zone.code = zone_area.zone_code
-                      INNER JOIN security_zone_state state ON state.zone_code = zone.code
-                      WHERE zone_area.area_id = area.id AND zone.active = TRUE
-                        AND state.mode IN ('ARMING', 'ARMED', 'ARMED_WITH_BYPASS', 'ALARM')
-                  )
-                """ : "";
         return jdbcTemplate.query("""
                 SELECT
                     device.id,
@@ -56,9 +38,8 @@ public class AutomaticLightingRuntimeService {
                   AND floor.active = TRUE
                   AND device.device_type = 'LIGHT'
                   AND device.controllable = TRUE
-                %s
                 ORDER BY area.display_order, device.display_order, device.id
-                """.formatted(securityFilter),
+                """,
                 (resultSet, rowNumber) -> new LightingDevice(
                         resultSet.getLong("id"),
                         resultSet.getString("code"),
@@ -67,21 +48,6 @@ public class AutomaticLightingRuntimeService {
                         resultSet.getString("area_name")
                 )
         );
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isSecurityManagedSensor(String sensorCode) {
-        Boolean managed = jdbcTemplate.queryForObject("""
-                SELECT EXISTS (
-                    SELECT 1 FROM building_device sensor
-                    INNER JOIN security_zone_area zone_area ON zone_area.area_id = sensor.area_id
-                    INNER JOIN security_zone zone ON zone.code = zone_area.zone_code
-                    INNER JOIN security_zone_state state ON state.zone_code = zone.code
-                    WHERE sensor.code = ? AND zone.active = TRUE
-                      AND state.mode IN ('ARMING', 'ARMED', 'ARMED_WITH_BYPASS', 'ALARM')
-                )
-                """, Boolean.class, sensorCode);
-        return Boolean.TRUE.equals(managed);
     }
 
     @Transactional(readOnly = true)

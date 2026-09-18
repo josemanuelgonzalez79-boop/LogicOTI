@@ -54,44 +54,7 @@ public class SecurityZoneService {
                       AND sensor_area.active = TRUE
                       AND sensor.active = TRUE
                       AND sensor.device_type = 'MOTION'
-                ) AS motion_sensor_count,
-                (
-                    SELECT COUNT(*)
-                    FROM security_zone_area light_zone_area
-                    INNER JOIN building_area light_area
-                        ON light_area.id = light_zone_area.area_id
-                    INNER JOIN building_device light
-                        ON light.area_id = light_area.id
-                    INNER JOIN security_automatic_lighting_target target
-                        ON target.device_id = light.id
-                    WHERE light_zone_area.zone_code = zone.code
-                      AND light_area.active = TRUE
-                      AND light.device_type = 'LIGHT'
-                ) AS light_circuit_count,
-                (
-                    SELECT COUNT(*)
-                    FROM security_zone_area ready_zone_area
-                    INNER JOIN building_area ready_area
-                        ON ready_area.id = ready_zone_area.area_id
-                    INNER JOIN building_device ready_light
-                        ON ready_light.area_id = ready_area.id
-                    INNER JOIN security_automatic_lighting_target ready_target
-                        ON ready_target.device_id = ready_light.id
-                    WHERE ready_zone_area.zone_code = zone.code
-                      AND ready_area.active = TRUE
-                      AND ready_light.active = TRUE
-                      AND ready_light.device_type = 'LIGHT'
-                      AND ready_light.controllable = TRUE
-                      AND ready_light.plc_command_tag IS NOT NULL
-                      AND TRIM(ready_light.plc_command_tag) <> ''
-                      AND ready_light.plc_state_tag IS NOT NULL
-                      AND TRIM(ready_light.plc_state_tag) <> ''
-                ) AS available_light_circuit_count,
-                (
-                    SELECT COUNT(*)
-                    FROM security_zone_light_runtime runtime
-                    WHERE runtime.zone_code = zone.code
-                ) AS controlled_light_count
+                ) AS motion_sensor_count
             FROM security_zone zone
             INNER JOIN security_zone_state state
                 ON state.zone_code = zone.code
@@ -102,20 +65,17 @@ public class SecurityZoneService {
     private final JdbcTemplate jdbcTemplate;
     private final SecurityScheduleService scheduleService;
     private final SecurityPrecheckService precheckService;
-    private final SecurityZoneLightingService lightingService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public SecurityZoneService(
             JdbcTemplate jdbcTemplate,
             SecurityScheduleService scheduleService,
             SecurityPrecheckService precheckService,
-            SecurityZoneLightingService lightingService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.scheduleService = scheduleService;
         this.precheckService = precheckService;
-        this.lightingService = lightingService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -225,27 +185,6 @@ public class SecurityZoneService {
                 null
         );
 
-        if (findStates().stream()
-                .noneMatch(state -> state.mode() == AlarmMode.ALARM)) {
-            List<String> armedZoneCodes = findStates().stream()
-                    .filter(state -> state.mode().isArmed())
-                    .map(ZoneState::code)
-                    .toList();
-
-            if (!armedZoneCodes.isEmpty()) {
-                SecurityZoneLightingService.LightingActionResult result =
-                        lightingService.turnOffOwnedZones(armedZoneCodes);
-
-                if (!result.successful()) {
-                    updateMessage(
-                            zoneCode,
-                            "La alarma fue reconocida y la zona permanece armada, "
-                                    + "pero una o más luces no confirmaron el apagado."
-                    );
-                }
-            }
-        }
-
         publish();
         return getStatus();
     }
@@ -273,26 +212,6 @@ public class SecurityZoneService {
                     current.automaticTransitionKey(),
                     event.id(),
                     current.mode()
-            );
-        }
-
-        List<String> armedZoneCodes = findStates().stream()
-                .filter(state -> state.mode().isArmed())
-                .map(ZoneState::code)
-                .toList();
-
-        SecurityZoneLightingService.LightingActionResult lights =
-                lightingService.turnOnZones(
-                        armedZoneCodes,
-                        "ALARM",
-                        event.id()
-                );
-
-        if (!lights.successful()) {
-            updateMessage(
-                    current.code(),
-                    "Movimiento detectado en " + event.areaName()
-                            + "; una o más luces no confirmaron el encendido."
             );
         }
 
@@ -511,20 +430,14 @@ public class SecurityZoneService {
         List<String> zoneCodes = normalizeAndValidate(
                 requestedZoneCodes
         );
-        SecurityZoneLightingService.LightingActionResult lights =
-                lightingService.turnOffOwnedZones(zoneCodes);
 
         for (String zoneCode : zoneCodes) {
             ZoneState state = findState(zoneCode);
-            String message = lights.successful()
-                    ? state.name() + " fue desarmada correctamente."
-                    : state.name() + " fue desarmada, pero una o más luces "
-                            + "no confirmaron el apagado.";
 
             transition(
                     state,
                     AlarmMode.DISARMED,
-                    message,
+                    state.name() + " fue desarmada correctamente.",
                     username,
                     source,
                     null,
@@ -634,18 +547,6 @@ public class SecurityZoneService {
         }
     }
 
-    private void updateMessage(String zoneCode, String message) {
-        jdbcTemplate.update(
-                """
-                UPDATE security_zone_state
-                SET message = ?, changed_at = CURRENT_TIMESTAMP
-                WHERE zone_code = ?
-                """,
-                message,
-                zoneCode
-        );
-    }
-
     private List<ZoneState> findStates() {
         return jdbcTemplate.query(
                 STATE_QUERY,
@@ -671,12 +572,7 @@ public class SecurityZoneService {
                         resultSet.getObject("alarm_event_id") == null
                                 ? null
                                 : resultSet.getLong("alarm_event_id"),
-                        resultSet.getInt("motion_sensor_count"),
-                        resultSet.getInt("light_circuit_count"),
-                        resultSet.getInt(
-                                "available_light_circuit_count"
-                        ),
-                        resultSet.getInt("controlled_light_count")
+                        resultSet.getInt("motion_sensor_count")
                 )
         );
     }
@@ -792,9 +688,6 @@ public class SecurityZoneService {
                 state.displayOrder(),
                 state.motionDetectionEnabled(),
                 state.motionSensorCount(),
-                state.lightCircuitCount(),
-                state.availableLightCircuitCount(),
-                state.controlledLightCount(),
                 state.mode().name(),
                 state.mode().isArmed(),
                 state.mode().isAlarmActive(),
@@ -962,10 +855,7 @@ public class SecurityZoneService {
             Instant armingCompletesAt,
             String automaticTransitionKey,
             Long alarmEventId,
-            int motionSensorCount,
-            int lightCircuitCount,
-            int availableLightCircuitCount,
-            int controlledLightCount
+            int motionSensorCount
     ) {
     }
 }

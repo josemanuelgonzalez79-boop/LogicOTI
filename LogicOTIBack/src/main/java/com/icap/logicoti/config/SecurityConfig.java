@@ -83,8 +83,21 @@ public class SecurityConfig {
                         // Inicio de sesión.
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/2fa/verify"
                         ).permitAll()
+
+                        // Cada usuario autenticado administra su propio segundo factor.
+                        .requestMatchers(
+                                "/api/auth/2fa/status",
+                                "/api/auth/2fa/setup",
+                                "/api/auth/2fa/confirm",
+                                "/api/auth/2fa/disable"
+                        ).hasAnyRole(
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
+                        )
 
                         // Conexión inicial de WebSocket.
                         // El JWT se valida después en el CONNECT de STOMP.

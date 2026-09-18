@@ -14,15 +14,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
 
 class SecurityZoneServiceTests {
 
     private JdbcTemplate jdbcTemplate;
-    private SecurityZoneLightingService lightingService;
     private SecurityZoneService service;
     private SecurityScheduleService scheduleService;
     private SecurityPrecheckService precheckService;
@@ -48,7 +45,6 @@ class SecurityZoneServiceTests {
         precheckService = mock(
                 SecurityPrecheckService.class
         );
-        lightingService = mock(SecurityZoneLightingService.class);
         SimpMessagingTemplate messagingTemplate = mock(
                 SimpMessagingTemplate.class
         );
@@ -59,7 +55,6 @@ class SecurityZoneServiceTests {
                 jdbcTemplate,
                 scheduleService,
                 precheckService,
-                lightingService,
                 messagingTemplate
         );
 
@@ -76,7 +71,6 @@ class SecurityZoneServiceTests {
 
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
         assertThat(stateValue("PATIO", "mode")).isEqualTo("ARMED");
-        verifyNoInteractions(lightingService);
     }
 
     @Test
@@ -84,7 +78,6 @@ class SecurityZoneServiceTests {
         readyToArm();
         service.armManually(List.of("PB"), "operador");
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMING");
-        verifyNoInteractions(lightingService);
         jdbcTemplate.update("UPDATE security_zone_state SET arming_completes_at = ? WHERE zone_code = 'PB'",
                 java.sql.Timestamp.from(Instant.now().minusSeconds(1)));
 
@@ -117,14 +110,9 @@ class SecurityZoneServiceTests {
     }
 
     @Test
-    void motionAlarmsItsZoneAndTurnsOnEveryArmedZone() {
+    void motionAlarmsOnlyItsArmedZone() {
         setMode("PB", "ARMED", null, null);
         setMode("P1", "ARMED", null, null);
-        when(lightingService.turnOnZones(
-                List.of("PB", "P1"),
-                "ALARM",
-                42L
-        )).thenReturn(successfulLighting());
 
         SecurityStatusResponse response = service.activateFromMotion(
                 motionEvent()
@@ -134,20 +122,12 @@ class SecurityZoneServiceTests {
         assertThat(stateValue("PB", "mode")).isEqualTo("ALARM");
         assertThat(stateValue("P1", "mode")).isEqualTo("ARMED");
         assertThat(stateLong("PB", "alarm_event_id")).isEqualTo(42L);
-        verify(lightingService).turnOnZones(
-                List.of("PB", "P1"),
-                "ALARM",
-                42L
-        );
     }
 
     @Test
-    void acknowledgementRestoresArmedModeAndTurnsOffOwnedLights() {
+    void acknowledgementRestoresArmedModeWithoutChangingLighting() {
         setMode("PB", "ALARM", "ARMED", 42L);
         setMode("P1", "ARMED", null, null);
-        when(lightingService.turnOffOwnedZones(
-                List.of("PB", "P1")
-        )).thenReturn(successfulLighting());
 
         SecurityZoneListResponse response = service.acknowledge(
                 "PB",
@@ -158,9 +138,6 @@ class SecurityZoneServiceTests {
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
         assertThat(stateLong("PB", "alarm_event_id")).isNull();
         assertThat(countAcknowledgements(42L)).isEqualTo(1);
-        verify(lightingService).turnOffOwnedZones(
-                List.of("PB", "P1")
-        );
     }
 
     private void createSchema() {
@@ -223,12 +200,6 @@ class SecurityZoneServiceTests {
                     controllable BOOLEAN NOT NULL,
                     plc_command_tag VARCHAR(80),
                     plc_state_tag VARCHAR(80)
-                )
-                """);
-        jdbcTemplate.execute("""
-                CREATE TABLE security_zone_light_runtime (
-                    device_id BIGINT PRIMARY KEY,
-                    zone_code VARCHAR(20) NOT NULL
                 )
                 """);
         jdbcTemplate.execute("""
@@ -384,11 +355,4 @@ class SecurityZoneServiceTests {
         );
     }
 
-    private SecurityZoneLightingService.LightingActionResult successfulLighting() {
-        return new SecurityZoneLightingService.LightingActionResult(
-                true,
-                0,
-                List.of()
-        );
-    }
 }

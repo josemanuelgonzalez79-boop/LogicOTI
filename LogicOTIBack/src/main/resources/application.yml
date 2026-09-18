@@ -89,3 +89,10 @@ security:
   jwt:
     secret: ${JWT_SECRET}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  two-factor:
+    encryption-key: ${TWO_FACTOR_ENCRYPTION_KEY:${security.jwt.secret}}
+    issuer: ${TWO_FACTOR_ISSUER:LogicOTI}
+    challenge-expiration-seconds: ${TWO_FACTOR_CHALLENGE_EXPIRATION_SECONDS:300}
+    challenge-max-attempts: ${TWO_FACTOR_CHALLENGE_MAX_ATTEMPTS:5}
+    account-max-failures: ${TWO_FACTOR_ACCOUNT_MAX_FAILURES:10}
+    account-lock-seconds: ${TWO_FACTOR_ACCOUNT_LOCK_SECONDS:900}

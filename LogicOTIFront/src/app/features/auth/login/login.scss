@@ -20,11 +20,7 @@
   overflow: hidden;
   color: #fff;
   background:
-    radial-gradient(
-      circle at 85% 20%,
-      rgba(34, 197, 94, 0.2),
-      transparent 30%
-    ),
+    radial-gradient(circle at 85% 20%, rgba(34, 197, 94, 0.2), transparent 30%),
     linear-gradient(145deg, #0c1f33 0%, #102a43 48%, #133a52 100%);
 }
 
@@ -325,6 +321,50 @@
   font-weight: 700;
   background: transparent;
   cursor: pointer;
+}
+
+.two-factor-summary,
+.login-form__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.8rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.two-factor-summary {
+  color: var(--text-color-secondary);
+  background: color-mix(in srgb, var(--primary-color) 9%, transparent);
+}
+
+.two-factor-summary i {
+  margin-top: 0.12rem;
+  color: var(--primary-color);
+}
+
+.login-form__error {
+  color: #b42318;
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+}
+
+.login-form__back {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.45rem;
+  padding: 0.35rem;
+  border: 0;
+  color: var(--text-color-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.login-form__back:hover {
+  color: var(--primary-color);
 }
 
 .login-card__footer {

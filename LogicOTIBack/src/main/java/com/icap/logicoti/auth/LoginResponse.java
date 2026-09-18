@@ -5,10 +5,13 @@ import com.icap.logicoti.user.AppUser;
 public record LoginResponse(
         String token,
         long expiresIn,
-        User user
+        User user,
+        boolean requiresTwoFactor,
+        String challengeToken,
+        long challengeExpiresIn
 ) {
 
-    public static LoginResponse from(
+    public static LoginResponse authenticated(
             String token,
             long expiresIn,
             AppUser user
@@ -21,7 +24,23 @@ public record LoginResponse(
                         user.getUsername(),
                         user.getFullName(),
                         user.getRole()
-                )
+                ),
+                false,
+                null,
+                0
+        );
+    }
+
+    public static LoginResponse challenge(
+            TwoFactorService.Challenge challenge
+    ) {
+        return new LoginResponse(
+                null,
+                0,
+                null,
+                true,
+                challenge.token(),
+                challenge.expiresIn()
         );
     }
 

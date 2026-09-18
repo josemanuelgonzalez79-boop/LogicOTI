@@ -38,7 +38,6 @@ public class AreaInactivityService {
     private final AreaInactivityRuntimeService runtimeService;
     private final DeviceCommandExecutionService commandService;
     private final AreaStateService areaStateService;
-    private final SecurityZoneLightingService zoneLightingService;
     private final SimpMessagingTemplate messagingTemplate;
 
     private final Map<String, Instant> lastProcessedMotion =
@@ -50,7 +49,6 @@ public class AreaInactivityService {
             AreaInactivityRuntimeService runtimeService,
             DeviceCommandExecutionService commandService,
             AreaStateService areaStateService,
-            SecurityZoneLightingService zoneLightingService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -58,7 +56,6 @@ public class AreaInactivityService {
         this.runtimeService = runtimeService;
         this.commandService = commandService;
         this.areaStateService = areaStateService;
-        this.zoneLightingService = zoneLightingService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -259,12 +256,6 @@ public class AreaInactivityService {
             if (!deviceType.equalsIgnoreCase(device.type())
                     || !device.controllable()
                     || !Boolean.TRUE.equals(device.state())) {
-                continue;
-            }
-
-            if ("LIGHT".equalsIgnoreCase(deviceType)
-                    && zoneLightingService.isOwned(device.code())) {
-                // Seguridad conserva la luz hasta desarmar o reconocer.
                 continue;
             }
 

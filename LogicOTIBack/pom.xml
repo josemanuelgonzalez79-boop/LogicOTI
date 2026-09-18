@@ -23,6 +23,7 @@
         <springdoc.version>3.0.3</springdoc.version>
         <web-push.version>5.1.1</web-push.version>
         <bouncycastle.version>1.85.2</bouncycastle.version>
+        <zxing.version>3.5.3</zxing.version>
     </properties>
 
     <dependencies>
@@ -153,6 +154,18 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
             <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>${zxing.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>${zxing.version}</version>
         </dependency>
 
     </dependencies>

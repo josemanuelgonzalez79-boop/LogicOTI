@@ -64,6 +64,11 @@ export class Sidebar {
       route: '/administration',
       roles: ['ADMIN'],
     },
+    {
+      label: 'Mi seguridad',
+      icon: 'pi pi-key',
+      route: '/account/security',
+    },
   ];
 
   protected readonly menuItems = this.allMenuItems.filter((item) => {

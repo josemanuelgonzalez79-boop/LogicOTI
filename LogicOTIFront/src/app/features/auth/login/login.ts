@@ -24,6 +24,9 @@ export class Login {
   rememberSession = false;
   loading = false;
   errorMessage = '';
+  challengeToken = '';
+  verificationCode = '';
+  challengeExpiresIn = 0;
 
   constructor(
     private readonly router: Router,
@@ -55,21 +58,66 @@ export class Login {
         }),
       )
       .subscribe({
-        next: () => {
-          const returnUrl = this.getSafeReturnUrl();
-
-          if (returnUrl) {
-            void this.router.navigateByUrl(returnUrl);
+        next: (outcome) => {
+          if (!outcome.authenticated) {
+            this.challengeToken = outcome.challengeToken;
+            this.challengeExpiresIn = outcome.expiresIn;
+            this.password = '';
+            this.cdr.detectChanges();
             return;
           }
 
-          void this.router.navigate(['/dashboard']);
+          this.completeLogin();
         },
         error: () => {
           this.errorMessage = 'Usuario o contraseña incorrectos.';
           this.cdr.detectChanges();
         },
       });
+  }
+
+  verifyTwoFactor(): void {
+    if (!this.challengeToken || !this.verificationCode.trim() || this.loading) {
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.authService
+      .verifyTwoFactor(this.challengeToken, this.verificationCode, this.rememberSession)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: () => this.completeLogin(),
+        error: () => {
+          this.errorMessage =
+            'El código no es válido, ya fue utilizado o el tiempo de verificación terminó.';
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  restartLogin(): void {
+    this.challengeToken = '';
+    this.verificationCode = '';
+    this.challengeExpiresIn = 0;
+    this.errorMessage = '';
+  }
+
+  private completeLogin(): void {
+    const returnUrl = this.getSafeReturnUrl();
+
+    if (returnUrl) {
+      void this.router.navigateByUrl(returnUrl);
+      return;
+    }
+
+    void this.router.navigate(['/dashboard']);
   }
 
   private getSafeReturnUrl(): string | null {
