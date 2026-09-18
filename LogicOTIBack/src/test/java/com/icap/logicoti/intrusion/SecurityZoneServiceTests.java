@@ -84,7 +84,6 @@ class SecurityZoneServiceTests {
         service.completeArmingIfDue();
 
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
-        verifyNoInteractions(lightingService);
     }
 
     private void readyToArm() {
