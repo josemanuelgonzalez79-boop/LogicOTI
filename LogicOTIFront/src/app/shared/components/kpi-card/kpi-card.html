@@ -1,0 +1,27 @@
+<article class="kpi-card">
+  <div class="kpi-card__header">
+    <span class="kpi-card__title">
+      {{ title() }}
+    </span>
+
+    @if (icon()) {
+      <i class="kpi-card__icon" [class]="icon()"></i>
+    }
+  </div>
+
+  <div class="kpi-card__value">
+    {{ value() }}
+
+    @if (unit()) {
+      <span class="kpi-card__unit">
+        {{ unit() }}
+      </span>
+    }
+  </div>
+
+  @if (description()) {
+    <p class="kpi-card__description">
+      {{ description() }}
+    </p>
+  }
+</article>

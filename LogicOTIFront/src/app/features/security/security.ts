@@ -1,0 +1,702 @@
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { finalize, forkJoin, interval } from 'rxjs';
+
+import { UserRole } from '../../core/models/auth.model';
+import {
+  AreaInactivityStatus,
+  AutomaticLightingStatus,
+  AutomaticLightingTarget,
+  SecurityPrecheck,
+  SecurityScheduleDay,
+  SecuritySettings,
+  SecuritySettingsUpdateRequest,
+  SecurityStatus,
+  SecurityAggregateMode,
+  SecurityZoneActionResponse,
+  SecurityZoneList,
+  SecurityZoneStatus,
+} from '../../core/models/security.model';
+import { AuthService } from '../../core/services/auth.service';
+import { RealtimeConnectionStatus } from '../../core/services/smoke-alert-realtime.service';
+import { SecurityApiService } from '../../core/services/security-api.service';
+import { SecurityRealtimeService } from '../../core/services/security-realtime.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
+
+type PendingAction = 'ARM' | 'DISARM';
+type NumericSetting =
+  | 'exitDelaySeconds'
+  | 'lightInactivityMinutes'
+  | 'minisplitInactivityMinutes'
+  | 'diagnosticTimeoutSeconds'
+  | 'diagnosticValidityMonths';
+
+@Component({
+  selector: 'app-security',
+  standalone: true,
+  imports: [DatePipe, FormsModule],
+  templateUrl: './security.html',
+  styleUrl: './security.scss',
+})
+export class Security implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+  private readonly api = inject(SecurityApiService);
+  private readonly realtime = inject(SecurityRealtimeService);
+  readonly pushNotifications = inject(PushNotificationService);
+
+  readonly loading = signal(false);
+  readonly refreshingPrecheck = signal(false);
+  readonly savingSettings = signal(false);
+  readonly executingAction = signal(false);
+  readonly errorMessage = signal('');
+  readonly successMessage = signal('');
+  readonly status = signal<SecurityStatus | null>(null);
+  readonly zoneStatus = signal<SecurityZoneList | null>(null);
+  readonly selectedZoneCodes = signal<string[]>([]);
+  readonly precheck = signal<SecurityPrecheck | null>(null);
+  readonly settings = signal<SecuritySettings | null>(null);
+  readonly automaticLightingStatus = signal<AutomaticLightingStatus | null>(null);
+  readonly areaInactivityStatus = signal<AreaInactivityStatus | null>(null);
+  readonly scheduleForm = signal<SecuritySettingsUpdateRequest | null>(null);
+  readonly connectionStatus = signal<RealtimeConnectionStatus>('DISCONNECTED');
+  readonly currentTime = signal(Date.now());
+  readonly pendingAction = signal<PendingAction | null>(null);
+  readonly acknowledgingZoneCode = signal<string | null>(null);
+  private zoneSelectionInitialized = false;
+
+  readonly zones = computed(() => this.zoneStatus()?.zones ?? []);
+  readonly selectedZones = computed(() => {
+    const selected = new Set(this.selectedZoneCodes());
+    return this.zones().filter((zone) => selected.has(zone.code));
+  });
+  readonly selectedZoneCount = computed(() => this.selectedZones().length);
+  readonly allZonesSelected = computed(
+    () => this.zones().length > 0 && this.selectedZoneCount() === this.zones().length,
+  );
+  readonly selectedZoneNames = computed(() =>
+    this.selectedZones()
+      .map((zone) => zone.name)
+      .join(', '),
+  );
+
+  readonly selectedLightingTargets = computed(
+    () => this.scheduleForm()?.automaticLightingTargetDeviceCodes.length ?? 0,
+  );
+
+  readonly currentRole: UserRole = this.authService.getSession()?.user.role ?? 'MONITORING';
+  readonly canOperate = this.currentRole === 'ADMIN' || this.currentRole === 'OPERATOR';
+  readonly canEditSettings = this.currentRole === 'ADMIN';
+
+  readonly blockingIssues = computed(
+    () => this.precheck()?.issues.filter((issue) => issue.blocking).length ?? 0,
+  );
+
+  readonly warningIssues = computed(
+    () => this.precheck()?.issues.filter((issue) => !issue.blocking).length ?? 0,
+  );
+
+  readonly armingRemainingSeconds = computed(() => {
+    this.currentTime();
+    const completesAt = this.status()?.armingCompletesAt;
+
+    return completesAt
+      ? Math.max(0, Math.ceil((new Date(completesAt).getTime() - Date.now()) / 1000))
+      : 0;
+  });
+
+  ngOnInit(): void {
+    this.realtime.connectionStatus$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((connectionStatus) => this.connectionStatus.set(connectionStatus));
+
+    this.realtime.status$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.receiveStatus(status));
+
+    this.realtime.zones$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.receiveZoneStatus(status));
+
+    this.realtime.automaticLighting$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.automaticLightingStatus.set(status));
+
+    this.realtime.areaInactivity$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.areaInactivityStatus.set(status));
+
+    interval(1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.currentTime.set(Date.now()));
+
+    this.realtime.connect();
+    void this.pushNotifications.initialize();
+    this.loadAll();
+  }
+
+  ngOnDestroy(): void {
+    void this.realtime.disconnect();
+  }
+
+  loadAll(): void {
+    this.loading.set(true);
+    this.clearMessages();
+
+    forkJoin({
+      status: this.api.getStatus(),
+      zones: this.api.getZones(),
+      precheck: this.api.getPrecheck(),
+      settings: this.api.getSchedules(),
+      automaticLighting: this.api.getAutomaticLightingStatus(),
+      areaInactivity: this.api.getAreaInactivityStatus(),
+    })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: ({ status, zones, precheck, settings, automaticLighting, areaInactivity }) => {
+          this.status.set(status);
+          this.receiveZoneStatus(zones);
+          this.precheck.set(precheck);
+          this.applySettings(settings);
+          this.automaticLightingStatus.set(automaticLighting);
+          this.areaInactivityStatus.set(areaInactivity);
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'No fue posible cargar la configuración de seguridad.'),
+          ),
+      });
+  }
+
+  refreshPrecheck(): void {
+    const zoneCodes = this.selectedZoneCodes();
+
+    if (zoneCodes.length === 0) {
+      this.precheck.set(null);
+      this.errorMessage.set('Selecciona al menos una zona para ejecutar el precheck.');
+      return;
+    }
+
+    this.refreshingPrecheck.set(true);
+    this.clearMessages();
+
+    this.api
+      .getZonePrecheck(zoneCodes)
+      .pipe(finalize(() => this.refreshingPrecheck.set(false)))
+      .subscribe({
+        next: (precheck) => this.precheck.set(precheck),
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'No fue posible revisar los sensores.'),
+          ),
+      });
+  }
+
+  requestAction(action: PendingAction): void {
+    if (
+      !this.canOperate ||
+      this.executingAction() ||
+      this.acknowledgingZoneCode() ||
+      this.selectedZoneCount() === 0
+    ) {
+      return;
+    }
+
+    this.clearMessages();
+    this.pendingAction.set(action);
+  }
+
+  closeActionConfirmation(): void {
+    if (!this.executingAction()) {
+      this.pendingAction.set(null);
+    }
+  }
+
+  confirmAction(): void {
+    const action = this.pendingAction();
+
+    if (!action || !this.canOperate) {
+      return;
+    }
+
+    this.executingAction.set(true);
+    this.clearMessages();
+
+    const zoneCodes = this.selectedZoneCodes();
+    const request =
+      action === 'ARM' ? this.api.armZones(zoneCodes) : this.api.disarmZones(zoneCodes);
+
+    request.pipe(finalize(() => this.executingAction.set(false))).subscribe({
+      next: (response) => {
+        this.pendingAction.set(null);
+        this.applyZoneActionResponse(response, action);
+      },
+      error: (error: HttpErrorResponse) =>
+        this.errorMessage.set(
+          this.getErrorMessage(
+            error,
+            action === 'ARM'
+              ? 'No fue posible armar la alarma.'
+              : 'No fue posible desarmar la alarma.',
+          ),
+        ),
+    });
+  }
+
+  updateZoneSelection(zoneCode: string, selected: boolean): void {
+    this.selectedZoneCodes.update((current) => {
+      const codes = new Set(current);
+
+      if (selected) {
+        codes.add(zoneCode);
+      } else {
+        codes.delete(zoneCode);
+      }
+
+      return this.zones()
+        .map((zone) => zone.code)
+        .filter((code) => codes.has(code));
+    });
+
+    this.refreshPrecheck();
+  }
+
+  selectAllZones(): void {
+    this.selectedZoneCodes.set(this.zones().map((zone) => zone.code));
+    this.refreshPrecheck();
+  }
+
+  clearZoneSelection(): void {
+    this.selectedZoneCodes.set([]);
+    this.precheck.set(null);
+    this.clearMessages();
+  }
+
+  isZoneSelected(zoneCode: string): boolean {
+    return this.selectedZoneCodes().includes(zoneCode);
+  }
+
+  zoneArmingRemainingSeconds(zone: SecurityZoneStatus): number {
+    this.currentTime();
+
+    return zone.armingCompletesAt
+      ? Math.max(0, Math.ceil((new Date(zone.armingCompletesAt).getTime() - Date.now()) / 1000))
+      : 0;
+  }
+
+  acknowledgeZone(zone: SecurityZoneStatus): void {
+    if (!zone.alarmActive || this.acknowledgingZoneCode() || this.executingAction()) {
+      return;
+    }
+
+    this.acknowledgingZoneCode.set(zone.code);
+    this.clearMessages();
+
+    this.api
+      .acknowledgeZone(zone.code)
+      .pipe(finalize(() => this.acknowledgingZoneCode.set(null)))
+      .subscribe({
+        next: (status) => {
+          this.receiveZoneStatus(status);
+          this.successMessage.set(
+            `La alarma de ${zone.name} fue reconocida. La zona permanece armada.`,
+          );
+          this.refreshAggregateStatus();
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, `No fue posible reconocer la alarma de ${zone.name}.`),
+          ),
+      });
+  }
+
+  updateAutomaticSchedule(enabled: boolean): void {
+    this.scheduleForm.update((form) =>
+      form ? { ...form, automaticScheduleEnabled: enabled } : form,
+    );
+  }
+
+  togglePushNotifications(): void {
+    if (this.pushNotifications.subscribed()) {
+      void this.pushNotifications.disable();
+      return;
+    }
+
+    void this.pushNotifications.enable();
+  }
+
+  testPushNotification(): void {
+    void this.pushNotifications.sendTest();
+  }
+
+  updateAutomaticLighting(enabled: boolean): void {
+    this.scheduleForm.update((form) =>
+      form ? { ...form, automaticLightingEnabled: enabled } : form,
+    );
+  }
+
+  updateAreaInactivity(enabled: boolean): void {
+    this.scheduleForm.update((form) => (form ? { ...form, areaInactivityEnabled: enabled } : form));
+  }
+
+  updateEnergySavingArea(areaCode: string, enabled: boolean): void {
+    this.scheduleForm.update((form) => {
+      if (!form) {
+        return form;
+      }
+
+      const codes = new Set(form.energySavingAreaCodes);
+
+      if (enabled) {
+        codes.add(areaCode);
+      } else {
+        codes.delete(areaCode);
+      }
+
+      return { ...form, energySavingAreaCodes: [...codes] };
+    });
+  }
+
+  isEnergySavingAreaEnabled(areaCode: string): boolean {
+    return this.scheduleForm()?.energySavingAreaCodes.includes(areaCode) ?? false;
+  }
+
+  updateAutomaticLightingTime(
+    field: 'automaticLightingStartTime' | 'automaticLightingEndTime',
+    value: string,
+  ): void {
+    this.scheduleForm.update((form) => (form ? { ...form, [field]: value } : form));
+  }
+
+  updateLightingTarget(deviceCode: string, selected: boolean): void {
+    this.scheduleForm.update((form) => {
+      if (!form) {
+        return form;
+      }
+
+      const codes = new Set(form.automaticLightingTargetDeviceCodes);
+
+      if (selected) {
+        codes.add(deviceCode);
+      } else {
+        codes.delete(deviceCode);
+      }
+
+      return { ...form, automaticLightingTargetDeviceCodes: [...codes] };
+    });
+  }
+
+  isLightingTargetSelected(deviceCode: string): boolean {
+    return this.scheduleForm()?.automaticLightingTargetDeviceCodes.includes(deviceCode) ?? false;
+  }
+
+  updateTimezone(timezone: string): void {
+    this.scheduleForm.update((form) => (form ? { ...form, timezone } : form));
+  }
+
+  updateNumber(field: NumericSetting, value: number | string): void {
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue)) {
+      return;
+    }
+
+    this.scheduleForm.update((form) =>
+      form ? { ...form, [field]: Math.trunc(numericValue) } : form,
+    );
+  }
+
+  updateDayBoolean(dayOfWeek: number, field: 'enabled' | 'allDayArmed', value: boolean): void {
+    this.scheduleForm.update((form) =>
+      form
+        ? {
+            ...form,
+            days: form.days.map((day) =>
+              day.dayOfWeek === dayOfWeek ? { ...day, [field]: value } : day,
+            ),
+          }
+        : form,
+    );
+  }
+
+  updateDayTime(dayOfWeek: number, field: 'armTime' | 'disarmTime', value: string): void {
+    this.scheduleForm.update((form) =>
+      form
+        ? {
+            ...form,
+            days: form.days.map((day) =>
+              day.dayOfWeek === dayOfWeek ? { ...day, [field]: value } : day,
+            ),
+          }
+        : form,
+    );
+  }
+
+  saveSchedules(): void {
+    const form = this.scheduleForm();
+
+    if (!form || !this.canEditSettings || !this.validateSchedule(form)) {
+      return;
+    }
+
+    this.savingSettings.set(true);
+    this.clearMessages();
+
+    this.api
+      .updateSchedules(form)
+      .pipe(finalize(() => this.savingSettings.set(false)))
+      .subscribe({
+        next: (settings) => {
+          this.applySettings(settings);
+          this.status.update((status) =>
+            status
+              ? {
+                  ...status,
+                  automaticScheduleEnabled: settings.automaticScheduleEnabled,
+                  timezone: settings.timezone,
+                  exitDelaySeconds: settings.exitDelaySeconds,
+                  lightInactivityMinutes: settings.lightInactivityMinutes,
+                  minisplitInactivityMinutes: settings.minisplitInactivityMinutes,
+                }
+              : status,
+          );
+          this.successMessage.set('La configuración de seguridad quedó guardada.');
+          this.refreshAreaInactivityStatus();
+        },
+        error: (error: HttpErrorResponse) =>
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'No fue posible guardar los horarios.'),
+          ),
+      });
+  }
+
+  resetScheduleForm(): void {
+    const settings = this.settings();
+
+    if (settings) {
+      this.scheduleForm.set(this.toRequest(settings));
+      this.clearMessages();
+    }
+  }
+
+  modeLabel(mode: SecurityAggregateMode | undefined): string {
+    const labels: Record<SecurityAggregateMode, string> = {
+      DISARMED: 'Desarmada',
+      ARMING: 'Armándose',
+      ARMED: 'Armada',
+      ARMED_WITH_BYPASS: 'Armada con omisiones',
+      REJECTED: 'Armado rechazado',
+      ALARM: 'Alarma activa',
+      PARTIALLY_ARMED: 'Armado parcial',
+    };
+
+    return mode ? labels[mode] : 'Sin información';
+  }
+
+  sourceLabel(source: SecurityStatus['changeSource'] | undefined): string {
+    const labels = {
+      MANUAL: 'Acción manual',
+      SCHEDULE: 'Horario automático',
+      SYSTEM: 'Sistema',
+    };
+
+    return source ? labels[source] : 'Sin información';
+  }
+
+  dayName(dayOfWeek: number): string {
+    const names = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+    return names[dayOfWeek] ?? `Día ${dayOfWeek}`;
+  }
+
+  connectionLabel(): string {
+    const labels: Record<RealtimeConnectionStatus, string> = {
+      DISCONNECTED: 'Desconectado',
+      CONNECTING: 'Conectando...',
+      CONNECTED: 'Tiempo real conectado',
+      RECONNECTING: 'Reconectando...',
+      UNAUTHORIZED: 'Sesión no disponible',
+      ERROR: 'Error de conexión',
+    };
+
+    return labels[this.connectionStatus()];
+  }
+
+  trackDay(_: number, day: SecurityScheduleDay | { dayOfWeek: number }): number {
+    return day.dayOfWeek;
+  }
+
+  trackLightingTarget(_: number, target: AutomaticLightingTarget): number {
+    return target.deviceId;
+  }
+
+  trackZone(_: number, zone: SecurityZoneStatus): string {
+    return zone.code;
+  }
+
+  private receiveStatus(status: SecurityStatus): void {
+    this.status.set(status);
+
+    if (status.mode === 'ARMED' || status.mode === 'ARMED_WITH_BYPASS') {
+      this.successMessage.set(status.message);
+    } else if (status.mode === 'REJECTED' || status.mode === 'ALARM') {
+      this.errorMessage.set(status.message);
+    }
+  }
+
+  private receiveZoneStatus(status: SecurityZoneList): void {
+    this.zoneStatus.set(status);
+
+    const available = new Set(status.zones.map((zone) => zone.code));
+    const retained = this.selectedZoneCodes().filter((code) => available.has(code));
+
+    if (!this.zoneSelectionInitialized) {
+      this.selectedZoneCodes.set(status.zones.map((zone) => zone.code));
+      this.zoneSelectionInitialized = true;
+      return;
+    }
+
+    this.selectedZoneCodes.set(retained);
+  }
+
+  private applyZoneActionResponse(
+    response: SecurityZoneActionResponse,
+    action: PendingAction,
+  ): void {
+    this.receiveZoneStatus(response.status);
+
+    if (response.precheck) {
+      this.precheck.set(response.precheck);
+    }
+
+    const selectedCodes = new Set(this.selectedZoneCodes());
+    const rejectedZones = response.status.zones.filter(
+      (zone) => selectedCodes.has(zone.code) && zone.mode === 'REJECTED',
+    );
+
+    if (response.precheck?.ready === false || rejectedZones.length > 0) {
+      this.errorMessage.set(
+        rejectedZones.length > 0
+          ? rejectedZones.map((zone) => zone.message).join(' ')
+          : 'No fue posible armar las zonas seleccionadas. Revisa los puntos del precheck.',
+      );
+      return;
+    }
+
+    this.successMessage.set(
+      action === 'ARM' ? response.status.message : 'Las zonas seleccionadas quedaron desarmadas.',
+    );
+    this.refreshAggregateStatus();
+  }
+
+  private applySettings(settings: SecuritySettings): void {
+    this.settings.set(settings);
+    this.scheduleForm.set(this.toRequest(settings));
+  }
+
+  private toRequest(settings: SecuritySettings): SecuritySettingsUpdateRequest {
+    return {
+      automaticScheduleEnabled: settings.automaticScheduleEnabled,
+      automaticLightingEnabled: settings.automaticLightingEnabled,
+      automaticLightingStartTime: this.toTimeInput(settings.automaticLightingStartTime),
+      automaticLightingEndTime: this.toTimeInput(settings.automaticLightingEndTime),
+      areaInactivityEnabled: settings.areaInactivityEnabled,
+      timezone: settings.timezone,
+      exitDelaySeconds: settings.exitDelaySeconds,
+      lightInactivityMinutes: settings.lightInactivityMinutes,
+      minisplitInactivityMinutes: settings.minisplitInactivityMinutes,
+      diagnosticTimeoutSeconds: settings.diagnosticTimeoutSeconds,
+      diagnosticValidityMonths: settings.diagnosticValidityMonths,
+      days: settings.days.map((day) => ({
+        dayOfWeek: day.dayOfWeek,
+        enabled: day.enabled,
+        allDayArmed: day.allDayArmed,
+        armTime: this.toTimeInput(day.armTime),
+        disarmTime: this.toTimeInput(day.disarmTime),
+      })),
+      automaticLightingTargetDeviceCodes: settings.lightingTargets
+        .filter((target) => target.selected)
+        .map((target) => target.deviceCode),
+      energySavingAreaCodes: settings.energySavingAreas
+        .filter((area) => area.enabled)
+        .map((area) => area.areaCode),
+    };
+  }
+
+  private toTimeInput(time: string): string {
+    return time?.slice(0, 5) || '00:00';
+  }
+
+  private validateSchedule(form: SecuritySettingsUpdateRequest): boolean {
+    if (!form.timezone.trim()) {
+      this.errorMessage.set('La zona horaria es obligatoria.');
+      return false;
+    }
+
+    if (form.days.length !== 7) {
+      this.errorMessage.set('La configuración debe contener los siete días de la semana.');
+      return false;
+    }
+
+    if (
+      !form.automaticLightingStartTime ||
+      !form.automaticLightingEndTime ||
+      form.automaticLightingStartTime === form.automaticLightingEndTime
+    ) {
+      this.errorMessage.set('El inicio y fin de la iluminación automática no pueden ser iguales.');
+      return false;
+    }
+
+    if (form.automaticLightingEnabled && form.automaticLightingTargetDeviceCodes.length === 0) {
+      this.errorMessage.set('Selecciona al menos una luz para una alarma de intrusión.');
+      return false;
+    }
+
+    if (form.areaInactivityEnabled && form.energySavingAreaCodes.length === 0) {
+      this.errorMessage.set('Selecciona al menos un área para el ahorro de energía.');
+      return false;
+    }
+
+    const invalidDay = form.days.find(
+      (day) =>
+        !day.armTime || !day.disarmTime || (!day.allDayArmed && day.armTime === day.disarmTime),
+    );
+
+    if (invalidDay) {
+      this.errorMessage.set(
+        `Revisa el horario de ${this.dayName(invalidDay.dayOfWeek)}. Las horas no pueden ser iguales.`,
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  private clearMessages(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  private refreshAreaInactivityStatus(): void {
+    this.api.getAreaInactivityStatus().subscribe({
+      next: (status) => this.areaInactivityStatus.set(status),
+      error: () => undefined,
+    });
+  }
+
+  private refreshAggregateStatus(): void {
+    this.api.getStatus().subscribe({
+      next: (status) => this.status.set(status),
+      error: () => undefined,
+    });
+  }
+
+  private getErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    const detail = error.error?.detail ?? error.error?.message;
+
+    return typeof detail === 'string' && detail.trim() ? detail : fallback;
+  }
+}

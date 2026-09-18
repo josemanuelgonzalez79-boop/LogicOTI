@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      minimum-idle: ${DB_POOL_MIN:2}
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: 5000
+      pool-name: IndustrialHikariPool
+  flyway:
+    enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+
+logging:
+  level:
+    root: INFO
+    com.icap.template: INFO

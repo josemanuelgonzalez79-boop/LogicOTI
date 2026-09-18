@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.area-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.area-page__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.76rem;
+
+  a {
+    color: var(--p-primary-color);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  i {
+    font-size: 0.65rem;
+  }
+}

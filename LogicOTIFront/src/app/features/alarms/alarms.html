@@ -1,0 +1,495 @@
+<section class="alarms-page">
+  <header class="alarms-header">
+    <div>
+      <span class="alarms-header__eyebrow">Monitoreo de seguridad</span>
+      <h1>Alarmas de humo</h1>
+      <p>
+        Revisa las alarmas activas y los cambios recibidos desde los sensores de humo del edificio
+        OTI.
+      </p>
+    </div>
+
+    <div class="connection-status" [attr.data-status]="connectionStatus()">
+      <span class="connection-status__dot"></span>
+      <div>
+        <strong>{{ connectionLabel() }}</strong>
+        <span>Actualización automática por WebSocket</span>
+      </div>
+    </div>
+  </header>
+
+  @if (lastRealtimeEvent(); as latestEvent) {
+    <article
+      class="realtime-notice"
+      [class.realtime-notice--active]="latestEvent.currentState"
+      [class.realtime-notice--cleared]="!latestEvent.currentState"
+      aria-live="polite"
+    >
+      <span class="realtime-notice__icon">
+        <i
+          class="pi"
+          [class.pi-exclamation-triangle]="latestEvent.currentState"
+          [class.pi-check-circle]="!latestEvent.currentState"
+        ></i>
+      </span>
+
+      <div class="realtime-notice__content">
+        <span>Último cambio recibido en tiempo real</span>
+        <strong>{{ latestEvent.message }}</strong>
+        <small>
+          {{ latestEvent.areaName }} ·
+          {{ latestEvent.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+        </small>
+      </div>
+    </article>
+  }
+
+  <section class="summary-grid" aria-label="Resumen de alarmas">
+    <article class="summary-card summary-card--danger">
+      <span class="summary-card__icon">
+        <i class="pi pi-exclamation-triangle"></i>
+      </span>
+      <div>
+        <span>Alarmas activas</span>
+        <strong>{{ activeAlerts().length }}</strong>
+        <small>{{ unacknowledgedActiveAlerts() }} sin reconocer</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--warning">
+      <span class="summary-card__icon">
+        <i class="pi pi-clock"></i>
+      </span>
+      <div>
+        <span>Críticas en 24 horas</span>
+        <strong>{{ criticalEventsLast24Hours() }}</strong>
+        <small>Activaciones recientes</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--success">
+      <span class="summary-card__icon">
+        <i class="pi pi-check-circle"></i>
+      </span>
+      <div>
+        <span>Restablecimientos</span>
+        <strong>{{ clearedEvents() }}</strong>
+        <small>Dentro de los últimos 200 registros</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--info">
+      <span class="summary-card__icon">
+        <i class="pi pi-database"></i>
+      </span>
+      <div>
+        <span>Histórico total</span>
+        <strong>{{ totalEvents() }}</strong>
+        <small>Eventos de sensores de humo</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="active-panel">
+    <header class="panel-header">
+      <div>
+        <span class="panel-header__eyebrow">Atención inmediata</span>
+        <h2>Alarmas activas</h2>
+      </div>
+
+      <span class="active-count" [class.active-count--clear]="activeAlerts().length === 0">
+        {{ activeAlerts().length }} activas
+      </span>
+    </header>
+
+    @if (loading() && events().length === 0) {
+      <div class="panel-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Consultando alarmas...</span>
+      </div>
+    } @else if (activeAlerts().length === 0) {
+      <div class="healthy-state">
+        <span class="healthy-state__icon">
+          <i class="pi pi-shield"></i>
+        </span>
+        <div>
+          <strong>No hay alarmas de humo activas</strong>
+          <span>Los últimos estados registrados se encuentran restablecidos.</span>
+        </div>
+      </div>
+    } @else {
+      <div class="active-alert-grid">
+        @for (alarm of activeAlerts(); track alarm.deviceCode) {
+          <article class="active-alert-card">
+            <div class="active-alert-card__top">
+              <span class="active-alert-card__icon">
+                <i class="pi pi-exclamation-triangle"></i>
+              </span>
+              <span class="critical-badge">Crítica</span>
+            </div>
+
+            <div class="active-alert-card__content">
+              <span>{{ alarm.areaCode }}</span>
+              <h3>{{ alarm.areaName }}</h3>
+              <p>{{ alarm.message }}</p>
+            </div>
+
+            <div
+              class="attention-summary"
+              [class.attention-summary--acknowledged]="alarm.acknowledged"
+            >
+              <i
+                class="pi"
+                [class.pi-user-plus]="!alarm.acknowledged"
+                [class.pi-check-circle]="alarm.acknowledged"
+              ></i>
+              <div>
+                @if (alarm.acknowledged) {
+                  <strong>Reconocida por {{ alarm.acknowledgedBy }}</strong>
+                  <span>
+                    {{ alarm.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }} ·
+                    {{ alarm.commentCount }} comentarios
+                  </span>
+                } @else {
+                  <strong>Pendiente de reconocimiento</strong>
+                  <span>Registra quién está atendiendo la alarma.</span>
+                }
+              </div>
+            </div>
+
+            <footer class="active-alert-card__footer">
+              <span>
+                <i class="pi pi-bell"></i>
+                {{ alarm.deviceName }}
+              </span>
+              <time>
+                {{ alarm.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+              </time>
+            </footer>
+
+            <button type="button" class="attention-button" (click)="openAttention(alarm)">
+              <i
+                class="pi"
+                [class.pi-user-plus]="!alarm.acknowledged"
+                [class.pi-comments]="alarm.acknowledged"
+              ></i>
+              {{ alarm.acknowledged ? 'Ver atención y comentarios' : 'Reconocer alarma' }}
+            </button>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="history-panel">
+    <header class="panel-header history-panel__header">
+      <div>
+        <span class="panel-header__eyebrow">Actividad registrada</span>
+        <h2>Eventos recientes de humo</h2>
+      </div>
+
+      <button type="button" class="refresh-button" [disabled]="loading()" (click)="refresh()">
+        <i
+          class="pi"
+          [class.pi-refresh]="!loading()"
+          [class.pi-spin]="loading()"
+          [class.pi-spinner]="loading()"
+        ></i>
+        Actualizar
+      </button>
+    </header>
+
+    <div class="history-filters">
+      <label class="search-field">
+        <span class="sr-only">Buscar eventos</span>
+        <i class="pi pi-search"></i>
+        <input
+          type="search"
+          placeholder="Buscar por área, sensor o mensaje"
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+        />
+      </label>
+
+      <label class="select-field">
+        <span>Mostrar</span>
+        <select [ngModel]="eventFilter()" (ngModelChange)="eventFilter.set($event)">
+          <option value="">Todos los eventos</option>
+          <option value="ACTIVATED">Solo activaciones</option>
+          <option value="CLEARED">Solo restablecimientos</option>
+        </select>
+      </label>
+
+      @if (searchText() || eventFilter()) {
+        <button type="button" class="clear-button" (click)="clearFilters()">
+          <i class="pi pi-filter-slash"></i>
+          Limpiar filtros
+        </button>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <div class="panel-message panel-message--error">
+        <i class="pi pi-exclamation-circle"></i>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (loading() && events().length === 0) {
+      <div class="panel-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Consultando el histórico de alarmas...</span>
+      </div>
+    } @else if (filteredEvents().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-inbox"></i>
+        <strong>No hay eventos para mostrar</strong>
+        <span>Cambia los filtros o espera un nuevo evento de humo.</span>
+      </div>
+    } @else {
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Área</th>
+              <th>Sensor</th>
+              <th>Evento</th>
+              <th>Severidad</th>
+              <th>Atención</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of filteredEvents(); track event.id) {
+              <tr [class.history-table__critical]="event.currentState">
+                <td class="history-table__date" data-label="Fecha">
+                  {{ event.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                </td>
+                <td data-label="Área">
+                  <strong>{{ event.areaName }}</strong>
+                  <small>{{ event.areaCode }}</small>
+                </td>
+                <td data-label="Sensor">
+                  <strong>{{ event.deviceName }}</strong>
+                  <small>{{ event.deviceCode }}</small>
+                </td>
+                <td data-label="Evento">
+                  <span
+                    class="event-badge"
+                    [class.event-badge--active]="event.eventType === 'ACTIVATED'"
+                    [class.event-badge--cleared]="event.eventType === 'CLEARED'"
+                  >
+                    {{ event.eventType === 'ACTIVATED' ? 'Activada' : 'Restablecida' }}
+                  </span>
+                </td>
+                <td data-label="Severidad">
+                  <span
+                    class="severity-badge"
+                    [class.severity-badge--critical]="event.severity === 'CRITICAL'"
+                    [class.severity-badge--warning]="event.severity === 'WARNING'"
+                    [class.severity-badge--info]="event.severity === 'INFO'"
+                  >
+                    @switch (event.severity) {
+                      @case ('CRITICAL') {
+                        Crítica
+                      }
+                      @case ('WARNING') {
+                        Advertencia
+                      }
+                      @default {
+                        Información
+                      }
+                    }
+                  </span>
+                </td>
+                <td data-label="Atención">
+                  @if (event.eventType === 'ACTIVATED') {
+                    <button
+                      type="button"
+                      class="table-attention-button"
+                      [class.table-attention-button--pending]="!event.acknowledged"
+                      (click)="openAttention(event)"
+                    >
+                      <i
+                        class="pi"
+                        [class.pi-check-circle]="event.acknowledged"
+                        [class.pi-clock]="!event.acknowledged"
+                      ></i>
+                      {{ event.acknowledged ? 'Reconocida' : 'Pendiente' }}
+                      @if (event.commentCount > 0) {
+                        <span>{{ event.commentCount }}</span>
+                      }
+                    </button>
+                  } @else {
+                    <span class="not-applicable">—</span>
+                  }
+                </td>
+                <td class="history-table__message" data-label="Detalle">{{ event.message }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <footer class="history-panel__footer">
+      Mostrando {{ filteredEvents().length }} de {{ totalEvents() }} registros
+    </footer>
+  </section>
+
+  @if (selectedAlarm(); as alarm) {
+    <div class="attention-dialog-backdrop" (click)="closeAttention()">
+      <section
+        class="attention-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="attention-dialog-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="attention-dialog__header">
+          <div>
+            <span>Bitácora de atención</span>
+            <h2 id="attention-dialog-title">{{ alarm.areaName }}</h2>
+            <p>{{ alarm.deviceName }} · {{ alarm.detectedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="dialog-close"
+            aria-label="Cerrar"
+            [disabled]="activitySaving()"
+            (click)="closeAttention()"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+        </header>
+
+        <div class="attention-dialog__body">
+          @if (activityLoading()) {
+            <div class="dialog-state">
+              <i class="pi pi-spin pi-spinner"></i>
+              Consultando bitácora...
+            </div>
+          } @else if (alarmActivity(); as activity) {
+            <article
+              class="acknowledgement-card"
+              [class.acknowledgement-card--done]="activity.acknowledgement"
+            >
+              <i
+                class="pi"
+                [class.pi-shield]="!activity.acknowledgement"
+                [class.pi-check-circle]="activity.acknowledgement"
+              ></i>
+              <div>
+                @if (activity.acknowledgement; as acknowledgement) {
+                  <strong>Alarma reconocida</strong>
+                  <span>
+                    {{ acknowledgement.acknowledgedBy }} ·
+                    {{ acknowledgement.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  </span>
+                } @else {
+                  <strong>Alarma pendiente de reconocimiento</strong>
+                  <span>Reconocerla no cambia ni restablece el estado físico del sensor.</span>
+                }
+              </div>
+            </article>
+
+            <section class="comment-timeline">
+              <header>
+                <h3>Comentarios</h3>
+                <span>{{ activity.commentCount }}</span>
+              </header>
+
+              @if (activity.comments.length === 0) {
+                <p class="comment-empty">Todavía no hay observaciones registradas.</p>
+              } @else {
+                <div class="comment-list">
+                  @for (comment of activity.comments; track comment.id) {
+                    <article class="comment-item">
+                      <span class="comment-item__avatar">
+                        <i class="pi pi-user"></i>
+                      </span>
+                      <div>
+                        <header>
+                          <strong>{{ comment.createdBy }}</strong>
+                          <time>{{ comment.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</time>
+                        </header>
+                        <p>{{ comment.comment }}</p>
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+            </section>
+
+            <label class="comment-field">
+              <span>
+                {{
+                  activity.acknowledgement
+                    ? 'Agregar comentario a la bitácora'
+                    : 'Comentario inicial (opcional)'
+                }}
+              </span>
+              <textarea
+                rows="3"
+                maxlength="500"
+                placeholder="Describe la revisión, acción realizada o personal notificado"
+                [ngModel]="draftComment()"
+                (ngModelChange)="draftComment.set($event)"
+              ></textarea>
+              <small>{{ draftComment().length }}/500</small>
+            </label>
+          }
+
+          @if (activityError()) {
+            <div class="dialog-feedback dialog-feedback--error">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ activityError() }}
+            </div>
+          }
+
+          @if (activitySuccess()) {
+            <div class="dialog-feedback dialog-feedback--success">
+              <i class="pi pi-check-circle"></i>
+              {{ activitySuccess() }}
+            </div>
+          }
+        </div>
+
+        <footer class="attention-dialog__footer">
+          <button
+            type="button"
+            class="dialog-secondary-button"
+            [disabled]="activitySaving()"
+            (click)="closeAttention()"
+          >
+            Cerrar
+          </button>
+
+          <button
+            type="button"
+            class="dialog-primary-button"
+            [disabled]="activityLoading() || activitySaving() || !alarmActivity()"
+            (click)="saveAttention()"
+          >
+            <i
+              class="pi"
+              [class.pi-spin]="activitySaving()"
+              [class.pi-spinner]="activitySaving()"
+              [class.pi-user-plus]="!activitySaving() && !alarmActivity()?.acknowledgement"
+              [class.pi-send]="!activitySaving() && !!alarmActivity()?.acknowledgement"
+            ></i>
+            @if (activitySaving()) {
+              Guardando...
+            } @else if (alarmActivity()?.acknowledgement) {
+              Agregar comentario
+            } @else {
+              Reconocer alarma
+            }
+          </button>
+        </footer>
+      </section>
+    </div>
+  }
+</section>

@@ -1,0 +1,11 @@
+<section class="area-page">
+  <nav class="area-page__breadcrumb" aria-label="Navegación del edificio">
+    <a routerLink="/building">Edificio</a>
+    <i class="pi pi-angle-right"></i>
+    <a [routerLink]="['/building', 'floor', floorCode]">{{ floorCode }}</a>
+    <i class="pi pi-angle-right"></i>
+    <span>{{ areaCode }}</span>
+  </nav>
+
+  <app-control [compact]="true" [initialFloorCode]="floorCode" [initialAreaCode]="areaCode" />
+</section>

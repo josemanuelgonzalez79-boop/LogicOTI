@@ -1,0 +1,39 @@
+.status-chip {
+
+  display: inline-flex;
+  align-items: center;
+
+  padding: .35rem .8rem;
+
+  border-radius: 999px;
+
+  font-size: .85rem;
+
+  font-weight: 600;
+
+}
+
+.active{
+    background:#d4edda;
+    color:#155724;
+}
+
+.inactive{
+    background:#e2e3e5;
+    color:#495057;
+}
+
+.alarm{
+    background:#f8d7da;
+    color:#721c24;
+}
+
+.offline{
+    background:#d6d8db;
+    color:#343a40;
+}
+
+.maintenance{
+    background:#fff3cd;
+    color:#856404;
+}

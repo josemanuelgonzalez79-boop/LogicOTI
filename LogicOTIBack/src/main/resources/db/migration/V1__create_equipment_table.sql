@@ -1,0 +1,10 @@
+CREATE TABLE equipment (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(80) NOT NULL UNIQUE,
+    name VARCHAR(150) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO equipment (code, name, active)
+VALUES ('PLC-001', 'Controlador principal', TRUE);

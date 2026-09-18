@@ -1,0 +1,963 @@
+<section class="security-page">
+  <header class="page-header">
+    <div>
+      <span class="page-header__eyebrow">Matriz causa-efecto</span>
+      <h1>Seguridad y horarios</h1>
+      <p>
+        Arma una o varias zonas, revisa sus sensores y circuitos de iluminación, y configura los
+        horarios de operación automática.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <div class="connection-status" [attr.data-status]="connectionStatus()">
+        <span class="connection-status__dot"></span>
+        <div>
+          <strong>{{ connectionLabel() }}</strong>
+          <span>Estado de alarma por WebSocket</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="button button--secondary"
+        [disabled]="loading()"
+        (click)="loadAll()"
+      >
+        <i
+          class="pi"
+          [class.pi-refresh]="!loading()"
+          [class.pi-spin]="loading()"
+          [class.pi-spinner]="loading()"
+        ></i>
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if (!canOperate) {
+    <article class="role-notice">
+      <i class="pi pi-eye"></i>
+      <div>
+        <strong>Modo de consulta</strong>
+        <span>Tu usuario puede revisar el estado y los horarios sin modificar la seguridad.</span>
+      </div>
+    </article>
+  } @else if (!canEditSettings) {
+    <article class="role-notice role-notice--operator">
+      <i class="pi pi-shield"></i>
+      <div>
+        <strong>Operación manual habilitada</strong>
+        <span
+          >Puedes armar o desarmar zonas. Los horarios solamente los modifica un
+          administrador.</span
+        >
+      </div>
+    </article>
+  }
+
+  <article class="push-notification-card">
+    <span
+      class="push-notification-card__icon"
+      [class.push-notification-card__icon--active]="pushNotifications.subscribed()"
+    >
+      <i
+        class="pi"
+        [class.pi-bell]="pushNotifications.subscribed()"
+        [class.pi-mobile]="!pushNotifications.subscribed()"
+      ></i>
+    </span>
+
+    <div class="push-notification-card__content">
+      <span class="section-eyebrow">Avisos en este dispositivo</span>
+      <strong>
+        {{
+          pushNotifications.subscribed()
+            ? 'Notificaciones móviles activas'
+            : 'Recibir alarmas aunque cierres la pantalla'
+        }}
+      </strong>
+      <span>{{ pushNotifications.message() }}</span>
+      <small>
+        Cada teléfono se activa por separado. Al tocar el aviso se abrirá Alarmas o la cámara
+        relacionada; para ver el sistema desde fuera del edificio deberá estar conectada la VPN.
+      </small>
+    </div>
+
+    <div class="push-notification-card__action">
+      <span>{{ pushNotifications.subscriptionCount() }} dispositivos registrados en tu cuenta</span>
+      <button
+        type="button"
+        class="button"
+        [class.button--primary]="!pushNotifications.subscribed()"
+        [class.button--secondary]="pushNotifications.subscribed()"
+        [disabled]="pushNotifications.loading() || !pushNotifications.serverConfigured()"
+        (click)="togglePushNotifications()"
+      >
+        <i
+          class="pi"
+          [class.pi-spin]="pushNotifications.loading()"
+          [class.pi-spinner]="pushNotifications.loading()"
+          [class.pi-bell]="!pushNotifications.loading() && !pushNotifications.subscribed()"
+          [class.pi-bell-slash]="!pushNotifications.loading() && pushNotifications.subscribed()"
+        ></i>
+        {{
+          pushNotifications.loading()
+            ? 'Procesando...'
+            : pushNotifications.subscribed()
+              ? 'Desactivar en este equipo'
+              : 'Activar en este equipo'
+        }}
+      </button>
+      @if (pushNotifications.subscribed()) {
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="pushNotifications.loading()"
+          (click)="testPushNotification()"
+        >
+          <i class="pi pi-send"></i>
+          Enviar notificación de prueba
+        </button>
+      }
+    </div>
+  </article>
+
+  @if (errorMessage()) {
+    <div class="feedback feedback--error" role="alert">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="feedback feedback--success" role="status">
+      <i class="pi pi-check-circle"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+  }
+
+  <section class="panel zone-selection-panel">
+    <header class="panel-header zone-selection-panel__header">
+      <div>
+        <span class="section-eyebrow">Armado independiente</span>
+        <h2>Zonas de seguridad</h2>
+        <p>
+          Selecciona una, varias o todas las zonas. Armar una zona habilita únicamente sus alarmas
+          de movimiento; no enciende ni controla circuitos de iluminación.
+        </p>
+      </div>
+
+      <div class="zone-selection-actions">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="executingAction() || allZonesSelected()"
+          (click)="selectAllZones()"
+        >
+          Seleccionar todas
+        </button>
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="executingAction() || selectedZoneCount() === 0"
+          (click)="clearZoneSelection()"
+        >
+          Limpiar selección
+        </button>
+      </div>
+    </header>
+
+    <div class="zone-summary">
+      <span
+        ><strong>{{ zoneStatus()?.armedZones ?? 0 }}</strong> zonas armadas</span
+      >
+      <span
+        ><strong>{{ zoneStatus()?.alarmZones ?? 0 }}</strong> en alarma</span
+      >
+      <span
+        ><strong>{{ selectedZoneCount() }}</strong> seleccionadas</span
+      >
+    </div>
+
+    <div class="zone-grid">
+      @for (zone of zones(); track trackZone($index, zone)) {
+        <article
+          class="zone-card"
+          [class.zone-card--selected]="isZoneSelected(zone.code)"
+          [attr.data-mode]="zone.mode"
+        >
+          <label class="zone-card__selection">
+            <input
+              type="checkbox"
+              [disabled]="executingAction()"
+              [checked]="isZoneSelected(zone.code)"
+              (change)="updateZoneSelection(zone.code, $any($event.target).checked)"
+            />
+            <span>Incluir zona</span>
+          </label>
+
+          <div class="zone-card__title">
+            <span class="zone-card__icon">
+              <i
+                class="pi"
+                [class.pi-lock-open]="zone.mode === 'DISARMED'"
+                [class.pi-clock]="zone.mode === 'ARMING'"
+                [class.pi-shield]="zone.mode === 'ARMED' || zone.mode === 'ARMED_WITH_BYPASS'"
+                [class.pi-ban]="zone.mode === 'REJECTED'"
+                [class.pi-bell]="zone.mode === 'ALARM'"
+              ></i>
+            </span>
+            <div>
+              <h3>{{ zone.name }}</h3>
+              <span class="zone-card__mode">{{ modeLabel(zone.mode) }}</span>
+            </div>
+          </div>
+
+          <p>{{ zone.message }}</p>
+
+          @if (zone.mode === 'ARMING') {
+            <div class="zone-card__timer">
+              <strong>{{ zoneArmingRemainingSeconds(zone) }}</strong>
+              <span>segundos para completar el armado</span>
+            </div>
+          }
+
+          <dl class="zone-card__metrics">
+            <div>
+              <dt>Sensores</dt>
+              <dd>{{ zone.motionSensorCount }}</dd>
+            </div>
+          </dl>
+
+          @if (!zone.motionDetectionEnabled) {
+            <div class="zone-card__notice">
+              <i class="pi pi-info-circle"></i>
+              Zona sin sensores de movimiento; puede armarse, pero no originará alarmas de movimiento.
+            </div>
+          }
+
+          @if (zone.alarmActive) {
+            <button
+              type="button"
+              class="button button--danger zone-card__acknowledge"
+              [disabled]="acknowledgingZoneCode() !== null || executingAction()"
+              (click)="acknowledgeZone(zone)"
+            >
+              <i
+                class="pi"
+                [class.pi-check-circle]="acknowledgingZoneCode() !== zone.code"
+                [class.pi-spin]="acknowledgingZoneCode() === zone.code"
+                [class.pi-spinner]="acknowledgingZoneCode() === zone.code"
+              ></i>
+              {{ acknowledgingZoneCode() === zone.code ? 'Reconociendo...' : 'Reconocer alarma' }}
+            </button>
+          }
+        </article>
+      } @empty {
+        <div class="empty-issues">
+          <i class="pi pi-spinner pi-spin"></i>
+          <span>Consultando zonas de seguridad...</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="security-overview">
+    <article
+      class="alarm-card"
+      [attr.data-mode]="zoneStatus()?.aggregateMode ?? status()?.mode ?? 'UNKNOWN'"
+    >
+      <div class="alarm-card__icon">
+        <i
+          class="pi"
+          [class.pi-lock-open]="zoneStatus()?.aggregateMode === 'DISARMED'"
+          [class.pi-clock]="zoneStatus()?.aggregateMode === 'ARMING'"
+          [class.pi-shield]="
+            zoneStatus()?.aggregateMode === 'ARMED' ||
+            zoneStatus()?.aggregateMode === 'ARMED_WITH_BYPASS' ||
+            zoneStatus()?.aggregateMode === 'PARTIALLY_ARMED'
+          "
+          [class.pi-ban]="zoneStatus()?.aggregateMode === 'REJECTED'"
+          [class.pi-bell]="zoneStatus()?.aggregateMode === 'ALARM'"
+          [class.pi-question-circle]="!status()"
+        ></i>
+      </div>
+
+      <div class="alarm-card__content">
+        <span class="section-eyebrow">Estado general</span>
+        <h2>{{ modeLabel(zoneStatus()?.aggregateMode) }}</h2>
+        <p>{{ zoneStatus()?.message ?? 'Consultando el estado de seguridad...' }}</p>
+
+        @if (status()?.mode === 'ARMING') {
+          <div class="arming-timer">
+            <span>{{ armingRemainingSeconds() }}</span>
+            <div>
+              <strong>segundos para armar</strong>
+              <small>Tiempo disponible para salir del edificio</small>
+            </div>
+          </div>
+        }
+
+        <dl class="alarm-details">
+          <div>
+            <dt>Último cambio</dt>
+            <dd>{{ status()?.changedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+          </div>
+          <div>
+            <dt>Realizado por</dt>
+            <dd>{{ status()?.changedBy ?? 'Sin información' }}</dd>
+          </div>
+          <div>
+            <dt>Origen</dt>
+            <dd>{{ sourceLabel(status()?.changeSource) }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      @if (canOperate) {
+        <div class="alarm-actions">
+          <button
+            type="button"
+            class="button button--arm"
+            [disabled]="
+              executingAction() || acknowledgingZoneCode() !== null || selectedZoneCount() === 0
+            "
+            (click)="requestAction('ARM')"
+          >
+            <i class="pi pi-lock"></i>
+            Armar zonas
+          </button>
+
+          <button
+            type="button"
+            class="button button--disarm"
+            [disabled]="
+              executingAction() || acknowledgingZoneCode() !== null || selectedZoneCount() === 0
+            "
+            (click)="requestAction('DISARM')"
+          >
+            <i class="pi pi-lock-open"></i>
+            Desarmar zonas
+          </button>
+        </div>
+      }
+    </article>
+
+    <article class="precheck-card">
+      <header class="panel-header">
+        <div>
+          <span class="section-eyebrow">Revisión previa</span>
+          <h2>Precheck de las zonas seleccionadas</h2>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          title="Volver a revisar sensores"
+          [disabled]="refreshingPrecheck()"
+          (click)="refreshPrecheck()"
+        >
+          <i
+            class="pi"
+            [class.pi-refresh]="!refreshingPrecheck()"
+            [class.pi-spin]="refreshingPrecheck()"
+            [class.pi-spinner]="refreshingPrecheck()"
+          ></i>
+        </button>
+      </header>
+
+      <div class="readiness" [class.readiness--ready]="precheck()?.ready">
+        <span class="readiness__icon">
+          <i
+            class="pi"
+            [class.pi-check]="precheck()?.ready"
+            [class.pi-times]="!precheck()?.ready"
+          ></i>
+        </span>
+        <div>
+          <strong>{{
+            precheck()?.ready ? 'Sistema listo para armar' : 'Se requiere atención'
+          }}</strong>
+          <span>
+            {{ precheck()?.readableMotionSensors ?? 0 }} de
+            {{ precheck()?.totalMotionSensors ?? 0 }} sensores de movimiento disponibles
+          </span>
+        </div>
+      </div>
+
+      <div class="precheck-summary">
+        <div>
+          <span>PLC</span>
+          <strong [class.text-success]="precheck()?.plcConnected">
+            {{ precheck()?.plcConnected ? 'Conectado' : 'Sin conexión' }}
+          </strong>
+        </div>
+        <div>
+          <span>Bloqueos</span>
+          <strong [class.text-danger]="blockingIssues() > 0">{{ blockingIssues() }}</strong>
+        </div>
+        <div>
+          <span>Advertencias</span>
+          <strong [class.text-warning]="warningIssues() > 0">{{ warningIssues() }}</strong>
+        </div>
+      </div>
+
+      @if ((precheck()?.issues?.length ?? 0) > 0) {
+        <div class="issue-list">
+          @for (issue of precheck()?.issues ?? []; track issue.code + issue.sensorCode) {
+            <article class="issue" [class.issue--blocking]="issue.blocking">
+              <i
+                class="pi"
+                [class.pi-times-circle]="issue.blocking"
+                [class.pi-info-circle]="!issue.blocking"
+              ></i>
+              <div>
+                <strong>{{ issue.message }}</strong>
+                @if (issue.sensorCode) {
+                  <span>{{ issue.areaName }} · {{ issue.sensorCode }}</span>
+                }
+              </div>
+              <span>{{ issue.blocking ? 'Impide armar' : 'Advertencia' }}</span>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="empty-issues">
+          <i class="pi pi-check-circle"></i>
+          <span>No se encontraron problemas en la revisión.</span>
+        </div>
+      }
+    </article>
+  </section>
+
+  <section class="panel schedules-panel">
+    <header class="panel-header schedules-panel__header">
+      <div>
+        <span class="section-eyebrow">Configuración automática</span>
+        <h2>Horarios de armado</h2>
+        <p>El horario inicial arma la alarma después de las 18:00 y la desarma a las 08:00.</p>
+      </div>
+
+      @if (canEditSettings) {
+        <div class="schedule-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="savingSettings()"
+            (click)="resetScheduleForm()"
+          >
+            Descartar cambios
+          </button>
+          <button
+            type="button"
+            class="button button--primary"
+            [disabled]="savingSettings() || !scheduleForm()"
+            (click)="saveSchedules()"
+          >
+            <i
+              class="pi"
+              [class.pi-save]="!savingSettings()"
+              [class.pi-spin]="savingSettings()"
+              [class.pi-spinner]="savingSettings()"
+            ></i>
+            Guardar configuración
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (scheduleForm(); as form) {
+      <div class="schedule-master">
+        <label class="switch-control">
+          <input
+            type="checkbox"
+            [disabled]="!canEditSettings"
+            [ngModel]="form.automaticScheduleEnabled"
+            (ngModelChange)="updateAutomaticSchedule($event)"
+          />
+          <span class="switch-control__track"><span></span></span>
+          <span>
+            <strong>Armado automático</strong>
+            <small>
+              {{
+                form.automaticScheduleEnabled
+                  ? 'Los horarios configurados están activos.'
+                  : 'La alarma solamente cambiará de forma manual.'
+              }}
+            </small>
+          </span>
+        </label>
+
+        <label class="field-control field-control--timezone">
+          <span>Zona horaria</span>
+          <input
+            type="text"
+            [disabled]="!canEditSettings"
+            [ngModel]="form.timezone"
+            (ngModelChange)="updateTimezone($event)"
+          />
+        </label>
+      </div>
+
+      <section class="automatic-lighting">
+        <header class="automatic-lighting__header">
+          <div>
+            <span class="section-eyebrow">Iluminación de áreas comunes</span>
+            <h3>Selección de luces para una alarma</h3>
+            <p>
+              Estas luces se encienden únicamente cuando una zona armada detecta movimiento y entra
+              en alarma. El movimiento con el sistema desarmado no utiliza esta selección.
+            </p>
+          </div>
+
+          <span
+            class="automatic-lighting__status"
+            [class.automatic-lighting__status--active]="form.automaticLightingEnabled"
+          >
+            <i class="pi pi-shield"></i>
+            {{ form.automaticLightingEnabled ? 'Respuesta de emergencia habilitada' : 'Respuesta de emergencia deshabilitada' }}
+          </span>
+        </header>
+
+        <div class="automatic-lighting__controls">
+          <label class="switch-control automatic-lighting__switch">
+            <input
+              type="checkbox"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.automaticLightingEnabled"
+              (ngModelChange)="updateAutomaticLighting($event)"
+            />
+            <span class="switch-control__track"><span></span></span>
+            <span>
+              <strong>Encendido de emergencia habilitado</strong>
+              <small>Solo responde a sensores pertenecientes a una zona armada.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="automatic-lighting__summary">
+          <article>
+            <span>Luces configuradas</span>
+            <strong>{{ selectedLightingTargets() }}</strong>
+          </article>
+          <article>
+            <span>Encendidas por alarma</span>
+            <strong>{{ automaticLightingStatus()?.automaticLightsOn ?? 0 }}</strong>
+          </article>
+        </div>
+
+        <div class="lighting-targets">
+          <div class="lighting-targets__title">
+            <div>
+              <strong>Luces que responderán a una intrusión</strong>
+              <span>Se encenderán juntas al dispararse la alarma de cualquier zona armada.</span>
+            </div>
+            <span>{{ selectedLightingTargets() }} seleccionadas</span>
+          </div>
+
+          <div class="lighting-targets__grid">
+            @for (target of settings()?.lightingTargets ?? []; track target.deviceId) {
+              <label
+                class="lighting-target"
+                [class.lighting-target--selected]="isLightingTargetSelected(target.deviceCode)"
+              >
+                <input
+                  type="checkbox"
+                  [disabled]="!canEditSettings"
+                  [ngModel]="isLightingTargetSelected(target.deviceCode)"
+                  (ngModelChange)="updateLightingTarget(target.deviceCode, $event)"
+                />
+                <span class="lighting-target__check"><i class="pi pi-check"></i></span>
+                <span>
+                  <strong>{{ target.areaName }}</strong>
+                  <small>{{ target.floorName }} · {{ target.deviceCode }}</small>
+                </span>
+              </label>
+            } @empty {
+              <div class="lighting-targets__empty">
+                No se encontraron luces controlables con tags de comando y estado.
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="area-inactivity">
+        <header class="area-inactivity__header">
+          <div>
+            <span class="section-eyebrow">Ahorro por oficina</span>
+            <h3>Movimiento local y apagado por inactividad</h3>
+            <p>
+              Con su zona desarmada, cada sensor enciende únicamente las luces de su propia área.
+              Nunca enciende el minisplit; después de los tiempos configurados apaga las luces y el
+              minisplit de esa misma área.
+            </p>
+          </div>
+
+          <span
+            class="area-inactivity__status"
+            [class.area-inactivity__status--active]="areaInactivityStatus()?.enabled"
+          >
+            <i class="pi pi-clock"></i>
+            {{ areaInactivityStatus()?.message ?? 'Consultando inactividad...' }}
+          </span>
+        </header>
+
+        <div class="area-inactivity__controls">
+          <label class="switch-control">
+            <input
+              type="checkbox"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.areaInactivityEnabled"
+              (ngModelChange)="updateAreaInactivity($event)"
+            />
+            <span class="switch-control__track"><span></span></span>
+            <span>
+              <strong>Apagado por área habilitado</strong>
+              <small>
+                Funciona solamente en las oficinas seleccionadas y mientras su zona esté desarmada.
+              </small>
+            </span>
+          </label>
+
+          <div class="area-inactivity__delays">
+            <span>Luces: {{ form.lightInactivityMinutes }} min</span>
+            <span>Minisplits: {{ form.minisplitInactivityMinutes }} min</span>
+          </div>
+        </div>
+
+        <div class="lighting-targets">
+          <div class="lighting-targets__title">
+            <div>
+              <strong>Oficinas con ahorro de energía</strong>
+              <span>Cada oficina se habilita o deshabilita de forma independiente.</span>
+            </div>
+            <span>{{ form.energySavingAreaCodes.length }} habilitadas</span>
+          </div>
+
+          <div class="lighting-targets__grid">
+            @for (area of settings()?.energySavingAreas ?? []; track area.areaId) {
+              <label
+                class="lighting-target"
+                [class.lighting-target--selected]="isEnergySavingAreaEnabled(area.areaCode)"
+              >
+                <input
+                  type="checkbox"
+                  [disabled]="!canEditSettings || !form.areaInactivityEnabled"
+                  [ngModel]="isEnergySavingAreaEnabled(area.areaCode)"
+                  (ngModelChange)="updateEnergySavingArea(area.areaCode, $event)"
+                />
+                <span class="lighting-target__check"><i class="pi pi-check"></i></span>
+                <span>
+                  <strong>{{ area.areaName }}</strong>
+                  <small>
+                    {{ area.floorName }} · {{ area.motionSensorCount }} sensor(es) ·
+                    {{ area.lightCount }} luz(ces) · {{ area.minisplitCount }} minisplit(s)
+                  </small>
+                </span>
+              </label>
+            } @empty {
+              <div class="lighting-targets__empty">
+                No se encontraron áreas activas con sensores de movimiento.
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="area-inactivity__summary">
+          <article>
+            <span>Áreas vigiladas</span>
+            <strong>{{ areaInactivityStatus()?.trackedAreas ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Apagados pendientes</span>
+            <strong>{{ areaInactivityStatus()?.pendingAreas ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Luces apagadas</span>
+            <strong>{{ areaInactivityStatus()?.lightsTurnedOff ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Minisplits apagados</span>
+            <strong>{{ areaInactivityStatus()?.minisplitsTurnedOff ?? 0 }}</strong>
+          </article>
+          <article>
+            <span>Último movimiento</span>
+            <strong>
+              {{
+                areaInactivityStatus()?.lastMotionAt
+                  ? (areaInactivityStatus()?.lastMotionAt | date: 'dd/MM HH:mm:ss')
+                  : 'Sin actividad'
+              }}
+            </strong>
+          </article>
+          <article>
+            <span>Próxima acción</span>
+            <strong>
+              {{
+                areaInactivityStatus()?.nextActionAt
+                  ? (areaInactivityStatus()?.nextActionAt | date: 'dd/MM HH:mm:ss')
+                  : 'No programada'
+              }}
+            </strong>
+          </article>
+        </div>
+
+        @if ((areaInactivityStatus()?.areas?.length ?? 0) > 0) {
+          <div class="area-inactivity__areas">
+            @for (area of areaInactivityStatus()?.areas ?? []; track area.areaCode) {
+              <article>
+                <span>
+                  <strong>{{ area.areaName }}</strong>
+                  <small>{{ area.floorName }} · {{ area.areaCode }}</small>
+                </span>
+                <span>
+                  Luz:
+                  <strong>{{
+                    area.lightProcessed ? 'Procesada' : (area.lightTurnOffAt | date: 'HH:mm:ss')
+                  }}</strong>
+                </span>
+                <span>
+                  Minisplit:
+                  <strong>{{
+                    area.minisplitProcessed
+                      ? 'Procesado'
+                      : (area.minisplitTurnOffAt | date: 'HH:mm:ss')
+                  }}</strong>
+                </span>
+              </article>
+            }
+          </div>
+        }
+      </section>
+
+      <div class="schedule-table-wrap">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Aplicar horario</th>
+              <th>Todo el día armada</th>
+              <th>Hora de armado</th>
+              <th>Hora de desarmado</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (day of form.days; track day.dayOfWeek) {
+              <tr [class.schedule-table__disabled]="!day.enabled">
+                <td>
+                  <strong>{{ dayName(day.dayOfWeek) }}</strong>
+                </td>
+                <td>
+                  <label class="compact-check">
+                    <input
+                      type="checkbox"
+                      [disabled]="!canEditSettings"
+                      [ngModel]="day.enabled"
+                      (ngModelChange)="updateDayBoolean(day.dayOfWeek, 'enabled', $event)"
+                    />
+                    <span>{{ day.enabled ? 'Sí' : 'No' }}</span>
+                  </label>
+                </td>
+                <td>
+                  <label class="compact-check">
+                    <input
+                      type="checkbox"
+                      [disabled]="!canEditSettings || !day.enabled"
+                      [ngModel]="day.allDayArmed"
+                      (ngModelChange)="updateDayBoolean(day.dayOfWeek, 'allDayArmed', $event)"
+                    />
+                    <span>{{ day.allDayArmed ? 'Sí' : 'No' }}</span>
+                  </label>
+                </td>
+                <td>
+                  <input
+                    class="time-input"
+                    type="time"
+                    [disabled]="!canEditSettings || !day.enabled || day.allDayArmed"
+                    [ngModel]="day.armTime"
+                    (ngModelChange)="updateDayTime(day.dayOfWeek, 'armTime', $event)"
+                  />
+                </td>
+                <td>
+                  <input
+                    class="time-input"
+                    type="time"
+                    [disabled]="!canEditSettings || !day.enabled || day.allDayArmed"
+                    [ngModel]="day.disarmTime"
+                    (ngModelChange)="updateDayTime(day.dayOfWeek, 'disarmTime', $event)"
+                  />
+                </td>
+                <td>
+                  @if (!day.enabled) {
+                    <span class="schedule-result schedule-result--off">Sin horario</span>
+                  } @else if (day.allDayArmed) {
+                    <span class="schedule-result schedule-result--all-day">Armada todo el día</span>
+                  } @else {
+                    <span class="schedule-result"> {{ day.armTime }} a {{ day.disarmTime }} </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="settings-grid">
+        <label class="number-setting">
+          <span>Tiempo para salir</span>
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="600"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.exitDelaySeconds"
+              (ngModelChange)="updateNumber('exitDelaySeconds', $event)"
+            /><span>segundos</span>
+          </div>
+          <small>Espera antes de completar el armado.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Apagado de luces sin actividad</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="1440"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.lightInactivityMinutes"
+              (ngModelChange)="updateNumber('lightInactivityMinutes', $event)"
+            /><span>minutos</span>
+          </div>
+          <small>Aplica a las luces de la misma oficina en modo desarmado.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Apagado de minisplits sin actividad</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="1440"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.minisplitInactivityMinutes"
+              (ngModelChange)="updateNumber('minisplitInactivityMinutes', $event)"
+            /><span>minutos</span>
+          </div>
+          <small>El movimiento no lo enciende; solo programa su apagado.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Duración del diagnóstico</span>
+          <div>
+            <input
+              type="number"
+              min="30"
+              max="600"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.diagnosticTimeoutSeconds"
+              (ngModelChange)="updateNumber('diagnosticTimeoutSeconds', $event)"
+            /><span>segundos</span>
+          </div>
+          <small>Tiempo para activar y restablecer los sensores.</small>
+        </label>
+
+        <label class="number-setting">
+          <span>Vigencia del diagnóstico</span>
+          <div>
+            <input
+              type="number"
+              min="1"
+              max="24"
+              [disabled]="!canEditSettings"
+              [ngModel]="form.diagnosticValidityMonths"
+              (ngModelChange)="updateNumber('diagnosticValidityMonths', $event)"
+            /><span>meses</span>
+          </div>
+          <small>Valor acordado: revisión cada cuatro meses.</small>
+        </label>
+      </div>
+
+      <footer class="settings-footer">
+        <span>
+          Última modificación:
+          <strong>{{ settings()?.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</strong>
+          por <strong>{{ settings()?.updatedBy ?? 'SYSTEM' }}</strong>
+        </span>
+      </footer>
+    }
+  </section>
+
+  @if (pendingAction(); as action) {
+    <div class="modal-backdrop" role="presentation" (click)="closeActionConfirmation()">
+      <section
+        class="confirmation-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="security-confirmation-title"
+        (click)="$event.stopPropagation()"
+      >
+        <span
+          class="confirmation-modal__icon"
+          [class.confirmation-modal__icon--danger]="action === 'DISARM'"
+        >
+          <i
+            class="pi"
+            [class.pi-lock]="action === 'ARM'"
+            [class.pi-lock-open]="action === 'DISARM'"
+          ></i>
+        </span>
+        <h2 id="security-confirmation-title">
+          {{ action === 'ARM' ? '¿Armar las zonas?' : '¿Desarmar las zonas?' }}
+        </h2>
+        <p>
+          @if (action === 'ARM') {
+            El sistema revisará el PLC, los sensores y los circuitos de iluminación antes de armar
+            <strong>{{ selectedZoneNames() }}</strong
+            >. Al terminar el tiempo de salida quedarán armadas sin encender luces.
+          } @else {
+            Se desarmarán <strong>{{ selectedZoneNames() }}</strong> y se apagarán únicamente las
+            luces que la seguridad haya encendido.
+          }
+        </p>
+
+        @if (action === 'ARM' && blockingIssues() > 0) {
+          <div class="modal-warning">
+            <i class="pi pi-exclamation-triangle"></i>
+            Existen {{ blockingIssues() }} problemas que podrían rechazar el armado.
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="button button--secondary"
+            [disabled]="executingAction()"
+            (click)="closeActionConfirmation()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="button"
+            [class.button--arm]="action === 'ARM'"
+            [class.button--danger]="action === 'DISARM'"
+            [disabled]="executingAction()"
+            (click)="confirmAction()"
+          >
+            <i
+              class="pi"
+              [class.pi-check]="!executingAction()"
+              [class.pi-spin]="executingAction()"
+              [class.pi-spinner]="executingAction()"
+            ></i>
+            {{ executingAction() ? 'Procesando...' : 'Confirmar' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</section>

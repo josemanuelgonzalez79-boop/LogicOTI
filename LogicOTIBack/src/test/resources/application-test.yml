@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:industrial_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+security:
+  jwt:
+    secret: LogicOTI-Test-Secret-Only-Do-Not-Use-In-Production-2026-0123456789
+    expiration-seconds: 3600
+  two-factor:
+    encryption-key: LogicOTI-Test-Two-Factor-Key-Only-Do-Not-Use-In-Production

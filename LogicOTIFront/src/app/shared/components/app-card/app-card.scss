@@ -1,0 +1,29 @@
+.app-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: var(--card-shadow, 0 2px 8px rgba(0,0,0,.08));
+}
+
+.app-card__header {
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  small {
+    display: block;
+    margin-top: .25rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+.app-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

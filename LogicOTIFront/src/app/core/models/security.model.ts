@@ -1,0 +1,212 @@
+export type AlarmMode =
+  'DISARMED' | 'ARMING' | 'ARMED' | 'ARMED_WITH_BYPASS' | 'REJECTED' | 'ALARM';
+
+export type SecurityAggregateMode = AlarmMode | 'PARTIALLY_ARMED';
+
+export interface SecurityStatus {
+  mode: AlarmMode;
+  armed: boolean;
+  alarmActive: boolean;
+  message: string;
+  changedBy: string;
+  changeSource: 'MANUAL' | 'SCHEDULE' | 'SYSTEM';
+  changedAt: string;
+  armingCompletesAt: string | null;
+  automaticScheduleEnabled: boolean;
+  timezone: string;
+  exitDelaySeconds: number;
+  lightInactivityMinutes: number;
+  minisplitInactivityMinutes: number;
+  timestamp: string;
+}
+
+export interface SecurityPrecheckIssue {
+  code: string;
+  severity: string;
+  blocking: boolean;
+  sensorCode: string | null;
+  sensorName: string | null;
+  areaCode: string | null;
+  areaName: string | null;
+  message: string;
+}
+
+export interface SecurityPrecheck {
+  ready: boolean;
+  plcEnabled: boolean;
+  plcConnected: boolean;
+  totalMotionSensors: number;
+  readableMotionSensors: number;
+  issues: SecurityPrecheckIssue[];
+  timestamp: string;
+}
+
+export interface SecurityActionResponse {
+  status: SecurityStatus;
+  precheck: SecurityPrecheck | null;
+}
+
+export interface SecurityZoneStatus {
+  code: string;
+  name: string;
+  displayOrder: number;
+  motionDetectionEnabled: boolean;
+  motionSensorCount: number;
+  mode: AlarmMode;
+  armed: boolean;
+  alarmActive: boolean;
+  message: string;
+  changedBy: string;
+  changeSource: 'MANUAL' | 'SCHEDULE' | 'SYSTEM';
+  changedAt: string;
+  armingCompletesAt: string | null;
+  alarmEventId: number | null;
+}
+
+export interface SecurityZoneList {
+  aggregateMode: SecurityAggregateMode;
+  message: string;
+  totalZones: number;
+  armedZones: number;
+  alarmZones: number;
+  zones: SecurityZoneStatus[];
+  timestamp: string;
+}
+
+export interface SecurityZoneSelectionRequest {
+  zoneCodes: string[];
+}
+
+export interface SecurityZoneActionResponse {
+  status: SecurityZoneList;
+  precheck: SecurityPrecheck | null;
+}
+
+export interface SecurityScheduleDay {
+  dayOfWeek: number;
+  dayName: string;
+  enabled: boolean;
+  allDayArmed: boolean;
+  armTime: string;
+  disarmTime: string;
+}
+
+export interface SecuritySettings {
+  automaticScheduleEnabled: boolean;
+  automaticLightingEnabled: boolean;
+  automaticLightingStartTime: string;
+  automaticLightingEndTime: string;
+  areaInactivityEnabled: boolean;
+  timezone: string;
+  exitDelaySeconds: number;
+  lightInactivityMinutes: number;
+  minisplitInactivityMinutes: number;
+  diagnosticTimeoutSeconds: number;
+  diagnosticValidityMonths: number;
+  days: SecurityScheduleDay[];
+  lightingTargets: AutomaticLightingTarget[];
+  energySavingAreas: EnergySavingArea[];
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface SecurityScheduleDayRequest {
+  dayOfWeek: number;
+  enabled: boolean;
+  allDayArmed: boolean;
+  armTime: string;
+  disarmTime: string;
+}
+
+export interface SecuritySettingsUpdateRequest {
+  automaticScheduleEnabled: boolean;
+  automaticLightingEnabled: boolean;
+  automaticLightingStartTime: string;
+  automaticLightingEndTime: string;
+  areaInactivityEnabled: boolean;
+  timezone: string;
+  exitDelaySeconds: number;
+  lightInactivityMinutes: number;
+  minisplitInactivityMinutes: number;
+  diagnosticTimeoutSeconds: number;
+  diagnosticValidityMonths: number;
+  days: SecurityScheduleDayRequest[];
+  automaticLightingTargetDeviceCodes: string[];
+  energySavingAreaCodes: string[];
+}
+
+export interface AutomaticLightingTarget {
+  deviceId: number;
+  deviceCode: string;
+  deviceName: string;
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  selected: boolean;
+}
+
+export interface EnergySavingArea {
+  areaId: number;
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  motionSensorCount: number;
+  lightCount: number;
+  minisplitCount: number;
+  enabled: boolean;
+}
+
+export interface AutomaticLightingControlledLight {
+  deviceCode: string;
+  deviceName: string;
+  areaCode: string;
+  areaName: string;
+  activatedAt: string;
+  turnOffAt: string;
+}
+
+export interface AutomaticLightingStatus {
+  enabled: boolean;
+  withinSchedule: boolean;
+  startTime: string;
+  endTime: string;
+  inactivityMinutes: number;
+  configuredLights: number;
+  automaticLightsOn: number;
+  lastMotionAt: string | null;
+  nextTurnOffAt: string | null;
+  lights: AutomaticLightingControlledLight[];
+  message: string;
+  timestamp: string;
+}
+
+export interface AreaInactivityAreaStatus {
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  lastMotionAt: string;
+  lightTurnOffAt: string;
+  minisplitTurnOffAt: string;
+  lightProcessed: boolean;
+  minisplitProcessed: boolean;
+  lightsTurnedOff: number;
+  minisplitsTurnedOff: number;
+}
+
+export interface AreaInactivityStatus {
+  enabled: boolean;
+  lightInactivityMinutes: number;
+  minisplitInactivityMinutes: number;
+  trackedAreas: number;
+  pendingAreas: number;
+  lightsTurnedOff: number;
+  minisplitsTurnedOff: number;
+  lastMotionAt: string | null;
+  nextActionAt: string | null;
+  areas: AreaInactivityAreaStatus[];
+  message: string;
+  timestamp: string;
+}

@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "LogicOTI Backend",
+      "request": "launch",
+      "mainClass": "com.icap.logicoti.IndustrialBackendApplication",
+      "projectName": "industrial-backend-template",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

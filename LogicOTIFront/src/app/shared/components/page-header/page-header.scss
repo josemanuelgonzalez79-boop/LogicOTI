@@ -1,0 +1,47 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  &__icon {
+    font-size: 1.75rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  &__subtitle {
+    margin: 0.35rem 0 0;
+    opacity: 0.7;
+    font-size: 0.95rem;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+
+    &__actions {
+      width: 100%;
+    }
+  }
+}

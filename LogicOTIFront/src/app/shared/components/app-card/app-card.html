@@ -1,0 +1,19 @@
+<div class="app-card">
+
+  @if (title()) {
+    <div class="app-card__header">
+
+      <h3>{{ title() }}</h3>
+
+      @if (subtitle()) {
+        <small>{{ subtitle() }}</small>
+      }
+
+    </div>
+  }
+
+  <div class="app-card__body">
+    <ng-content />
+  </div>
+
+</div>

@@ -1,0 +1,26 @@
+PLANTILLAS FULL STACK INDUSTRIALES — 15 DE JULIO DE 2026
+
+CONTENIDO
+1. industrial-backend-template
+   Spring Boot 4.1.0 + Java 21 + Maven Wrapper 3.9.16
+   PostgreSQL, Flyway, JPA, Actuator, OpenAPI y PLC4X EtherNet/IP.
+
+2. industrial-frontend-template
+   Angular 21.2 + PrimeNG 21.1.9 + TypeScript 5.9.
+   Arquitectura standalone, rutas lazy, interceptor, proxy y tema moderno.
+
+ARRANQUE RÁPIDO
+Backend:
+  docker compose up -d
+  .\mvnw.cmd spring-boot:run
+
+Frontend:
+  npm ci
+  npm start
+
+Backend: http://localhost:3210
+Frontend: http://localhost:4200
+Swagger: http://localhost:3210/swagger-ui.html
+
+Leer el README.md de cada proyecto antes de cambiar nombres, paquetes o variables.
+No copiar node_modules, dist ni target en futuros ZIP.

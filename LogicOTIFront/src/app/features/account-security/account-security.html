@@ -1,0 +1,181 @@
+<main class="account-security">
+  <header class="page-heading">
+    <div>
+      <span class="page-heading__eyebrow">Cuenta personal</span>
+      <h1>Mi seguridad</h1>
+      <p>Protege tu acceso a LogicOTI con una aplicación autenticadora.</p>
+    </div>
+
+    <span class="status-chip" [class.status-chip--enabled]="status?.enabled">
+      <i class="pi" [class.pi-shield]="status?.enabled" [class.pi-lock-open]="!status?.enabled"></i>
+      {{ status === null ? 'Consultando...' : status.enabled ? '2FA activo' : '2FA inactivo' }}
+    </span>
+  </header>
+
+  @if (errorMessage || successMessage) {
+    <div class="feedback" [class.feedback--error]="errorMessage" role="status" aria-live="polite">
+      <i
+        class="pi"
+        [class.pi-check-circle]="successMessage"
+        [class.pi-exclamation-circle]="errorMessage"
+      ></i>
+      <span>{{ errorMessage || successMessage }}</span>
+    </div>
+  }
+
+  @if (status === null) {
+    <section class="security-card loading-card">
+      <i class="pi pi-spin pi-spinner"></i>
+      Consultando la seguridad de tu cuenta...
+    </section>
+  }
+
+  @if (status && !status.enabled && !setup) {
+    <section class="security-card">
+      <div class="security-card__title">
+        <span class="security-card__icon"><i class="pi pi-mobile"></i></span>
+        <div>
+          <h2>Activar autenticación en dos pasos</h2>
+          <p>
+            Funciona con Google Authenticator, Microsoft Authenticator, 1Password y otras
+            aplicaciones TOTP compatibles.
+          </p>
+        </div>
+      </div>
+
+      <ol class="steps">
+        <li>Confirma tu contraseña actual.</li>
+        <li>Escanea el código QR con tu aplicación.</li>
+        <li>Confirma un código temporal y guarda los códigos de recuperación.</li>
+      </ol>
+
+      <label class="field">
+        <span>Contraseña actual</span>
+        <input
+          type="password"
+          [(ngModel)]="currentPassword"
+          autocomplete="current-password"
+          placeholder="Confirma tu contraseña"
+        />
+      </label>
+
+      <button
+        type="button"
+        class="primary-button"
+        [disabled]="!currentPassword || loading"
+        (click)="beginSetup()"
+      >
+        <i class="pi pi-qrcode"></i>
+        {{ loading ? 'Preparando...' : 'Generar código QR' }}
+      </button>
+    </section>
+  }
+
+  @if (setup) {
+    <section class="security-card setup-card">
+      <div class="security-card__title">
+        <span class="security-card__icon"><i class="pi pi-qrcode"></i></span>
+        <div>
+          <h2>Vincula tu aplicación autenticadora</h2>
+          <p>Este QR vence a los 10 minutos. No lo compartas ni le tomes una foto.</p>
+        </div>
+      </div>
+
+      <div class="setup-grid">
+        <img [src]="setup.qrCodeDataUrl" alt="Código QR para activar 2FA" />
+
+        <div class="manual-key">
+          <span>Si no puedes escanear, escribe esta clave:</span>
+          <code>{{ setup.manualKey }}</code>
+          <small>Cuenta: {{ setup.accountName }} · Emisor: {{ setup.issuer }}</small>
+        </div>
+      </div>
+
+      <label class="field">
+        <span>Código de seis dígitos</span>
+        <input
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          [(ngModel)]="confirmationCode"
+          autocomplete="one-time-code"
+          placeholder="000000"
+        />
+      </label>
+
+      <button
+        type="button"
+        class="primary-button"
+        [disabled]="!confirmationCode.trim() || loading"
+        (click)="confirmSetup()"
+      >
+        <i class="pi pi-check"></i>
+        {{ loading ? 'Verificando...' : 'Confirmar y activar' }}
+      </button>
+    </section>
+  }
+
+  @if (status?.enabled) {
+    <section class="security-card">
+      <div class="security-card__title">
+        <span class="security-card__icon security-card__icon--success">
+          <i class="pi pi-shield"></i>
+        </span>
+        <div>
+          <h2>Tu cuenta tiene protección adicional</h2>
+          <p>
+            Después de tu contraseña se solicitará un código temporal. Te quedan
+            <strong>{{ status?.unusedRecoveryCodes }}</strong> códigos de recuperación sin usar.
+          </p>
+        </div>
+      </div>
+
+      @if (recoveryCodes.length > 0) {
+        <div class="recovery-panel">
+          <div>
+            <strong>Guarda estos códigos ahora</strong>
+            <span>Cada código funciona una sola vez y no volverá a mostrarse.</span>
+          </div>
+
+          <div class="recovery-grid">
+            @for (recoveryCode of recoveryCodes; track recoveryCode) {
+              <code>{{ recoveryCode }}</code>
+            }
+          </div>
+
+          <button type="button" class="secondary-button" (click)="copyRecoveryCodes()">
+            <i class="pi pi-copy"></i>
+            Copiar códigos
+          </button>
+        </div>
+      }
+
+      <details class="disable-panel">
+        <summary>Desactivar autenticación en dos pasos</summary>
+        <p>Confirma tu contraseña y un código temporal o de recuperación.</p>
+
+        <div class="disable-grid">
+          <label class="field">
+            <span>Contraseña actual</span>
+            <input type="password" [(ngModel)]="disablePassword" autocomplete="current-password" />
+          </label>
+
+          <label class="field">
+            <span>Código de verificación</span>
+            <input type="text" [(ngModel)]="disableCode" autocomplete="one-time-code" />
+          </label>
+        </div>
+
+        <button
+          type="button"
+          class="danger-button"
+          [disabled]="!disablePassword || !disableCode.trim() || loading"
+          (click)="disable()"
+        >
+          <i class="pi pi-lock-open"></i>
+          Desactivar 2FA
+        </button>
+      </details>
+    </section>
+  }
+</main>

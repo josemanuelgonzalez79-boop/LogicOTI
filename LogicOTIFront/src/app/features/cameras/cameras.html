@@ -1,0 +1,225 @@
+<section class="cameras-page">
+  <header class="cameras-header">
+    <div>
+      <span class="cameras-header__eyebrow">Videovigilancia OTI</span>
+      <h1>Cámaras</h1>
+      <p>Consulta el inventario de CCTV y abre únicamente la transmisión que necesites revisar.</p>
+    </div>
+
+    <button type="button" class="refresh-button" [disabled]="loading()" (click)="refresh()">
+      <i
+        class="pi"
+        [class.pi-refresh]="!loading()"
+        [class.pi-spin]="loading()"
+        [class.pi-spinner]="loading()"
+      ></i>
+      Actualizar
+    </button>
+  </header>
+
+  @if (!playbackConfigured() && cameras().length > 0) {
+    <article class="configuration-notice">
+      <span class="configuration-notice__icon">
+        <i class="pi pi-info-circle"></i>
+      </span>
+      <div>
+        <strong>Catálogo disponible; reproducción pendiente de configurar</strong>
+        <p>
+          Falta conectar el NVR Hikvision al gateway WebRTC. No se mostrarán contraseñas ni
+          direcciones RTSP en el navegador.
+        </p>
+      </div>
+    </article>
+  }
+
+  <section class="camera-summary" aria-label="Resumen de cámaras">
+    <article class="summary-card summary-card--primary">
+      <span class="summary-card__icon"><i class="pi pi-video"></i></span>
+      <div>
+        <span>Cámaras registradas</span>
+        <strong>{{ total() }}</strong>
+        <small>Inventario entregado por TI</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--success">
+      <span class="summary-card__icon"><i class="pi pi-play-circle"></i></span>
+      <div>
+        <span>Video disponible</span>
+        <strong>{{ availableCameras() }}</strong>
+        <small>Transmisiones configuradas</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--info">
+      <span class="summary-card__icon"><i class="pi pi-building"></i></span>
+      <div>
+        <span>Interiores</span>
+        <strong>{{ interiorCameras() }}</strong>
+        <small>PB, Piso 1 y Piso 2</small>
+      </div>
+    </article>
+
+    <article class="summary-card summary-card--warning">
+      <span class="summary-card__icon"><i class="pi pi-map-marker"></i></span>
+      <div>
+        <span>Exteriores</span>
+        <strong>{{ exteriorCameras() }}</strong>
+        <small>Accesos, patio y PTZ</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="camera-filters">
+    <label class="search-field">
+      <span class="sr-only">Buscar cámaras</span>
+      <i class="pi pi-search"></i>
+      <input
+        type="search"
+        placeholder="Buscar por nombre, código, área u origen"
+        [ngModel]="searchText()"
+        (ngModelChange)="searchText.set($event)"
+      />
+    </label>
+
+    <label class="select-field">
+      <span>Ubicación</span>
+      <select [ngModel]="floorFilter()" (ngModelChange)="floorFilter.set($event)">
+        @for (option of floorOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    @if (searchText() || floorFilter()) {
+      <button type="button" class="clear-button" (click)="clearFilters()">
+        <i class="pi pi-filter-slash"></i>
+        Limpiar filtros
+      </button>
+    }
+  </section>
+
+  @if (errorMessage()) {
+    <div class="page-message page-message--error">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (loading() && cameras().length === 0) {
+    <div class="page-message">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Consultando cámaras...</span>
+    </div>
+  } @else if (cameras().length > 0) {
+    <div class="camera-workspace">
+      <section class="viewer-panel">
+        @if (selectedCamera(); as camera) {
+          <header class="viewer-panel__header">
+            <div>
+              <span>{{ camera.code }} · Canal {{ camera.channelNumber }}</span>
+              <h2>{{ camera.name }}</h2>
+            </div>
+
+            <span class="viewer-status" [class.viewer-status--online]="camera.videoAvailable">
+              <span></span>
+              {{ camera.videoAvailable ? 'Video disponible' : 'Pendiente de configurar' }}
+            </span>
+          </header>
+
+          <div class="video-frame">
+            @if (safeViewUrl(); as viewUrl) {
+              <iframe
+                [src]="viewUrl"
+                [title]="'Video en vivo de ' + camera.name"
+                allow="autoplay; fullscreen; picture-in-picture"
+                referrerpolicy="same-origin"
+              ></iframe>
+            } @else {
+              <div class="video-placeholder">
+                <span class="video-placeholder__icon">
+                  <i class="pi pi-video"></i>
+                </span>
+                <strong>La cámara está registrada</strong>
+                <p>El video se habilitará al configurar el gateway con la IP definitiva del NVR.</p>
+                <small>{{ camera.streamKey }}</small>
+              </div>
+            }
+          </div>
+
+          <dl class="camera-details">
+            <div>
+              <dt>Ubicación</dt>
+              <dd>{{ floorLabel(camera.floorCode) }}</dd>
+            </div>
+            <div>
+              <dt>Área relacionada</dt>
+              <dd>{{ camera.areaCode || 'Área general' }}</dd>
+            </div>
+            <div>
+              <dt>Origen documentado</dt>
+              <dd>{{ camera.sourceName }}</dd>
+            </div>
+            <div>
+              <dt>Clave de transmisión</dt>
+              <dd>{{ camera.streamKey }}</dd>
+            </div>
+          </dl>
+
+          <p class="viewer-panel__note">
+            <i class="pi pi-shield"></i>
+            LogicOTI solicita solamente esta transmisión. Las credenciales del NVR permanecen en el
+            servidor de video.
+          </p>
+        }
+      </section>
+
+      <section class="catalog-panel">
+        <header class="catalog-panel__header">
+          <div>
+            <span>Inventario</span>
+            <h2>Seleccionar cámara</h2>
+          </div>
+          <strong>{{ filteredCameras().length }}</strong>
+        </header>
+
+        @if (filteredCameras().length === 0) {
+          <div class="empty-state">
+            <i class="pi pi-search"></i>
+            <strong>No hay cámaras para mostrar</strong>
+            <span>Cambia los filtros de búsqueda.</span>
+          </div>
+        } @else {
+          <div class="camera-list">
+            @for (camera of filteredCameras(); track camera.code) {
+              <button
+                type="button"
+                class="camera-card"
+                [class.camera-card--selected]="selectedCamera()?.code === camera.code"
+                [attr.aria-pressed]="selectedCamera()?.code === camera.code"
+                (click)="selectCamera(camera)"
+              >
+                <span class="camera-card__number">{{ camera.channelNumber }}</span>
+                <span class="camera-card__content">
+                  <strong>{{ camera.name }}</strong>
+                  <small>
+                    {{ floorLabel(camera.floorCode) }}
+                    @if (camera.areaCode) {
+                      · {{ camera.areaCode }}
+                    }
+                  </small>
+                  <span>{{ camera.code }}</span>
+                </span>
+                <i
+                  class="pi"
+                  [class.pi-play-circle]="camera.videoAvailable"
+                  [class.pi-clock]="!camera.videoAvailable"
+                ></i>
+              </button>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+</section>

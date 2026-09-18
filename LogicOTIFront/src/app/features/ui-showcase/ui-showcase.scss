@@ -1,0 +1,40 @@
+.showcase {
+
+  max-width: 1200px;
+  margin: 0 auto;
+
+  padding: 2rem;
+
+}
+
+.section {
+
+  margin-top: 3rem;
+
+}
+
+.section h2 {
+
+  margin-bottom: 1rem;
+
+}
+
+.grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+
+  gap: 1rem;
+
+}
+
+.chips {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 1rem;
+
+}
