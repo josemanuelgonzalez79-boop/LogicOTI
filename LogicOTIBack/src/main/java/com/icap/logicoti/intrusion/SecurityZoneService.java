@@ -515,7 +515,7 @@ public class SecurityZoneService {
 
         AreaInactivityService.EquipmentShutdownResult result =
                 areaInactivityService.turnOffZoneEquipment(
-                        armedZoneCodes
+                        List.copyOf(armedZoneCodes)
                 );
 
         if (!result.success()) {
