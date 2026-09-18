@@ -3,7 +3,6 @@ package com.icap.logicoti.event;
 import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.diagnostic.SensorDiagnosticService;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
-import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.intrusion.AreaInactivityService;
 import com.icap.logicoti.notification.WebPushSubscriptionService;
 import com.icap.logicoti.plc.PlcCommunicationService;
@@ -38,7 +37,6 @@ public class SensorEventMonitor {
     private final boolean enabled;
     private final SimpMessagingTemplate messagingTemplate;
     private final IntrusionMotionAlarmService motionAlarmService;
-    private final AutomaticLightingService automaticLightingService;
     private final AreaInactivityService areaInactivityService;
     private final WebPushSubscriptionService webPushSubscriptionService;
     private final SignalQualityRegistry signalQualityRegistry;
@@ -62,7 +60,6 @@ public class SensorEventMonitor {
             PlcProperties plcProperties,
             SimpMessagingTemplate messagingTemplate,
             IntrusionMotionAlarmService motionAlarmService,
-            AutomaticLightingService automaticLightingService,
             AreaInactivityService areaInactivityService,
             WebPushSubscriptionService webPushSubscriptionService,
             SignalQualityRegistry signalQualityRegistry,
@@ -76,7 +73,6 @@ public class SensorEventMonitor {
         this.plcProperties = plcProperties;
         this.messagingTemplate = messagingTemplate;
         this.motionAlarmService = motionAlarmService;
-        this.automaticLightingService = automaticLightingService;
         this.areaInactivityService = areaInactivityService;
         this.webPushSubscriptionService = webPushSubscriptionService;
         this.signalQualityRegistry = signalQualityRegistry;
@@ -327,9 +323,6 @@ public class SensorEventMonitor {
             if (currentState
                     && !testing
                     && "MOTION".equalsIgnoreCase(sensor.type())) {
-                automaticLightingService.refreshActiveMotion(
-                        sensor.code()
-                );
                 areaInactivityService.refreshActiveMotion(
                         sensor.code()
                 );
@@ -401,16 +394,6 @@ public class SensorEventMonitor {
         }
 
         if ("MOTION".equalsIgnoreCase(sensor.type())) {
-            try {
-                automaticLightingService.processMotion(savedEvent);
-            } catch (RuntimeException exception) {
-                LOGGER.warn(
-                        "No se pudo procesar iluminación automática para {}: {}",
-                        sensor.code(),
-                        exception.getMessage()
-                );
-            }
-
             try {
                 areaInactivityService.processMotion(savedEvent);
             } catch (RuntimeException exception) {

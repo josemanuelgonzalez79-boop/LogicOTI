@@ -4,7 +4,6 @@ import com.icap.logicoti.exception.BadRequestException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.EmptyResultDataAccessException;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -98,6 +97,49 @@ public class SecurityScheduleService {
                 updated_at = CURRENT_TIMESTAMP,
                 updated_by = ?
             WHERE id = 1
+            """;
+
+    private static final String ENERGY_SAVING_AREAS_QUERY = """
+            SELECT
+                area.id,
+                area.code,
+                area.name,
+                floor.code AS floor_code,
+                floor.name AS floor_name,
+                COUNT(DISTINCT sensor.id) AS motion_sensor_count,
+                COUNT(DISTINCT light.id) AS light_count,
+                COUNT(DISTINCT minisplit.id) AS minisplit_count,
+                COALESCE(configuration.enabled, FALSE) AS enabled
+            FROM building_area area
+            INNER JOIN building_floor floor
+                ON floor.id = area.floor_id
+            INNER JOIN building_device sensor
+                ON sensor.area_id = area.id
+               AND sensor.active = TRUE
+               AND sensor.device_type = 'MOTION'
+            LEFT JOIN building_device light
+                ON light.area_id = area.id
+               AND light.active = TRUE
+               AND light.device_type = 'LIGHT'
+               AND light.controllable = TRUE
+            LEFT JOIN building_device minisplit
+                ON minisplit.area_id = area.id
+               AND minisplit.active = TRUE
+               AND minisplit.device_type = 'MINISPLIT'
+               AND minisplit.controllable = TRUE
+            LEFT JOIN security_area_energy_saving configuration
+                ON configuration.area_id = area.id
+            WHERE area.active = TRUE
+              AND floor.active = TRUE
+            GROUP BY area.id,
+                     area.code,
+                     area.name,
+                     floor.code,
+                     floor.name,
+                     floor.display_order,
+                     area.display_order,
+                     configuration.enabled
+            ORDER BY floor.display_order, area.display_order, area.id
             """;
 
     private static final String UPDATE_DAY = """
@@ -222,6 +264,7 @@ public class SecurityScheduleService {
                 settings.diagnosticValidityMonths(),
                 days,
                 findLightingTargets(),
+                findEnergySavingAreas(),
                 settings.updatedAt(),
                 settings.updatedBy()
         );
@@ -232,7 +275,7 @@ public class SecurityScheduleService {
             SecuritySettingsUpdateRequest request,
             String username
     ) {
-        Set<String> selectedLightCodes = validateRequest(request);
+        ValidatedSelection selection = validateRequest(request);
 
         jdbcTemplate.update(
                 UPDATE_SETTINGS,
@@ -263,7 +306,11 @@ public class SecurityScheduleService {
             );
         }
 
-        replaceLightingTargets(selectedLightCodes);
+        replaceLightingTargets(selection.lightCodes());
+        replaceEnergySavingAreas(
+                selection.areaCodes(),
+                username
+        );
 
         if (!request.areaInactivityEnabled()) {
             jdbcTemplate.update(
@@ -282,7 +329,7 @@ public class SecurityScheduleService {
         );
     }
 
-    private Set<String> validateRequest(
+    private ValidatedSelection validateRequest(
             SecuritySettingsUpdateRequest request
     ) {
         try {
@@ -342,7 +389,7 @@ public class SecurityScheduleService {
 
         if (request.automaticLightingEnabled() && selected.isEmpty()) {
             throw new BadRequestException(
-                    "Selecciona al menos una luz para la automatización."
+                    "Selecciona al menos una luz para una alarma de intrusión."
             );
         }
 
@@ -356,6 +403,45 @@ public class SecurityScheduleService {
             throw new BadRequestException(
                     "Se seleccionó una luz inexistente o no controlable."
             );
+        }
+
+        Set<String> selectedAreas = normalizeAreaCodes(
+                request.energySavingAreaCodes()
+        );
+
+        if (request.areaInactivityEnabled()
+                && selectedAreas.isEmpty()) {
+            throw new BadRequestException(
+                    "Selecciona al menos un área para el ahorro de energía."
+            );
+        }
+
+        Set<String> availableAreas = findEnergySavingAreas()
+                .stream()
+                .map(SecuritySettingsResponse.EnergySavingArea::areaCode)
+                .map(code -> code.toUpperCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (!availableAreas.containsAll(selectedAreas)) {
+            throw new BadRequestException(
+                    "Se seleccionó un área inexistente o sin sensor de movimiento."
+            );
+        }
+
+        return new ValidatedSelection(selected, selectedAreas);
+    }
+
+    private Set<String> normalizeAreaCodes(List<String> requestedCodes) {
+        Set<String> selected = new LinkedHashSet<>();
+
+        for (String requestedCode : requestedCodes) {
+            String code = requestedCode.trim().toUpperCase(Locale.ROOT);
+
+            if (!selected.add(code)) {
+                throw new BadRequestException(
+                        "El área " + code + " está repetida."
+                );
+            }
         }
 
         return selected;
@@ -379,6 +465,25 @@ public class SecurityScheduleService {
         );
     }
 
+    private List<SecuritySettingsResponse.EnergySavingArea>
+    findEnergySavingAreas() {
+        return jdbcTemplate.query(
+                ENERGY_SAVING_AREAS_QUERY,
+                (resultSet, rowNumber) ->
+                        new SecuritySettingsResponse.EnergySavingArea(
+                                resultSet.getLong("id"),
+                                resultSet.getString("code"),
+                                resultSet.getString("name"),
+                                resultSet.getString("floor_code"),
+                                resultSet.getString("floor_name"),
+                                resultSet.getInt("motion_sensor_count"),
+                                resultSet.getInt("light_count"),
+                                resultSet.getInt("minisplit_count"),
+                                resultSet.getBoolean("enabled")
+                        )
+        );
+    }
+
     private void replaceLightingTargets(Set<String> selectedCodes) {
         jdbcTemplate.update(DELETE_LIGHTING_TARGETS);
 
@@ -388,6 +493,27 @@ public class SecurityScheduleService {
                         code
                 )
         );
+    }
+
+    private void replaceEnergySavingAreas(
+            Set<String> selectedCodes,
+            String username
+    ) {
+        jdbcTemplate.update("DELETE FROM security_area_energy_saving");
+
+        selectedCodes.forEach(code -> jdbcTemplate.update("""
+                INSERT INTO security_area_energy_saving (
+                    area_id,
+                    enabled,
+                    updated_by
+                )
+                SELECT id, TRUE, ?
+                FROM building_area
+                WHERE UPPER(code) = ?
+                """,
+                username,
+                code
+        ));
     }
 
     private Instant toInstant(Timestamp timestamp) {
@@ -408,6 +534,12 @@ public class SecurityScheduleService {
             int diagnosticValidityMonths,
             Instant updatedAt,
             String updatedBy
+    ) {
+    }
+
+    private record ValidatedSelection(
+            Set<String> lightCodes,
+            Set<String> areaCodes
     ) {
     }
 }

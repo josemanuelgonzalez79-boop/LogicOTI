@@ -3,7 +3,6 @@ package com.icap.logicoti.event;
 import com.icap.logicoti.config.PlcProperties;
 import com.icap.logicoti.diagnostic.SensorDiagnosticService;
 import com.icap.logicoti.intrusion.AreaInactivityService;
-import com.icap.logicoti.intrusion.AutomaticLightingService;
 import com.icap.logicoti.intrusion.IntrusionMotionAlarmService;
 import com.icap.logicoti.notification.WebPushSubscriptionService;
 import com.icap.logicoti.plc.PlcCommunicationService;
@@ -26,7 +25,6 @@ class SensorEventMonitorTests {
     private final SensorDiagnosticService diagnostics = mock(SensorDiagnosticService.class);
     private final SimpMessagingTemplate messaging = mock(SimpMessagingTemplate.class);
     private final IntrusionMotionAlarmService intrusion = mock(IntrusionMotionAlarmService.class);
-    private final AutomaticLightingService lighting = mock(AutomaticLightingService.class);
     private final AreaInactivityService inactivity = mock(AreaInactivityService.class);
     private final WebPushSubscriptionService push = mock(WebPushSubscriptionService.class);
     private final SensorDefinition smoke = sensor(7, "SMOKE");
@@ -37,7 +35,7 @@ class SensorEventMonitorTests {
         PlcProperties properties = new PlcProperties();
         properties.setEnabled(true);
         monitor = new SensorEventMonitor(history, plc, properties, messaging, intrusion,
-                lighting, inactivity, push, mock(SignalQualityRegistry.class), diagnostics, true);
+                inactivity, push, mock(SignalQualityRegistry.class), diagnostics, true);
         when(history.saveChange(any(), nullable(Boolean.class), anyBoolean())).thenAnswer(call -> {
             SensorDefinition sensor = call.getArgument(0);
             boolean active = call.getArgument(2);
@@ -58,7 +56,7 @@ class SensorEventMonitorTests {
         verify(history).saveDiagnosticChange(smoke, false, true);
         verify(history).saveDiagnosticChange(smoke, true, false);
         verify(history, never()).saveChange(any(), nullable(Boolean.class), anyBoolean());
-        verifyNoInteractions(messaging, push, intrusion, lighting, inactivity);
+        verifyNoInteractions(messaging, push, intrusion, inactivity);
     }
 
     @Test

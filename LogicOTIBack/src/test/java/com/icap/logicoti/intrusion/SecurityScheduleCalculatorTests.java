@@ -102,6 +102,7 @@ class SecurityScheduleCalculatorTests {
                         day(7, true)
                 ),
                 List.of(),
+                List.of(),
                 Instant.parse("2026-08-06T12:00:00Z"),
                 "admin"
         );

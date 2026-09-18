@@ -53,7 +53,12 @@ public record SecuritySettingsUpdateRequest(
         @NotNull(message = "La selección de luces es obligatoria.")
         @Size(max = 100, message = "No se pueden seleccionar más de 100 luces.")
         List<@NotBlank(message = "El código de la luz no puede estar vacío.") String>
-                automaticLightingTargetDeviceCodes
+                automaticLightingTargetDeviceCodes,
+
+        @NotNull(message = "La selección de áreas de ahorro es obligatoria.")
+        @Size(max = 100, message = "No se pueden seleccionar más de 100 áreas.")
+        List<@NotBlank(message = "El código del área no puede estar vacío.") String>
+                energySavingAreaCodes
 ) {
 
     public record ScheduleDay(

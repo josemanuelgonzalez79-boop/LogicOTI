@@ -18,6 +18,7 @@ public record SecuritySettingsResponse(
         int diagnosticValidityMonths,
         List<ScheduleDay> days,
         List<LightingTarget> lightingTargets,
+        List<EnergySavingArea> energySavingAreas,
         Instant updatedAt,
         String updatedBy
 ) {
@@ -41,6 +42,19 @@ public record SecuritySettingsResponse(
             String floorCode,
             String floorName,
             boolean selected
+    ) {
+    }
+
+    public record EnergySavingArea(
+            Long areaId,
+            String areaCode,
+            String areaName,
+            String floorCode,
+            String floorName,
+            int motionSensorCount,
+            int lightCount,
+            int minisplitCount,
+            boolean enabled
     ) {
     }
 }

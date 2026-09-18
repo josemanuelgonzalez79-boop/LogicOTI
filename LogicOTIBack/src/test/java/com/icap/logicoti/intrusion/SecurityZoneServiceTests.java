@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
@@ -23,6 +24,7 @@ class SecurityZoneServiceTests {
     private SecurityZoneService service;
     private SecurityScheduleService scheduleService;
     private SecurityPrecheckService precheckService;
+    private SecurityZoneLightingService lightingService;
 
     @BeforeEach
     void setUp() {
@@ -45,6 +47,7 @@ class SecurityZoneServiceTests {
         precheckService = mock(
                 SecurityPrecheckService.class
         );
+        lightingService = mock(SecurityZoneLightingService.class);
         SimpMessagingTemplate messagingTemplate = mock(
                 SimpMessagingTemplate.class
         );
@@ -55,6 +58,7 @@ class SecurityZoneServiceTests {
                 jdbcTemplate,
                 scheduleService,
                 precheckService,
+                lightingService,
                 messagingTemplate
         );
 
@@ -121,10 +125,11 @@ class SecurityZoneServiceTests {
         assertThat(stateValue("PB", "mode")).isEqualTo("ALARM");
         assertThat(stateValue("P1", "mode")).isEqualTo("ARMED");
         assertThat(stateLong("PB", "alarm_event_id")).isEqualTo(42L);
+        verify(lightingService).turnOnEmergencySelection("PB", 42L);
     }
 
     @Test
-    void acknowledgementRestoresArmedModeWithoutChangingLighting() {
+    void acknowledgementRestoresArmedModeAndReleasesEmergencyLighting() {
         setMode("PB", "ALARM", "ARMED", 42L);
         setMode("P1", "ARMED", null, null);
 
@@ -137,6 +142,7 @@ class SecurityZoneServiceTests {
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
         assertThat(stateLong("PB", "alarm_event_id")).isNull();
         assertThat(countAcknowledgements(42L)).isEqualTo(1);
+        verify(lightingService).turnOffOwnedIfNoActiveAlarm();
     }
 
     private void createSchema() {
@@ -347,6 +353,7 @@ class SecurityZoneServiceTests {
                 30,
                 120,
                 4,
+                List.of(),
                 List.of(),
                 List.of(),
                 Instant.now(),

@@ -118,6 +118,19 @@ const settings: SecuritySettings = {
       selected: true,
     },
   ],
+  energySavingAreas: [
+    {
+      areaId: 1,
+      areaCode: 'PB_A01',
+      areaName: 'Recepción',
+      floorCode: 'PB',
+      floorName: 'Planta Baja',
+      motionSensorCount: 1,
+      lightCount: 1,
+      minisplitCount: 1,
+      enabled: true,
+    },
+  ],
   updatedAt: '2026-08-07T17:00:00Z',
   updatedBy: 'SYSTEM',
 };
@@ -276,6 +289,7 @@ describe('Security', () => {
         lightInactivityMinutes: 15,
         areaInactivityEnabled: false,
         automaticLightingTargetDeviceCodes: ['P1_A03_LUZ01'],
+        energySavingAreaCodes: ['PB_A01'],
         days: expect.arrayContaining([expect.objectContaining({ dayOfWeek: 1 })]),
       }),
     );

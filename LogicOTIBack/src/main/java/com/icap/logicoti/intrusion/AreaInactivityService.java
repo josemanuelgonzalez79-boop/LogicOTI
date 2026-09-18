@@ -38,6 +38,7 @@ public class AreaInactivityService {
     private final AreaInactivityRuntimeService runtimeService;
     private final DeviceCommandExecutionService commandService;
     private final AreaStateService areaStateService;
+    private final SecurityZoneLightingService securityLightingService;
     private final SimpMessagingTemplate messagingTemplate;
 
     private final Map<String, Instant> lastProcessedMotion =
@@ -49,6 +50,7 @@ public class AreaInactivityService {
             AreaInactivityRuntimeService runtimeService,
             DeviceCommandExecutionService commandService,
             AreaStateService areaStateService,
+            SecurityZoneLightingService securityLightingService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -56,6 +58,7 @@ public class AreaInactivityService {
         this.runtimeService = runtimeService;
         this.commandService = commandService;
         this.areaStateService = areaStateService;
+        this.securityLightingService = securityLightingService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -92,9 +95,13 @@ public class AreaInactivityService {
             AreaInactivityRuntimeService.MotionArea area =
                     runtimeService.findMotionArea(sensorCode);
 
-            if (area == null) {
+            if (area == null
+                    || !area.energySavingEnabled()
+                    || area.zoneArmed()) {
                 return;
             }
+
+            turnOnAreaLights(area.code());
 
             runtimeService.recordActivity(
                     area.id(),
@@ -174,6 +181,11 @@ public class AreaInactivityService {
             AreaInactivityRuntimeService.RuntimeArea area,
             Instant now
     ) {
+        if (!runtimeService.canManageArea(area.code())) {
+            runtimeService.release(area.id());
+            return true;
+        }
+
         AreaStateResponse areaState;
 
         try {
@@ -199,8 +211,7 @@ public class AreaInactivityService {
                 && !now.isBefore(area.lightTurnOffAt())) {
             GroupResult result = turnOffDevices(
                     areaState,
-                    "LIGHT",
-                    true
+                    "LIGHT"
             );
 
             if (result.success()) {
@@ -221,8 +232,7 @@ public class AreaInactivityService {
                 && !now.isBefore(area.minisplitTurnOffAt())) {
             GroupResult result = turnOffDevices(
                     areaState,
-                    "MINISPLIT",
-                    false
+                    "MINISPLIT"
             );
 
             if (result.success()) {
@@ -244,8 +254,7 @@ public class AreaInactivityService {
 
     private GroupResult turnOffDevices(
             AreaStateResponse areaState,
-            String deviceType,
-            boolean excludeCommonLighting
+            String deviceType
     ) {
         int turnedOff = 0;
         boolean success = true;
@@ -259,11 +268,9 @@ public class AreaInactivityService {
                 continue;
             }
 
-            if (excludeCommonLighting
-                    && runtimeService.isAutomaticLightingTarget(
-                            device.code()
-                    )) {
-                // Las luces de pasillos y exteriores siguen bajo V16.
+            if ("LIGHT".equalsIgnoreCase(deviceType)
+                    && securityLightingService.isOwned(device.code())) {
+                // Una alarma activa tiene prioridad sobre el ahorro.
                 continue;
             }
 
@@ -308,6 +315,35 @@ public class AreaInactivityService {
         }
 
         return new GroupResult(success, turnedOff);
+    }
+
+    private void turnOnAreaLights(String areaCode) {
+        AreaStateResponse areaState = areaStateService.getAreaState(areaCode);
+
+        if (!areaState.connected()) {
+            return;
+        }
+
+        for (AreaStateResponse.DeviceStateResponse device
+                : areaState.devices()) {
+            if (!"LIGHT".equalsIgnoreCase(device.type())
+                    || !device.controllable()
+                    || device.state() == null
+                    || Boolean.TRUE.equals(device.state())) {
+                continue;
+            }
+
+            try {
+                commandService.executeAutomatic(device.code(), true);
+            } catch (RuntimeException exception) {
+                LOGGER.warn(
+                        "No se pudo encender {} por movimiento en {}: {}",
+                        device.code(),
+                        areaCode,
+                        exception.getMessage()
+                );
+            }
+        }
     }
 
     private void postponePendingActions(
@@ -394,7 +430,7 @@ public class AreaInactivityService {
         if (!settings.areaInactivityEnabled()) {
             message = "El apagado por inactividad está deshabilitado.";
         } else if (runtimeAreas.isEmpty()) {
-            message = "Habilitado, esperando movimiento en las áreas.";
+            message = "Ahorro habilitado, esperando movimiento en las áreas seleccionadas.";
         } else if (pendingAreas > 0) {
             message = "Vigilando la actividad de las áreas.";
         } else {

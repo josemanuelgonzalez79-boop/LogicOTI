@@ -65,17 +65,20 @@ public class SecurityZoneService {
     private final JdbcTemplate jdbcTemplate;
     private final SecurityScheduleService scheduleService;
     private final SecurityPrecheckService precheckService;
+    private final SecurityZoneLightingService lightingService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public SecurityZoneService(
             JdbcTemplate jdbcTemplate,
             SecurityScheduleService scheduleService,
             SecurityPrecheckService precheckService,
+            SecurityZoneLightingService lightingService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.scheduleService = scheduleService;
         this.precheckService = precheckService;
+        this.lightingService = lightingService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -185,6 +188,8 @@ public class SecurityZoneService {
                 null
         );
 
+        lightingService.turnOffOwnedIfNoActiveAlarm();
+
         publish();
         return getStatus();
     }
@@ -214,6 +219,11 @@ public class SecurityZoneService {
                     current.mode()
             );
         }
+
+        lightingService.turnOnEmergencySelection(
+                current.code(),
+                event.id()
+        );
 
         publish();
         return getAggregateStatus();
@@ -446,6 +456,8 @@ public class SecurityZoneService {
                     null
             );
         }
+
+        lightingService.turnOffOwnedIfNoActiveAlarm();
 
         publish();
         return new SecurityZoneActionResponse(

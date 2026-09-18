@@ -105,6 +105,7 @@ export interface SecuritySettings {
   diagnosticValidityMonths: number;
   days: SecurityScheduleDay[];
   lightingTargets: AutomaticLightingTarget[];
+  energySavingAreas: EnergySavingArea[];
   updatedAt: string;
   updatedBy: string;
 }
@@ -131,6 +132,7 @@ export interface SecuritySettingsUpdateRequest {
   diagnosticValidityMonths: number;
   days: SecurityScheduleDayRequest[];
   automaticLightingTargetDeviceCodes: string[];
+  energySavingAreaCodes: string[];
 }
 
 export interface AutomaticLightingTarget {
@@ -142,6 +144,18 @@ export interface AutomaticLightingTarget {
   floorCode: string;
   floorName: string;
   selected: boolean;
+}
+
+export interface EnergySavingArea {
+  areaId: number;
+  areaCode: string;
+  areaName: string;
+  floorCode: string;
+  floorName: string;
+  motionSensorCount: number;
+  lightCount: number;
+  minisplitCount: number;
+  enabled: boolean;
 }
 
 export interface AutomaticLightingControlledLight {

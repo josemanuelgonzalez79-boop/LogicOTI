@@ -503,20 +503,19 @@
         <header class="automatic-lighting__header">
           <div>
             <span class="section-eyebrow">Iluminación de áreas comunes</span>
-            <h3>Encendido automático por movimiento</h3>
+            <h3>Selección de luces para una alarma</h3>
             <p>
-              Esta automatización es independiente del armado por zonas. Cualquier sensor de
-              movimiento válido puede encender únicamente las luces seleccionadas durante el horario
-              configurado; se apagan al cumplirse el tiempo sin actividad.
+              Estas luces se encienden únicamente cuando una zona armada detecta movimiento y entra
+              en alarma. El movimiento con el sistema desarmado no utiliza esta selección.
             </p>
           </div>
 
           <span
             class="automatic-lighting__status"
-            [class.automatic-lighting__status--active]="automaticLightingStatus()?.withinSchedule"
+            [class.automatic-lighting__status--active]="form.automaticLightingEnabled"
           >
-            <i class="pi pi-bolt"></i>
-            {{ automaticLightingStatus()?.message ?? 'Consultando automatización...' }}
+            <i class="pi pi-shield"></i>
+            {{ form.automaticLightingEnabled ? 'Respuesta de emergencia habilitada' : 'Respuesta de emergencia deshabilitada' }}
           </span>
         </header>
 
@@ -530,31 +529,9 @@
             />
             <span class="switch-control__track"><span></span></span>
             <span>
-              <strong>Encendido por horario habilitado</strong>
-              <small>Aplica al movimiento de cualquier zona, esté armada o desarmada.</small>
+              <strong>Encendido de emergencia habilitado</strong>
+              <small>Solo responde a sensores pertenecientes a una zona armada.</small>
             </span>
-          </label>
-
-          <label class="field-control">
-            <span>Inicia a las</span>
-            <input
-              class="time-input"
-              type="time"
-              [disabled]="!canEditSettings"
-              [ngModel]="form.automaticLightingStartTime"
-              (ngModelChange)="updateAutomaticLightingTime('automaticLightingStartTime', $event)"
-            />
-          </label>
-
-          <label class="field-control">
-            <span>Termina a las</span>
-            <input
-              class="time-input"
-              type="time"
-              [disabled]="!canEditSettings"
-              [ngModel]="form.automaticLightingEndTime"
-              (ngModelChange)="updateAutomaticLightingTime('automaticLightingEndTime', $event)"
-            />
           </label>
         </div>
 
@@ -564,36 +541,16 @@
             <strong>{{ selectedLightingTargets() }}</strong>
           </article>
           <article>
-            <span>Encendidas automáticamente</span>
+            <span>Encendidas por alarma</span>
             <strong>{{ automaticLightingStatus()?.automaticLightsOn ?? 0 }}</strong>
-          </article>
-          <article>
-            <span>Último movimiento</span>
-            <strong>
-              {{
-                automaticLightingStatus()?.lastMotionAt
-                  ? (automaticLightingStatus()?.lastMotionAt | date: 'dd/MM HH:mm:ss')
-                  : 'Sin actividad'
-              }}
-            </strong>
-          </article>
-          <article>
-            <span>Próximo apagado</span>
-            <strong>
-              {{
-                automaticLightingStatus()?.nextTurnOffAt
-                  ? (automaticLightingStatus()?.nextTurnOffAt | date: 'dd/MM HH:mm:ss')
-                  : 'No programado'
-              }}
-            </strong>
           </article>
         </div>
 
         <div class="lighting-targets">
           <div class="lighting-targets__title">
             <div>
-              <strong>Luces que responderán al movimiento</strong>
-              <span>La selección inicial incluye pasillos, escaleras y áreas comunes.</span>
+              <strong>Luces que responderán a una intrusión</strong>
+              <span>Se encenderán juntas al dispararse la alarma de cualquier zona armada.</span>
             </div>
             <span>{{ selectedLightingTargets() }} seleccionadas</span>
           </div>
@@ -629,11 +586,11 @@
         <header class="area-inactivity__header">
           <div>
             <span class="section-eyebrow">Ahorro por oficina</span>
-            <h3>Apagado automático por inactividad</h3>
+            <h3>Movimiento local y apagado por inactividad</h3>
             <p>
-              Cuando un área deja de detectar movimiento, el sistema apaga sus luces y minisplits
-              después de los tiempos configurados. Las luces comunes seleccionadas arriba conservan
-              su propia automatización.
+              Con su zona desarmada, cada sensor enciende únicamente las luces de su propia área.
+              Nunca enciende el minisplit; después de los tiempos configurados apaga las luces y el
+              minisplit de esa misma área.
             </p>
           </div>
 
@@ -658,8 +615,7 @@
             <span>
               <strong>Apagado por área habilitado</strong>
               <small>
-                Se inicia al detectar movimiento y no vuelve a apagar un equipo encendido
-                manualmente hasta recibir nueva actividad.
+                Funciona solamente en las oficinas seleccionadas y mientras su zona esté desarmada.
               </small>
             </span>
           </label>
@@ -667,6 +623,44 @@
           <div class="area-inactivity__delays">
             <span>Luces: {{ form.lightInactivityMinutes }} min</span>
             <span>Minisplits: {{ form.minisplitInactivityMinutes }} min</span>
+          </div>
+        </div>
+
+        <div class="lighting-targets">
+          <div class="lighting-targets__title">
+            <div>
+              <strong>Oficinas con ahorro de energía</strong>
+              <span>Cada oficina se habilita o deshabilita de forma independiente.</span>
+            </div>
+            <span>{{ form.energySavingAreaCodes.length }} habilitadas</span>
+          </div>
+
+          <div class="lighting-targets__grid">
+            @for (area of settings()?.energySavingAreas ?? []; track area.areaId) {
+              <label
+                class="lighting-target"
+                [class.lighting-target--selected]="isEnergySavingAreaEnabled(area.areaCode)"
+              >
+                <input
+                  type="checkbox"
+                  [disabled]="!canEditSettings || !form.areaInactivityEnabled"
+                  [ngModel]="isEnergySavingAreaEnabled(area.areaCode)"
+                  (ngModelChange)="updateEnergySavingArea(area.areaCode, $event)"
+                />
+                <span class="lighting-target__check"><i class="pi pi-check"></i></span>
+                <span>
+                  <strong>{{ area.areaName }}</strong>
+                  <small>
+                    {{ area.floorName }} · {{ area.motionSensorCount }} sensor(es) ·
+                    {{ area.lightCount }} luz(ces) · {{ area.minisplitCount }} minisplit(s)
+                  </small>
+                </span>
+              </label>
+            } @empty {
+              <div class="lighting-targets__empty">
+                No se encontraron áreas activas con sensores de movimiento.
+              </div>
+            }
           </div>
         </div>
 
@@ -838,7 +832,7 @@
               (ngModelChange)="updateNumber('lightInactivityMinutes', $event)"
             /><span>minutos</span>
           </div>
-          <small>Se usa para oficinas y para las luces comunes configuradas arriba.</small>
+          <small>Aplica a las luces de la misma oficina en modo desarmado.</small>
         </label>
 
         <label class="number-setting">
@@ -853,7 +847,7 @@
               (ngModelChange)="updateNumber('minisplitInactivityMinutes', $event)"
             /><span>minutos</span>
           </div>
-          <small>Valor acordado inicialmente: 30 minutos.</small>
+          <small>El movimiento no lo enciende; solo programa su apagado.</small>
         </label>
 
         <label class="number-setting">

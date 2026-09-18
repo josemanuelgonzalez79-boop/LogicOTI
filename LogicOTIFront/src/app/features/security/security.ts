@@ -342,6 +342,28 @@ export class Security implements OnInit, OnDestroy {
     this.scheduleForm.update((form) => (form ? { ...form, areaInactivityEnabled: enabled } : form));
   }
 
+  updateEnergySavingArea(areaCode: string, enabled: boolean): void {
+    this.scheduleForm.update((form) => {
+      if (!form) {
+        return form;
+      }
+
+      const codes = new Set(form.energySavingAreaCodes);
+
+      if (enabled) {
+        codes.add(areaCode);
+      } else {
+        codes.delete(areaCode);
+      }
+
+      return { ...form, energySavingAreaCodes: [...codes] };
+    });
+  }
+
+  isEnergySavingAreaEnabled(areaCode: string): boolean {
+    return this.scheduleForm()?.energySavingAreaCodes.includes(areaCode) ?? false;
+  }
+
   updateAutomaticLightingTime(
     field: 'automaticLightingStartTime' | 'automaticLightingEndTime',
     value: string,
@@ -598,6 +620,9 @@ export class Security implements OnInit, OnDestroy {
       automaticLightingTargetDeviceCodes: settings.lightingTargets
         .filter((target) => target.selected)
         .map((target) => target.deviceCode),
+      energySavingAreaCodes: settings.energySavingAreas
+        .filter((area) => area.enabled)
+        .map((area) => area.areaCode),
     };
   }
 
@@ -626,7 +651,12 @@ export class Security implements OnInit, OnDestroy {
     }
 
     if (form.automaticLightingEnabled && form.automaticLightingTargetDeviceCodes.length === 0) {
-      this.errorMessage.set('Selecciona al menos una luz para la automatización.');
+      this.errorMessage.set('Selecciona al menos una luz para una alarma de intrusión.');
+      return false;
+    }
+
+    if (form.areaInactivityEnabled && form.energySavingAreaCodes.length === 0) {
+      this.errorMessage.set('Selecciona al menos un área para el ahorro de energía.');
       return false;
     }
 

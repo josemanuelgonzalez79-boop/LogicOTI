@@ -54,6 +54,7 @@ const settings: SecuritySettings = {
   diagnosticValidityMonths: 4,
   days: [],
   lightingTargets: [],
+  energySavingAreas: [],
   updatedAt: '2026-08-07T17:00:00Z',
   updatedBy: 'admin',
 };
@@ -203,6 +204,7 @@ describe('SecurityApiService', () => {
       ...settings,
       days: [],
       automaticLightingTargetDeviceCodes: [],
+      energySavingAreaCodes: [],
     };
 
     service.updateSchedules(body).subscribe((response) => expect(response).toEqual(settings));

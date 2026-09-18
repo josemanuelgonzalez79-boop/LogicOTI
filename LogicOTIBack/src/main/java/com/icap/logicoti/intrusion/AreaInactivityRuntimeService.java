@@ -25,12 +25,21 @@ public class AreaInactivityRuntimeService {
                     area.code,
                     area.name,
                     floor.code AS floor_code,
-                    floor.name AS floor_name
+                    floor.name AS floor_name,
+                    COALESCE(configuration.enabled, FALSE)
+                        AS energy_saving_enabled,
+                    COALESCE(zone_state.mode, 'DISARMED') AS zone_mode
                 FROM building_device sensor
                 INNER JOIN building_area area
                     ON area.id = sensor.area_id
                 INNER JOIN building_floor floor
                     ON floor.id = area.floor_id
+                LEFT JOIN security_area_energy_saving configuration
+                    ON configuration.area_id = area.id
+                LEFT JOIN security_zone_area zone_area
+                    ON zone_area.area_id = area.id
+                LEFT JOIN security_zone_state zone_state
+                    ON zone_state.zone_code = zone_area.zone_code
                 WHERE UPPER(sensor.code) = UPPER(?)
                   AND sensor.active = TRUE
                   AND area.active = TRUE
@@ -42,7 +51,9 @@ public class AreaInactivityRuntimeService {
                         resultSet.getString("code"),
                         resultSet.getString("name"),
                         resultSet.getString("floor_code"),
-                        resultSet.getString("floor_name")
+                        resultSet.getString("floor_name"),
+                        resultSet.getBoolean("energy_saving_enabled"),
+                        resultSet.getString("zone_mode")
                 ),
                 sensorCode
         );
@@ -172,6 +183,38 @@ public class AreaInactivityRuntimeService {
     }
 
     @Transactional(readOnly = true)
+    public boolean canManageArea(String areaCode) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM building_area area
+                INNER JOIN security_area_energy_saving configuration
+                    ON configuration.area_id = area.id
+                   AND configuration.enabled = TRUE
+                LEFT JOIN security_zone_area zone_area
+                    ON zone_area.area_id = area.id
+                LEFT JOIN security_zone_state zone_state
+                    ON zone_state.zone_code = zone_area.zone_code
+                WHERE UPPER(area.code) = UPPER(?)
+                  AND area.active = TRUE
+                  AND COALESCE(zone_state.mode, 'DISARMED')
+                      NOT IN ('ARMING', 'ARMED', 'ARMED_WITH_BYPASS', 'ALARM')
+                """,
+                Integer.class,
+                areaCode
+        );
+
+        return count != null && count > 0;
+    }
+
+    @Transactional
+    public void release(long areaId) {
+        jdbcTemplate.update(
+                "DELETE FROM security_area_inactivity_runtime WHERE area_id = ?",
+                areaId
+        );
+    }
+
+    @Transactional(readOnly = true)
     public boolean isAutomaticLightingTarget(String deviceCode) {
         Integer count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -255,8 +298,16 @@ public class AreaInactivityRuntimeService {
             String code,
             String name,
             String floorCode,
-            String floorName
+            String floorName,
+            boolean energySavingEnabled,
+            String zoneMode
     ) {
+        public boolean zoneArmed() {
+            return switch (zoneMode) {
+                case "ARMING", "ARMED", "ARMED_WITH_BYPASS", "ALARM" -> true;
+                default -> false;
+            };
+        }
     }
 
     public record RuntimeArea(

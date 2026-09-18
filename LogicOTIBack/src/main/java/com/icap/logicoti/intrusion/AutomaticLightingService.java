@@ -387,60 +387,38 @@ public class AutomaticLightingService {
                 scheduleService.getSettings();
 
         Instant now = Instant.now();
-        LightingWindow window = evaluateWindow(settings, now);
 
         List<AutomaticLightingRuntimeService.LightingDevice> targets =
                 runtimeService.findTargets();
 
-        List<AutomaticLightingRuntimeService.RuntimeLight> owned =
-                runtimeService.findOwnedLights();
-
-        Instant lastMotionAt = owned.stream()
-                .map(AutomaticLightingRuntimeService.RuntimeLight::lastMotionAt)
-                .max(Instant::compareTo)
-                .orElse(null);
-
-        Instant nextTurnOffAt = owned.stream()
-                .map(AutomaticLightingRuntimeService.RuntimeLight::turnOffAt)
-                .min(Instant::compareTo)
-                .orElse(null);
-
-        List<AutomaticLightingStatusResponse.ControlledLight> lights =
-                owned.stream()
-                        .map(light ->
-                                new AutomaticLightingStatusResponse.ControlledLight(
-                                        light.code(),
-                                        light.name(),
-                                        light.areaCode(),
-                                        light.areaName(),
-                                        light.activatedAt(),
-                                        light.turnOffAt()
-                                )
-                        )
-                        .toList();
+        Integer emergencyLightsOn = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM security_zone_light_runtime
+                """,
+                Integer.class
+        );
 
         String message;
         if (!settings.automaticLightingEnabled()) {
-            message = "La iluminación automática está deshabilitada.";
-        } else if (!window.active()) {
-            message = "Fuera del horario de iluminación automática.";
-        } else if (owned.isEmpty()) {
-            message = "Horario activo, sin luces encendidas automáticamente.";
+            message = "La iluminación de emergencia está deshabilitada.";
+        } else if (emergencyLightsOn == null
+                || emergencyLightsOn == 0) {
+            message = "Iluminación de emergencia lista.";
         } else {
-            message = "Iluminación automática activa.";
+            message = "Luces de emergencia activas por alarma.";
         }
 
         return new AutomaticLightingStatusResponse(
                 settings.automaticLightingEnabled(),
-                window.active(),
+                settings.automaticLightingEnabled(),
                 settings.automaticLightingStartTime(),
                 settings.automaticLightingEndTime(),
                 settings.lightInactivityMinutes(),
                 targets.size(),
-                owned.size(),
-                lastMotionAt,
-                nextTurnOffAt,
-                lights,
+                emergencyLightsOn == null ? 0 : emergencyLightsOn,
+                null,
+                null,
+                List.of(),
                 message,
                 now
         );
