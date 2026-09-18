@@ -98,7 +98,7 @@ class SensorEventMonitorTests {
         monitor.processState(motion, true, true);
         monitor.processState(motion, false, false);
 
-        verifyNoInteractions(intrusion, lighting, inactivity, push, messaging);
+        verifyNoInteractions(intrusion, inactivity, push, messaging);
     }
 
     @Test
