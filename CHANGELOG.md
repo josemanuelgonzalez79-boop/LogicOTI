@@ -5,9 +5,12 @@
 ### Incorporado
 
 - Armado independiente o conjunto de Planta Baja, Piso 1, Piso 2 y Patio/Exterior.
-- Armado por zonas limitado a habilitar alarmas, sin encender ni tomar control de luces.
-- Iluminación de áreas comunes independiente del armado: cualquier sensor de movimiento válido
-  utiliza la selección global, el horario y el tiempo sin actividad configurados.
+- Armado por zonas limitado a habilitar alarmas; al completar el armado apaga las luces y los
+  minisplits de las zonas seleccionadas para dejar el edificio sin consumo innecesario.
+- Ahorro de energía independiente por área: con la zona desarmada, el movimiento enciende solo
+  las luces de esa misma área y los tiempos configurados apagan sus luces y minisplits.
+- Selección de iluminación de emergencia utilizada exclusivamente cuando una zona armada detecta
+  movimiento y dispara la alarma.
 - Reconocimiento de alarma sin desarmar las zonas ni modificar la iluminación automática.
 - Inventario y activación de los circuitos del patio, entrada exterior y los dos circuitos de la
   entrada interior, con tags de comando y retroalimentación confirmados en el PLC.
@@ -22,7 +25,10 @@
   Solo los sensores en prueba dejan de generar alarmas y avisos de LogicOTI; al finalizar o vencer
   el diagnóstico vuelven a vigilancia normal, incluso si permanecen activos.
 - Autenticación TOTP en dos pasos opcional por usuario, con QR, códigos de recuperación de un solo
-  uso, secretos cifrados, prevención de reutilización y límite de intentos.
+  uso, secretos cifrados, prevención de reutilización y límite de intentos. La desactivación
+  acepta el código vigente junto con la contraseña actual, incluso después de activarlo o iniciar
+  sesión en el mismo intervalo TOTP.
+- Cámara `Acceso puerta principal` clasificada en Exterior sin cambiar su canal ni transmisión.
 - Calidad individual `GOOD`, `BAD` y `STALE` con última actualización.
 - Reporte ejecutivo mensual, tendencias y exportación PDF.
 - Política configurable de retención y limpieza histórica.

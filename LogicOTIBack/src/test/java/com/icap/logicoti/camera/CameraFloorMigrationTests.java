@@ -46,9 +46,48 @@ class CameraFloorMigrationTests {
         )).isEqualTo("PB");
     }
 
+    @Test
+    void movesMainDoorCameraToExterior() throws IOException {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.h2.Driver");
+        dataSource.setUrl(
+                "jdbc:h2:mem:main_door_camera_"
+                        + UUID.randomUUID()
+                        + ";MODE=PostgreSQL"
+                        + ";DB_CLOSE_DELAY=-1"
+                        + ";DATABASE_TO_LOWER=TRUE"
+        );
+        dataSource.setUsername("sa");
+        dataSource.setPassword("");
+
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.execute("""
+                CREATE TABLE camera (
+                    code VARCHAR(20) PRIMARY KEY,
+                    floor_code VARCHAR(10) NOT NULL
+                )
+                """);
+        jdbcTemplate.update(
+                "INSERT INTO camera VALUES ('CAM-011', 'PB')"
+        );
+
+        jdbcTemplate.execute(readMigration(
+                "db/migration/V32__move_main_door_camera_to_exterior.sql"
+        ));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT floor_code FROM camera WHERE code = 'CAM-011'",
+                String.class
+        )).isEqualTo("EXT");
+    }
+
     private String readMigration() throws IOException {
-        String resource =
-                "db/migration/V22__correct_entrance_camera_floor.sql";
+        return readMigration(
+                "db/migration/V22__correct_entrance_camera_floor.sql"
+        );
+    }
+
+    private String readMigration(String resource) throws IOException {
 
         try (InputStream input = Thread.currentThread()
                 .getContextClassLoader()

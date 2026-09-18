@@ -201,6 +201,32 @@ class AreaEnergySavingServiceTests {
         verify(commands).executeAutomatic("MINISPLIT_PB_A01", false);
     }
 
+    @Test
+    void armingTurnsOffLightsAndMinisplitsFromEveryAreaInTheZone() {
+        when(areas.getAreaState(anyString()))
+                .thenAnswer(invocation -> areaState(
+                        invocation.getArgument(0),
+                        true,
+                        true
+                ));
+        when(commands.executeAutomatic(anyString(), eq(false)))
+                .thenAnswer(invocation -> commandResponse(
+                        invocation.getArgument(0),
+                        false
+                ));
+
+        AreaInactivityService.EquipmentShutdownResult result =
+                service.turnOffZoneEquipment(List.of("PB"));
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.lightsTurnedOff()).isEqualTo(2);
+        assertThat(result.minisplitsTurnedOff()).isEqualTo(2);
+        verify(commands).executeAutomatic("LIGHT_PB_A01", false);
+        verify(commands).executeAutomatic("MINISPLIT_PB_A01", false);
+        verify(commands).executeAutomatic("LIGHT_PB_A02", false);
+        verify(commands).executeAutomatic("MINISPLIT_PB_A02", false);
+    }
+
     private SecuritySettingsResponse settings() {
         return new SecuritySettingsResponse(
                 true,

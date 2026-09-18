@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +26,7 @@ class SecurityZoneServiceTests {
     private SecurityScheduleService scheduleService;
     private SecurityPrecheckService precheckService;
     private SecurityZoneLightingService lightingService;
+    private AreaInactivityService areaInactivityService;
 
     @BeforeEach
     void setUp() {
@@ -48,6 +50,14 @@ class SecurityZoneServiceTests {
                 SecurityPrecheckService.class
         );
         lightingService = mock(SecurityZoneLightingService.class);
+        areaInactivityService = mock(AreaInactivityService.class);
+        when(areaInactivityService.turnOffZoneEquipment(any()))
+                .thenReturn(new AreaInactivityService.EquipmentShutdownResult(
+                        true,
+                        0,
+                        0,
+                        List.of()
+                ));
         SimpMessagingTemplate messagingTemplate = mock(
                 SimpMessagingTemplate.class
         );
@@ -59,6 +69,7 @@ class SecurityZoneServiceTests {
                 scheduleService,
                 precheckService,
                 lightingService,
+                areaInactivityService,
                 messagingTemplate
         );
 
@@ -67,7 +78,7 @@ class SecurityZoneServiceTests {
     }
 
     @Test
-    void immediateArmingDoesNotSwitchLights() {
+    void immediateArmingTurnsOffEquipmentFromTheArmedZones() {
         when(scheduleService.getSettings()).thenReturn(settings(0));
         readyToArm();
 
@@ -75,19 +86,27 @@ class SecurityZoneServiceTests {
 
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
         assertThat(stateValue("PATIO", "mode")).isEqualTo("ARMED");
+        verify(areaInactivityService).turnOffZoneEquipment(
+                List.of("PB", "PATIO")
+        );
     }
 
     @Test
-    void delayedArmingDoesNotSwitchLightsAtEitherStage() {
+    void delayedArmingTurnsOffEquipmentOnlyAfterTheExitDelay() {
         readyToArm();
         service.armManually(List.of("PB"), "operador");
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMING");
+        verify(areaInactivityService, never())
+                .turnOffZoneEquipment(any());
         jdbcTemplate.update("UPDATE security_zone_state SET arming_completes_at = ? WHERE zone_code = 'PB'",
                 java.sql.Timestamp.from(Instant.now().minusSeconds(1)));
 
         service.completeArmingIfDue();
 
         assertThat(stateValue("PB", "mode")).isEqualTo("ARMED");
+        verify(areaInactivityService).turnOffZoneEquipment(
+                List.of("PB")
+        );
     }
 
     private void readyToArm() {
