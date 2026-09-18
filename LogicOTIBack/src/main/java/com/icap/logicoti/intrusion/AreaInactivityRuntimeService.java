@@ -1,6 +1,7 @@
 package com.icap.logicoti.intrusion;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,7 +69,30 @@ public class AreaInactivityRuntimeService {
             Instant lightTurnOffAt,
             Instant minisplitTurnOffAt
     ) {
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
+                UPDATE security_area_inactivity_runtime
+                SET last_motion_at = ?,
+                    light_turn_off_at = ?,
+                    minisplit_turn_off_at = ?,
+                    light_processed = FALSE,
+                    minisplit_processed = FALSE,
+                    lights_turned_off = 0,
+                    minisplits_turned_off = 0,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE area_id = ?
+                """,
+                Timestamp.from(motionAt),
+                Timestamp.from(lightTurnOffAt),
+                Timestamp.from(minisplitTurnOffAt),
+                areaId
+        );
+
+        if (updated > 0) {
+            return;
+        }
+
+        try {
+            jdbcTemplate.update("""
                 INSERT INTO security_area_inactivity_runtime (
                     area_id,
                     last_motion_at,
@@ -81,21 +105,20 @@ public class AreaInactivityRuntimeService {
                     updated_at
                 )
                 VALUES (?, ?, ?, ?, FALSE, FALSE, 0, 0, CURRENT_TIMESTAMP)
-                ON CONFLICT (area_id) DO UPDATE
-                SET last_motion_at = EXCLUDED.last_motion_at,
-                    light_turn_off_at = EXCLUDED.light_turn_off_at,
-                    minisplit_turn_off_at = EXCLUDED.minisplit_turn_off_at,
-                    light_processed = FALSE,
-                    minisplit_processed = FALSE,
-                    lights_turned_off = 0,
-                    minisplits_turned_off = 0,
-                    updated_at = CURRENT_TIMESTAMP
                 """,
                 areaId,
                 Timestamp.from(motionAt),
                 Timestamp.from(lightTurnOffAt),
                 Timestamp.from(minisplitTurnOffAt)
-        );
+            );
+        } catch (DuplicateKeyException exception) {
+            recordActivity(
+                    areaId,
+                    motionAt,
+                    lightTurnOffAt,
+                    minisplitTurnOffAt
+            );
+        }
     }
 
     @Transactional(readOnly = true)

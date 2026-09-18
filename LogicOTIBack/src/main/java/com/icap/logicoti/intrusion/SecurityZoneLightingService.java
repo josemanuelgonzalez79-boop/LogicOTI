@@ -5,6 +5,7 @@ import com.icap.logicoti.device.AreaStateService;
 import com.icap.logicoti.device.DeviceCommandExecutionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -257,7 +258,24 @@ public class SecurityZoneLightingService {
             String triggerZoneCode,
             Long triggerEventId
     ) {
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
+                UPDATE security_zone_light_runtime
+                SET zone_code = ?,
+                    activation_reason = 'ALARM',
+                    trigger_event_id = ?
+                WHERE device_id = ?
+                """,
+                triggerZoneCode,
+                triggerEventId,
+                deviceId
+        );
+
+        if (updated > 0) {
+            return;
+        }
+
+        try {
+            jdbcTemplate.update("""
                 INSERT INTO security_zone_light_runtime (
                     device_id,
                     zone_code,
@@ -266,16 +284,15 @@ public class SecurityZoneLightingService {
                     activated_at
                 )
                 VALUES (?, ?, 'ALARM', ?, ?)
-                ON CONFLICT (device_id) DO UPDATE
-                SET zone_code = EXCLUDED.zone_code,
-                    activation_reason = EXCLUDED.activation_reason,
-                    trigger_event_id = EXCLUDED.trigger_event_id
                 """,
                 deviceId,
                 triggerZoneCode,
                 triggerEventId,
                 java.sql.Timestamp.from(Instant.now())
-        );
+            );
+        } catch (DuplicateKeyException exception) {
+            claim(deviceId, triggerZoneCode, triggerEventId);
+        }
     }
 
     private void release(long deviceId) {
