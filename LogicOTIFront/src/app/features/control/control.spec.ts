@@ -183,6 +183,7 @@ const receptionCameras: CameraListResponse = {
       active: true,
       videoAvailable: true,
       viewUrl: 'http://video.local:8889/oti-cam-08/',
+      ptzAvailable: false,
     },
   ],
   total: 1,

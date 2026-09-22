@@ -88,7 +88,8 @@ class CameraAlertControllerTests {
                 available,
                 available
                         ? "https://video.local/camera/oti-cam-08/"
-                        : null
+                        : null,
+                false
         );
     }
 }

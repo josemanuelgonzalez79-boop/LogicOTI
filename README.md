@@ -40,6 +40,16 @@ El histórico permite saltar a una hora dentro del segmento: el backend verifica
 hora esté grabada y crea otra ruta temporal desde el punto elegido. El stream WebRTC no dispone de
 búsqueda continua mediante los controles nativos del video.
 
+El control PTZ se habilita por separado con `CAMERA_PTZ_ENABLED=true` en el `.env` del backend.
+Solo aparece en vivo para los canales indicados por `CAMERA_PTZ_CHANNELS` (por defecto 25–28)
+y para usuarios ADMIN u OPERATOR. El backend envía una orden ISAPI al NVR, espera 350 ms y envía
+una orden de parada; no transmite credenciales al navegador. Utiliza `NVR_BASE_URL` y, salvo
+que se indiquen `CAMERA_PTZ_USERNAME` y `CAMERA_PTZ_PASSWORD`, las credenciales `NVR_USERNAME`
+y `NVR_PASSWORD`. Si el firmware no admite la ruta directa, se puede configurar
+`CAMERA_PTZ_ENDPOINT_MODE=proxy`. Requiere verificar en el NVR el permiso de movimiento de esa
+cuenta y probar un pulso corto con visión directa de la cámara. Si no se detiene, deshabilita
+PTZ y detén la cámara desde el NVR; la entrega de la orden de parada depende de la conexión.
+
 ## Carpetas
 
 - `LogicOTIBack`: backend Spring Boot y migraciones Flyway.

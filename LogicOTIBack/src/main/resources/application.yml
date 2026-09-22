@@ -66,6 +66,17 @@ cameras:
     media-mtx-control-url: ${MEDIAMTX_CONTROL_URL:}
     media-mtx-timeout: ${MEDIAMTX_CONTROL_TIMEOUT:5s}
     playback-session-ttl: ${CAMERA_HISTORY_PLAYBACK_SESSION_TTL:2h}
+  ptz:
+    enabled: ${CAMERA_PTZ_ENABLED:false}
+    base-url: ${NVR_BASE_URL:}
+    username: ${CAMERA_PTZ_USERNAME:${NVR_USERNAME:}}
+    password: ${CAMERA_PTZ_PASSWORD:${NVR_PASSWORD:}}
+    endpoint-mode: ${CAMERA_PTZ_ENDPOINT_MODE:direct}
+    channels: ${CAMERA_PTZ_CHANNELS:25,26,27,28}
+    speed: ${CAMERA_PTZ_SPEED:40}
+    pulse-duration: ${CAMERA_PTZ_PULSE_DURATION:350ms}
+    connect-timeout: ${CAMERA_PTZ_CONNECT_TIMEOUT:5s}
+    response-timeout: ${CAMERA_PTZ_RESPONSE_TIMEOUT:5s}
 
 notifications:
   web-push:

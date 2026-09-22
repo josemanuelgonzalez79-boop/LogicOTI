@@ -4,6 +4,9 @@
 
 ### Incorporado
 
+- Control PTZ opcional para las cámaras 25–28: movimientos breves, parada desde el backend,
+  roles ADMIN/OPERATOR y conexión ISAPI directa o mediante proxy del NVR.
+
 - Armado independiente o conjunto de Planta Baja, Piso 1, Piso 2 y Patio/Exterior.
 - Armado por zonas limitado a habilitar alarmas; al completar el armado apaga las luces y los
   minisplits de las zonas seleccionadas para dejar el edificio sin consumo innecesario.

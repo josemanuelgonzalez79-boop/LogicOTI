@@ -81,6 +81,7 @@ export const API_ENDPOINTS = {
       `/cameras/${encodeURIComponent(cameraCode)}/recordings/search`,
     recordingPlayback: (cameraCode: string) =>
       `/cameras/${encodeURIComponent(cameraCode)}/recordings/playback`,
+    ptzMove: (cameraCode: string) => `/cameras/${encodeURIComponent(cameraCode)}/ptz/move`,
     alertView: '/camera-alerts/view',
   },
 

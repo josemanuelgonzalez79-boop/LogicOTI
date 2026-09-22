@@ -2,6 +2,7 @@ package com.icap.logicoti.camera;
 
 import com.icap.logicoti.config.CameraHistoryProperties;
 import com.icap.logicoti.config.CameraProperties;
+import com.icap.logicoti.config.CameraPtzProperties;
 import com.icap.logicoti.exception.ResourceNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -35,15 +36,18 @@ public class CameraService {
     private final JdbcTemplate jdbcTemplate;
     private final CameraProperties cameraProperties;
     private final CameraHistoryProperties cameraHistoryProperties;
+    private final CameraPtzProperties cameraPtzProperties;
 
     public CameraService(
             JdbcTemplate jdbcTemplate,
             CameraProperties cameraProperties,
-            CameraHistoryProperties cameraHistoryProperties
+            CameraHistoryProperties cameraHistoryProperties,
+            CameraPtzProperties cameraPtzProperties
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.cameraProperties = cameraProperties;
         this.cameraHistoryProperties = cameraHistoryProperties;
+        this.cameraPtzProperties = cameraPtzProperties;
     }
 
     public CameraListResponse findAll(
@@ -134,7 +138,9 @@ public class CameraService {
                 streamKey,
                 active,
                 videoAvailable,
-                videoAvailable ? buildViewUrl(streamKey) : null
+                videoAvailable ? buildViewUrl(streamKey) : null,
+                videoAvailable && cameraPtzProperties.isConfigured()
+                        && cameraPtzProperties.isChannelAllowed(resultSet.getInt("channel_number"))
         );
     }
 

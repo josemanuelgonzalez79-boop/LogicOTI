@@ -172,6 +172,69 @@
                 </div>
               }
             </div>
+            @if (camera.ptzAvailable && canControlPtz) {
+              <section class="ptz-panel" aria-label="Control PTZ">
+                <div>
+                  <strong>Control PTZ</strong>
+                  <small>Cada pulsación mueve la cámara brevemente.</small>
+                </div>
+                <div class="ptz-panel__buttons">
+                  <button
+                    type="button"
+                    aria-label="Girar a la izquierda"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('LEFT')"
+                  >
+                    <i class="pi pi-arrow-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Mover hacia arriba"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('UP')"
+                  >
+                    <i class="pi pi-arrow-up"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Mover hacia abajo"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('DOWN')"
+                  >
+                    <i class="pi pi-arrow-down"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Girar a la derecha"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('RIGHT')"
+                  >
+                    <i class="pi pi-arrow-right"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Acercar zoom"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('ZOOM_IN')"
+                  >
+                    <i class="pi pi-search-plus"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Alejar zoom"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('ZOOM_OUT')"
+                  >
+                    <i class="pi pi-search-minus"></i>
+                  </button>
+                </div>
+                @if (ptzError()) {
+                  <p class="history-message history-message--error" role="alert">
+                    {{ ptzError() }}
+                  </p>
+                }
+              </section>
+            }
           } @else {
             <section class="history-panel">
               <form class="history-form" (ngSubmit)="searchHistory()">

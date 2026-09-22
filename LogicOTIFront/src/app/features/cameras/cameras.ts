@@ -9,9 +9,11 @@ import { finalize } from 'rxjs';
 import {
   CameraFloorCode,
   CameraItem,
+  CameraPtzDirection,
   CameraRecordingSegment,
 } from '../../core/models/camera.model';
 import { CameraApiService } from '../../core/services/camera-api.service';
+import { AuthService } from '../../core/services/auth.service';
 
 type CameraFloorFilter = '' | CameraFloorCode;
 type ViewerMode = 'live' | 'history';
@@ -25,6 +27,7 @@ type ViewerMode = 'live' | 'history';
 })
 export class Cameras implements OnInit {
   private readonly cameraApi = inject(CameraApiService);
+  private readonly authService = inject(AuthService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly route = inject(ActivatedRoute);
 
@@ -41,6 +44,11 @@ export class Cameras implements OnInit {
   readonly selectedCamera = signal<CameraItem | null>(null);
   readonly safeViewUrl = signal<SafeResourceUrl | null>(null);
   readonly viewerMode = signal<ViewerMode>('live');
+  readonly canControlPtz = ['ADMIN', 'OPERATOR'].includes(
+    this.authService.getSession()?.user.role ?? '',
+  );
+  readonly ptzMoving = signal(false);
+  readonly ptzError = signal('');
   readonly historyDate = signal('');
   readonly historyStartTime = signal('');
   readonly historyEndTime = signal('');
@@ -116,6 +124,7 @@ export class Cameras implements OnInit {
     const changed = this.selectedCamera()?.code !== camera.code;
     this.selectedCamera.set(camera);
     this.safeViewUrl.set(this.createSafeViewUrl(camera));
+    this.ptzError.set('');
     if (changed) {
       this.clearHistoryResults();
     }
@@ -126,6 +135,35 @@ export class Cameras implements OnInit {
       return;
     }
     this.viewerMode.set(mode);
+    this.ptzError.set('');
+  }
+
+  movePtz(direction: CameraPtzDirection): void {
+    const camera = this.selectedCamera();
+    if (
+      !camera?.ptzAvailable ||
+      !this.canControlPtz ||
+      this.ptzMoving() ||
+      this.viewerMode() !== 'live'
+    ) {
+      return;
+    }
+
+    this.ptzError.set('');
+    this.ptzMoving.set(true);
+    this.cameraApi
+      .movePtz(camera.code, direction)
+      .pipe(finalize(() => this.ptzMoving.set(false)))
+      .subscribe({
+        error: (error: HttpErrorResponse) => {
+          if (this.selectedCamera()?.code === camera.code) {
+            this.ptzError.set(
+              error.error?.detail ??
+                'No fue posible completar el movimiento PTZ. Comprueba la cámara.',
+            );
+          }
+        },
+      });
   }
 
   searchHistory(): void {

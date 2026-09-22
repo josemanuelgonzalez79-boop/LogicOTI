@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 
 import { CameraListResponse } from '../../core/models/camera.model';
 import { CameraApiService } from '../../core/services/camera-api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Cameras } from './cameras';
 
 const response: CameraListResponse = {
@@ -20,6 +21,7 @@ const response: CameraListResponse = {
       active: true,
       videoAvailable: false,
       viewUrl: null,
+      ptzAvailable: false,
     },
     {
       id: 25,
@@ -33,6 +35,7 @@ const response: CameraListResponse = {
       active: true,
       videoAvailable: true,
       viewUrl: 'http://video.local:8889/oti-cam-25',
+      ptzAvailable: true,
     },
   ],
   total: 2,
@@ -42,6 +45,7 @@ const response: CameraListResponse = {
 };
 
 class CameraApiServiceMock {
+  readonly movePtz = vi.fn(() => of(undefined));
   readonly getCameras = vi.fn(() => of(response));
   readonly searchRecordings = vi.fn(() =>
     of({
@@ -77,13 +81,16 @@ class CameraApiServiceMock {
 
 describe('Cameras', () => {
   let requestedCameraCode: string | null;
+  let role: string;
 
   beforeEach(async () => {
     requestedCameraCode = null;
+    role = 'ADMIN';
 
     await TestBed.configureTestingModule({
       imports: [Cameras],
       providers: [
+        { provide: AuthService, useValue: { getSession: () => ({ user: { role } }) } },
         {
           provide: CameraApiService,
           useClass: CameraApiServiceMock,
@@ -181,5 +188,30 @@ describe('Cameras', () => {
       endTime: '2026-09-22T09:44:09',
     });
     expect(fixture.componentInstance.historyPlaybackSeekSeconds()).toBe(90);
+  });
+
+  it('envía un movimiento solo desde una cámara PTZ para un rol operativo', () => {
+    requestedCameraCode = 'CAM-025';
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+
+    fixture.componentInstance.movePtz('RIGHT');
+
+    expect(cameraApi.movePtz).toHaveBeenCalledWith('CAM-025', 'RIGHT');
+    expect(fixture.nativeElement.querySelector('[aria-label="Control PTZ"]')).not.toBeNull();
+  });
+
+  it('oculta PTZ al rol de monitoreo aunque el canal esté habilitado', () => {
+    role = 'MONITORING';
+    requestedCameraCode = 'CAM-025';
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+
+    fixture.componentInstance.movePtz('LEFT');
+
+    expect(cameraApi.movePtz).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[aria-label="Control PTZ"]')).toBeNull();
   });
 });

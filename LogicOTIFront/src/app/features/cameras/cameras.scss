@@ -426,6 +426,51 @@
   }
 }
 
+.ptz-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+
+  > div:first-child {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  strong {
+    font-size: 0.86rem;
+  }
+
+  small {
+    color: var(--p-text-muted-color);
+    font-size: 0.74rem;
+  }
+}
+
+.ptz-panel__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+
+  button {
+    display: grid;
+    width: 2.6rem;
+    height: 2.6rem;
+    place-items: center;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 0.6rem;
+    color: var(--p-primary-color);
+    background: var(--p-content-background);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: wait;
+    opacity: 0.45;
+  }
+}
+
 .history-seek {
   display: grid;
   gap: 0.5rem;

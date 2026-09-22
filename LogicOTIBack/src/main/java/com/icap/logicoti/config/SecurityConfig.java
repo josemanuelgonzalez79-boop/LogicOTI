@@ -238,6 +238,12 @@ public class SecurityConfig {
                                 MONITORING_ROLE
                         )
 
+                        // El movimiento físico requiere un rol operativo.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/cameras/*/ptz/move"
+                        ).hasAnyRole(ADMIN_ROLE, OPERATOR_ROLE)
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,

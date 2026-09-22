@@ -260,7 +260,8 @@ class CameraHistoryServiceTests {
                 active
                         ? "https://video.local/camera/oti-cam-%02d/"
                                 .formatted(channelNumber)
-                        : null
+                        : null,
+                false
         );
     }
 }
