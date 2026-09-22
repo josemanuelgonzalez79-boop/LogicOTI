@@ -1,18 +1,25 @@
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { CameraFloorCode, CameraItem } from '../../core/models/camera.model';
+import {
+  CameraFloorCode,
+  CameraItem,
+  CameraRecordingSegment,
+} from '../../core/models/camera.model';
 import { CameraApiService } from '../../core/services/camera-api.service';
 
 type CameraFloorFilter = '' | CameraFloorCode;
+type ViewerMode = 'live' | 'history';
 
 @Component({
   selector: 'app-cameras',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   templateUrl: './cameras.html',
   styleUrl: './cameras.scss',
 })
@@ -26,12 +33,27 @@ export class Cameras implements OnInit {
   readonly cameras = signal<CameraItem[]>([]);
   readonly total = signal(0);
   readonly playbackConfigured = signal(false);
+  readonly historyConfigured = signal(false);
   readonly lastUpdate = signal('');
 
   readonly searchText = signal('');
   readonly floorFilter = signal<CameraFloorFilter>('');
   readonly selectedCamera = signal<CameraItem | null>(null);
   readonly safeViewUrl = signal<SafeResourceUrl | null>(null);
+  readonly viewerMode = signal<ViewerMode>('live');
+  readonly historyDate = signal('');
+  readonly historyStartTime = signal('');
+  readonly historyEndTime = signal('');
+  readonly historyLoading = signal(false);
+  readonly historyError = signal('');
+  readonly recordingSegments = signal<CameraRecordingSegment[]>([]);
+  readonly historySearched = signal(false);
+  readonly historyPlaybackConfigured = signal(false);
+  readonly historyPlaybackLoadingSequence = signal<number | null>(null);
+  readonly historyPlaybackError = signal('');
+  readonly historyPlaybackUrl = signal<SafeResourceUrl | null>(null);
+  readonly historyPlaybackExpiresAt = signal('');
+  readonly historyPlaybackSegment = signal<CameraRecordingSegment | null>(null);
 
   readonly floorOptions: ReadonlyArray<{
     value: CameraFloorFilter;
@@ -75,6 +97,7 @@ export class Cameras implements OnInit {
   );
 
   ngOnInit(): void {
+    this.setDefaultHistoryRange();
     this.loadCameras();
   }
 
@@ -88,8 +111,115 @@ export class Cameras implements OnInit {
   }
 
   selectCamera(camera: CameraItem): void {
+    const changed = this.selectedCamera()?.code !== camera.code;
     this.selectedCamera.set(camera);
     this.safeViewUrl.set(this.createSafeViewUrl(camera));
+    if (changed) {
+      this.clearHistoryResults();
+    }
+  }
+
+  selectViewerMode(mode: ViewerMode): void {
+    if (mode === 'history' && !this.historyConfigured()) {
+      return;
+    }
+    this.viewerMode.set(mode);
+  }
+
+  searchHistory(): void {
+    const camera = this.selectedCamera();
+    const date = this.historyDate();
+    const start = this.historyStartTime();
+    const end = this.historyEndTime();
+
+    this.historyError.set('');
+    this.recordingSegments.set([]);
+    this.historySearched.set(false);
+
+    if (!camera || !date || !start || !end) {
+      this.historyError.set('Selecciona una cámara, fecha, hora inicial y hora final.');
+      return;
+    }
+
+    if (end <= start) {
+      this.historyError.set('La hora final debe ser posterior a la hora inicial.');
+      return;
+    }
+
+    this.historyLoading.set(true);
+    this.cameraApi
+      .searchRecordings(camera.code, {
+        startTime: `${date}T${start}:00`,
+        endTime: `${date}T${end}:00`,
+      })
+      .pipe(finalize(() => this.historyLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.recordingSegments.set(response.items);
+          this.historyPlaybackConfigured.set(response.playbackConfigured);
+          this.historySearched.set(true);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.historyError.set(
+            error.error?.detail ?? 'No fue posible consultar las grabaciones del NVR.',
+          );
+        },
+      });
+  }
+
+  playRecording(segment: CameraRecordingSegment): void {
+    const camera = this.selectedCamera();
+    if (!camera || !this.historyPlaybackConfigured()) {
+      return;
+    }
+
+    this.historyPlaybackError.set('');
+    this.historyPlaybackUrl.set(null);
+    this.historyPlaybackSegment.set(null);
+    this.historyPlaybackLoadingSequence.set(segment.sequence);
+
+    this.cameraApi
+      .startRecordingPlayback(camera.code, {
+        startTime: segment.startTime,
+        endTime: segment.endTime,
+      })
+      .pipe(finalize(() => this.historyPlaybackLoadingSequence.set(null)))
+      .subscribe({
+        next: (response) => {
+          const safeUrl = this.createSafeHistoryUrl(response.viewUrl);
+          if (!safeUrl) {
+            this.historyPlaybackError.set(
+              'El servidor devolvió una dirección de reproducción inválida.',
+            );
+            return;
+          }
+
+          this.historyPlaybackUrl.set(safeUrl);
+          this.historyPlaybackExpiresAt.set(response.expiresAt);
+          this.historyPlaybackSegment.set(segment);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.historyPlaybackError.set(
+            error.error?.detail ?? 'No fue posible iniciar la reproducción histórica.',
+          );
+        },
+      });
+  }
+
+  closeHistoryPlayback(): void {
+    this.historyPlaybackUrl.set(null);
+    this.historyPlaybackExpiresAt.set('');
+    this.historyPlaybackSegment.set(null);
+    this.historyPlaybackError.set('');
+  }
+
+  recordingDuration(segment: CameraRecordingSegment): string {
+    const milliseconds =
+      new Date(segment.endTime).getTime() - new Date(segment.startTime).getTime();
+    const totalMinutes = Math.max(0, Math.round(milliseconds / 60_000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
   }
 
   floorLabel(floorCode: CameraFloorCode): string {
@@ -119,6 +249,7 @@ export class Cameras implements OnInit {
           this.cameras.set(response.items);
           this.total.set(response.total);
           this.playbackConfigured.set(response.playbackConfigured);
+          this.historyConfigured.set(response.historyConfigured);
           this.lastUpdate.set(response.timestamp);
 
           const nextSelection =
@@ -150,5 +281,44 @@ export class Cameras implements OnInit {
     }
 
     return this.sanitizer.bypassSecurityTrustResourceUrl(camera.viewUrl);
+  }
+
+  private createSafeHistoryUrl(viewUrl: string): SafeResourceUrl | null {
+    if (!viewUrl.startsWith('http://') && !viewUrl.startsWith('https://')) {
+      return null;
+    }
+
+    const separator = viewUrl.includes('?') ? '&' : '?';
+    return this.sanitizer.bypassSecurityTrustResourceUrl(
+      `${viewUrl}${separator}controls=true&autoplay=true&muted=true&playsInline=true`,
+    );
+  }
+
+  private setDefaultHistoryRange(): void {
+    const now = new Date();
+    const start = new Date(now.getTime() - 60 * 60 * 1000);
+    const sameDay = start.toDateString() === now.toDateString();
+    this.historyDate.set(this.localDate(now));
+    this.historyStartTime.set(sameDay ? this.localTime(start) : '00:00');
+    this.historyEndTime.set(this.localTime(now));
+  }
+
+  private localDate(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private localTime(value: Date): string {
+    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+  }
+
+  private clearHistoryResults(): void {
+    this.historyError.set('');
+    this.recordingSegments.set([]);
+    this.historySearched.set(false);
+    this.historyPlaybackConfigured.set(false);
+    this.closeHistoryPlayback();
   }
 }

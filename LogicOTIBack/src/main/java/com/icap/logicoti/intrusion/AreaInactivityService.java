@@ -13,10 +13,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class AreaInactivityService {
@@ -175,6 +179,119 @@ public class AreaInactivityService {
         if (changed) {
             publishStatus();
         }
+    }
+
+    /**
+     * Apaga luces y minisplits al completar el armado de una o varias zonas.
+     * El armado no se rechaza si un equipo no responde: la alarma conserva
+     * prioridad y el fallo queda disponible para registro y diagnóstico.
+     */
+    public EquipmentShutdownResult turnOffZoneEquipment(
+            Collection<String> requestedZoneCodes
+    ) {
+        Set<String> zoneCodes = new LinkedHashSet<>();
+
+        for (String requestedCode : requestedZoneCodes) {
+            if (requestedCode != null && !requestedCode.isBlank()) {
+                zoneCodes.add(
+                        requestedCode.trim().toUpperCase(Locale.ROOT)
+                );
+            }
+        }
+
+        if (zoneCodes.isEmpty()) {
+            return new EquipmentShutdownResult(
+                    true,
+                    0,
+                    0,
+                    List.of()
+            );
+        }
+
+        String placeholders = String.join(
+                ", ",
+                java.util.Collections.nCopies(zoneCodes.size(), "?")
+        );
+        List<ZoneArea> areas = jdbcTemplate.query(
+                """
+                SELECT DISTINCT
+                    area.id,
+                    area.code,
+                    area.name
+                FROM security_zone_area zone_area
+                INNER JOIN building_area area
+                    ON area.id = zone_area.area_id
+                INNER JOIN building_floor floor
+                    ON floor.id = area.floor_id
+                WHERE zone_area.zone_code IN (%s)
+                  AND area.active = TRUE
+                  AND floor.active = TRUE
+                ORDER BY area.id
+                """.formatted(placeholders),
+                (resultSet, rowNumber) -> new ZoneArea(
+                        resultSet.getLong("id"),
+                        resultSet.getString("code"),
+                        resultSet.getString("name")
+                ),
+                zoneCodes.toArray()
+        );
+
+        List<String> failures = new ArrayList<>();
+        int lightsTurnedOff = 0;
+        int minisplitsTurnedOff = 0;
+
+        for (ZoneArea area : areas) {
+            try {
+                AreaStateResponse areaState =
+                        areaStateService.getAreaState(area.code());
+
+                if (!areaState.connected()) {
+                    failures.add(
+                            area.name()
+                                    + ": no fue posible leer el PLC."
+                    );
+                    continue;
+                }
+
+                GroupResult lights = turnOffDevices(
+                        areaState,
+                        "LIGHT"
+                );
+                GroupResult minisplits = turnOffDevices(
+                        areaState,
+                        "MINISPLIT"
+                );
+
+                lightsTurnedOff += lights.turnedOff();
+                minisplitsTurnedOff += minisplits.turnedOff();
+
+                if (!lights.success() || !minisplits.success()) {
+                    failures.add(
+                            area.name()
+                                    + ": el PLC no confirmó todos los apagados."
+                    );
+                }
+            } catch (RuntimeException exception) {
+                failures.add(
+                        area.name() + ": " + safeMessage(exception)
+                );
+                LOGGER.warn(
+                        "No se pudo apagar el equipo de {} al armar: {}",
+                        area.code(),
+                        exception.getMessage()
+                );
+            } finally {
+                runtimeService.release(area.id());
+            }
+        }
+
+        publishStatus();
+        return new EquipmentShutdownResult(
+                failures.isEmpty(),
+                lightsTurnedOff,
+                minisplitsTurnedOff,
+                List.copyOf(failures)
+        );
     }
 
     private boolean processArea(
@@ -486,6 +603,13 @@ public class AreaInactivityService {
         return count != null && count > 0;
     }
 
+    private String safeMessage(RuntimeException exception) {
+        return exception.getMessage() == null
+                || exception.getMessage().isBlank()
+                ? exception.getClass().getSimpleName()
+                : exception.getMessage();
+    }
+
     private void publishStatus() {
         try {
             messagingTemplate.convertAndSend(TOPIC, getStatus());
@@ -498,5 +622,16 @@ public class AreaInactivityService {
     }
 
     private record GroupResult(boolean success, int turnedOff) {
+    }
+
+    private record ZoneArea(long id, String code, String name) {
+    }
+
+    public record EquipmentShutdownResult(
+            boolean success,
+            int lightsTurnedOff,
+            int minisplitsTurnedOff,
+            List<String> failures
+    ) {
     }
 }

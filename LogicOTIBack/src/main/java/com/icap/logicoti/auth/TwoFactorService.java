@@ -204,7 +204,12 @@ public class TwoFactorService {
             throw new ConflictException("La autenticación en dos pasos no está activa.");
         }
 
-        if (!verifyEnabledCode(user.getId(), request.code(), true)) {
+        // La contraseña actual ya confirma una segunda credencial para esta
+        // operación sensible. Permitir el TOTP vigente evita que el usuario
+        // tenga que esperar al siguiente intervalo cuando acaba de activar
+        // 2FA o de iniciar sesión con ese mismo código. Los códigos de
+        // recuperación continúan siendo de un solo uso.
+        if (!verifyEnabledCode(user.getId(), request.code(), false)) {
             throw new UnauthorizedException("El código de verificación no es válido.");
         }
 

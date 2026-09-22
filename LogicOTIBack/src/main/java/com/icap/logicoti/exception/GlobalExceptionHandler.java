@@ -1,6 +1,7 @@
 package com.icap.logicoti.exception;
 
 import com.icap.logicoti.camera.CameraAlertLinkException;
+import com.icap.logicoti.camera.CameraHistoryUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -77,6 +78,18 @@ public class GlobalExceptionHandler {
     ) {
         return problem(
                 HttpStatus.GONE,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(CameraHistoryUnavailableException.class)
+    ProblemDetail handleCameraHistoryUnavailable(
+            CameraHistoryUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.SERVICE_UNAVAILABLE,
                 exception.getMessage(),
                 request
         );

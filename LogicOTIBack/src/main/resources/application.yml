@@ -51,6 +51,21 @@ cameras:
   playback-base-url: ${CAMERA_PLAYBACK_BASE_URL:}
   available-streams: ${CAMERA_AVAILABLE_STREAMS:}
   alert-link-expiration-seconds: ${CAMERA_ALERT_LINK_EXPIRATION_SECONDS:900}
+  history:
+    enabled: ${CAMERA_HISTORY_ENABLED:false}
+    base-url: ${NVR_BASE_URL:}
+    username: ${NVR_USERNAME:}
+    password: ${NVR_PASSWORD:}
+    time-zone: ${NVR_TIME_ZONE:America/Mazatlan}
+    local-time-as-utc: ${NVR_LOCAL_TIME_AS_UTC:true}
+    connect-timeout: ${NVR_CONNECT_TIMEOUT:5s}
+    response-timeout: ${NVR_RESPONSE_TIMEOUT:15s}
+    max-search-hours: ${NVR_MAX_SEARCH_HOURS:24}
+    max-results: ${NVR_MAX_RESULTS:100}
+    playback-enabled: ${CAMERA_HISTORY_PLAYBACK_ENABLED:false}
+    media-mtx-control-url: ${MEDIAMTX_CONTROL_URL:}
+    media-mtx-timeout: ${MEDIAMTX_CONTROL_TIMEOUT:5s}
+    playback-session-ttl: ${CAMERA_HISTORY_PLAYBACK_SESSION_TTL:2h}
 
 notifications:
   web-push:

@@ -18,6 +18,45 @@ export interface CameraListResponse {
   items: CameraItem[];
   total: number;
   playbackConfigured: boolean;
+  historyConfigured: boolean;
+  timestamp: string;
+}
+
+export interface CameraRecordingSearchRequest {
+  startTime: string;
+  endTime: string;
+}
+
+export interface CameraRecordingSegment {
+  sequence: number;
+  startTime: string;
+  endTime: string;
+  codecType: string;
+  recordingType: string;
+}
+
+export interface CameraRecordingSearchResponse {
+  cameraCode: string;
+  cameraName: string;
+  channelNumber: number;
+  requestedStartTime: string;
+  requestedEndTime: string;
+  items: CameraRecordingSegment[];
+  total: number;
+  playbackConfigured: boolean;
+  timestamp: string;
+}
+
+export interface CameraRecordingPlaybackRequest {
+  startTime: string;
+  endTime: string;
+}
+
+export interface CameraRecordingPlaybackResponse {
+  cameraCode: string;
+  cameraName: string;
+  viewUrl: string;
+  expiresAt: string;
   timestamp: string;
 }
 

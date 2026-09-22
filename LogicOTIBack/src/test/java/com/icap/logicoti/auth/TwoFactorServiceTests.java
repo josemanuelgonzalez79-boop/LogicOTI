@@ -79,6 +79,40 @@ class TwoFactorServiceTests {
     }
 
     @Test
+    void disableAcceptsTheCurrentCodeImmediatelyAfterSetup() {
+        TwoFactorSetupResponse setup = service.beginSetup(
+                "operador",
+                new TwoFactorSetupRequest("correcta")
+        );
+        String secret = setup.manualKey().replace(" ", "");
+        String currentCode = totp.generateCode(
+                secret,
+                Instant.now().getEpochSecond()
+                        / TotpService.TIME_STEP_SECONDS
+        );
+        service.confirmSetup(
+                "operador",
+                new TwoFactorCodeRequest(currentCode)
+        );
+
+        TwoFactorStatusResponse status = service.disable(
+                "operador",
+                new TwoFactorDisableRequest(
+                        "correcta",
+                        currentCode
+                )
+        );
+
+        assertThat(status).isEqualTo(
+                new TwoFactorStatusResponse(false, 0)
+        );
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_two_factor WHERE user_id = 7",
+                Integer.class
+        )).isZero();
+    }
+
+    @Test
     void loginChallengeAcceptsCurrentTotpOnlyOnce() {
         EnabledAccount enabled = enableAccount();
         String currentCode = totp.generateCode(

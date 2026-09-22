@@ -79,6 +79,7 @@ class IntrusionMotionAlarmServiceTests {
                         List.of(camera),
                         1,
                         true,
+                        false,
                         Instant.now()
                 ));
         when(cameraAlertLinkService.createTargetUrl("CAM-008"))

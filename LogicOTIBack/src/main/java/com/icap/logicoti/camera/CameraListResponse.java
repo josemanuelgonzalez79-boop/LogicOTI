@@ -7,6 +7,7 @@ public record CameraListResponse(
         List<CameraResponse> items,
         int total,
         boolean playbackConfigured,
+        boolean historyConfigured,
         Instant timestamp
 ) {
 }

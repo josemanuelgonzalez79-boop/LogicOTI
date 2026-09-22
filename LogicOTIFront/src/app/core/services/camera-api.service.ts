@@ -9,6 +9,10 @@ import {
   CameraFloorCode,
   CameraItem,
   CameraListResponse,
+  CameraRecordingSearchRequest,
+  CameraRecordingSearchResponse,
+  CameraRecordingPlaybackRequest,
+  CameraRecordingPlaybackResponse,
 } from '../models/camera.model';
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +39,26 @@ export class CameraApiService {
   getCamera(cameraCode: string): Observable<CameraItem> {
     return this.http.get<CameraItem>(
       `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.detail(cameraCode)}`,
+    );
+  }
+
+  searchRecordings(
+    cameraCode: string,
+    request: CameraRecordingSearchRequest,
+  ): Observable<CameraRecordingSearchResponse> {
+    return this.http.post<CameraRecordingSearchResponse>(
+      `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.recordings(cameraCode)}`,
+      request,
+    );
+  }
+
+  startRecordingPlayback(
+    cameraCode: string,
+    request: CameraRecordingPlaybackRequest,
+  ): Observable<CameraRecordingPlaybackResponse> {
+    return this.http.post<CameraRecordingPlaybackResponse>(
+      `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.recordingPlayback(cameraCode)}`,
+      request,
     );
   }
 

@@ -187,6 +187,7 @@ const receptionCameras: CameraListResponse = {
   ],
   total: 1,
   playbackConfigured: true,
+  historyConfigured: true,
   timestamp: '2026-08-05T18:00:00Z',
 };
 

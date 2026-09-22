@@ -1,5 +1,9 @@
 logLevel: info
 
+# API local utilizada por el backend para crear rutas históricas temporales.
+api: yes
+apiAddress: 127.0.0.1:9997
+
 rtspTransports: [tcp]
 
 webrtcAdditionalHosts:

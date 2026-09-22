@@ -3,6 +3,8 @@ package com.icap.logicoti.intrusion;
 import com.icap.logicoti.event.SensorEventHistoryResponse;
 import com.icap.logicoti.exception.BadRequestException;
 import com.icap.logicoti.exception.ConflictException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -22,6 +24,10 @@ import java.util.Set;
 
 @Service
 public class SecurityZoneService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            SecurityZoneService.class
+    );
 
     public static final String ZONES_TOPIC = "/topic/security/zones";
     private static final String STATUS_TOPIC = "/topic/security/status";
@@ -66,6 +72,7 @@ public class SecurityZoneService {
     private final SecurityScheduleService scheduleService;
     private final SecurityPrecheckService precheckService;
     private final SecurityZoneLightingService lightingService;
+    private final AreaInactivityService areaInactivityService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public SecurityZoneService(
@@ -73,12 +80,14 @@ public class SecurityZoneService {
             SecurityScheduleService scheduleService,
             SecurityPrecheckService precheckService,
             SecurityZoneLightingService lightingService,
+            AreaInactivityService areaInactivityService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.scheduleService = scheduleService;
         this.precheckService = precheckService;
         this.lightingService = lightingService;
+        this.areaInactivityService = areaInactivityService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -284,6 +293,7 @@ public class SecurityZoneService {
     @Transactional
     public void completeArmingIfDue() {
         Instant now = Instant.now();
+        Set<String> armedZoneCodes = new LinkedHashSet<>();
         List<ZoneState> dueZones = findStates().stream()
                 .filter(state -> state.mode() == AlarmMode.ARMING)
                 .filter(state -> state.armingCompletesAt() != null)
@@ -322,7 +332,10 @@ public class SecurityZoneService {
                     null,
                     null
             );
+            armedZoneCodes.add(zone.code());
         }
+
+        turnOffEquipmentAfterArming(armedZoneCodes);
 
         if (!dueZones.isEmpty()) {
             publish();
@@ -385,6 +398,7 @@ public class SecurityZoneService {
         Instant completesAt = exitDelay == 0
                 ? null
                 : Instant.now().plusSeconds(exitDelay);
+        Set<String> armedZoneCodes = new LinkedHashSet<>();
 
         for (String zoneCode : zoneCodes) {
             ZoneState state = findState(zoneCode);
@@ -407,6 +421,7 @@ public class SecurityZoneService {
                         null,
                         null
                 );
+                armedZoneCodes.add(zoneCode);
                 continue;
             }
 
@@ -423,6 +438,8 @@ public class SecurityZoneService {
                     null
             );
         }
+
+        turnOffEquipmentAfterArming(armedZoneCodes);
 
         publish();
         return new SecurityZoneActionResponse(
@@ -487,6 +504,27 @@ public class SecurityZoneService {
                 && state.changedAt()
                 .plus(AUTOMATIC_RETRY_DELAY)
                 .isBefore(now);
+    }
+
+    private void turnOffEquipmentAfterArming(
+            Collection<String> armedZoneCodes
+    ) {
+        if (armedZoneCodes.isEmpty()) {
+            return;
+        }
+
+        AreaInactivityService.EquipmentShutdownResult result =
+                areaInactivityService.turnOffZoneEquipment(
+                        List.copyOf(armedZoneCodes)
+                );
+
+        if (!result.success()) {
+            LOGGER.warn(
+                    "Una o más cargas no confirmaron el apagado al armar {}: {}",
+                    armedZoneCodes,
+                    result.failures()
+            );
+        }
     }
 
     private void transition(
