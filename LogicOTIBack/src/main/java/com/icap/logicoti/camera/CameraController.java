@@ -48,4 +48,12 @@ public class CameraController {
     ) {
         return cameraHistoryService.search(cameraCode, request);
     }
+
+    @PostMapping("/{cameraCode}/recordings/playback")
+    public CameraRecordingPlaybackResponse startRecordingPlayback(
+            @PathVariable String cameraCode,
+            @Valid @RequestBody CameraRecordingPlaybackRequest request
+    ) {
+        return cameraHistoryService.startPlayback(cameraCode, request);
+    }
 }

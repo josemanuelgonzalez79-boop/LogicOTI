@@ -9,6 +9,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +27,9 @@ class CameraHistoryServiceTests {
 
     @Mock
     private NvrRecordingClient recordingClient;
+
+    @Mock
+    private HistoryPlaybackGateway playbackGateway;
 
     private CameraHistoryProperties properties;
     private CameraHistoryService service;
@@ -43,6 +48,7 @@ class CameraHistoryServiceTests {
         service = new CameraHistoryService(
                 cameraService,
                 recordingClient,
+                playbackGateway,
                 properties
         );
     }
@@ -128,6 +134,61 @@ class CameraHistoryServiceTests {
                         )
                 )
         );
+    }
+
+    @Test
+    void createsATemporaryPlaybackForTheSelectedSegment() {
+        LocalDateTime start = LocalDateTime.of(
+                2026,
+                9,
+                22,
+                9,
+                7,
+                21
+        );
+        LocalDateTime end = start.plusMinutes(37);
+        String playbackUri = "rtsp://192.0.2.18/Streaming/tracks/101/"
+                + "?starttime=20260922T090721Z&endtime=20260922T094409Z";
+        Instant expiresAt = Instant.parse("2026-09-22T19:00:00Z");
+
+        properties.setPlaybackEnabled(true);
+        properties.setMediaMtxControlUrl(
+                URI.create("http://127.0.0.1:9997")
+        );
+        properties.setMediaMtxTimeout(Duration.ofSeconds(5));
+        properties.setPlaybackSessionTtl(Duration.ofHours(2));
+
+        when(cameraService.isPlaybackConfigured()).thenReturn(true);
+        when(cameraService.findByCode("CAM-001"))
+                .thenReturn(camera(1, true));
+        when(recordingClient.search(101, start, end))
+                .thenReturn(List.of(new NvrRecordingSegment(
+                        start,
+                        end,
+                        "H.264-BP",
+                        "timing",
+                        playbackUri
+                )));
+        when(playbackGateway.open("CAM-001", 101, playbackUri))
+                .thenReturn(new HistoryPlaybackSession(
+                        "logicoti-history-session",
+                        expiresAt
+                ));
+        when(cameraService.buildViewUrl("logicoti-history-session"))
+                .thenReturn(
+                        "https://video.local/camera/logicoti-history-session/"
+                );
+
+        CameraRecordingPlaybackResponse response = service.startPlayback(
+                "CAM-001",
+                new CameraRecordingPlaybackRequest(start, end)
+        );
+
+        verify(playbackGateway).open("CAM-001", 101, playbackUri);
+        assertThat(response.viewUrl()).isEqualTo(
+                "https://video.local/camera/logicoti-history-session/"
+        );
+        assertThat(response.expiresAt()).isEqualTo(expiresAt);
     }
 
     private CameraResponse camera(

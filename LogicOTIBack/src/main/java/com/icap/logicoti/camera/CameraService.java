@@ -138,13 +138,13 @@ public class CameraService {
         );
     }
 
-    private boolean isPlaybackConfigured() {
+    boolean isPlaybackConfigured() {
         return cameraProperties.isEnabled()
                 && cameraProperties.getPlaybackBaseUrl() != null
                 && !cameraProperties.getPlaybackBaseUrl().isBlank();
     }
 
-    private String buildViewUrl(String streamKey) {
+    String buildViewUrl(String streamKey) {
         String baseUrl = cameraProperties
                 .getPlaybackBaseUrl()
                 .trim();

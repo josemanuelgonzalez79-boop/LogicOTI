@@ -8,8 +8,8 @@ Plataforma web para supervisar y operar la automatización del edificio OTI de I
 - Lectura y control de iluminación y encendido/apagado de minisplits mediante PLC EtherNet/IP.
 - Monitoreo de sensores de movimiento y humo con calidad `GOOD`, `BAD` y `STALE`.
 - Alarmas, reconocimiento, comentarios, armado, horarios y omisiones temporales.
-- Cámaras mediante MediaMTX/WebRTC, incluidas vistas temporales desde alertas y búsqueda de
-  grabaciones del NVR por cámara y periodo.
+- Cámaras mediante MediaMTX/WebRTC, incluidas vistas temporales desde alertas, búsqueda de
+  grabaciones del NVR y reproducción histórica con sesiones temporales.
 - Actualización en tiempo real con WebSocket/STOMP.
 - PWA instalable y notificaciones Web Push con bitácora y reintentos.
 - Diagnósticos de sensores, históricos, reporte ejecutivo mensual, PDF y retención automática.
@@ -34,8 +34,8 @@ En producción el navegador utiliza un solo origen HTTPS. Caddy recibe `/api`, `
 cámara y la aplicación; así evita contenido mixto y problemas de CORS.
 
 La búsqueda histórica se realiza desde el backend contra ISAPI con autenticación Digest. Las
-credenciales y las URI RTSP de reproducción nunca se entregan al navegador. La reproducción de los
-segmentos encontrados queda pendiente del gateway histórico temporal.
+credenciales y las URI RTSP nunca se entregan al navegador. Para reproducir, el backend crea una
+ruta aleatoria y temporal en la API local de MediaMTX; esa API escucha únicamente en loopback.
 
 ## Carpetas
 

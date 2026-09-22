@@ -2,6 +2,7 @@ package com.icap.logicoti.camera;
 
 import com.icap.logicoti.config.CameraHistoryProperties;
 import com.icap.logicoti.exception.BadRequestException;
+import com.icap.logicoti.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -21,15 +22,18 @@ public class CameraHistoryService {
 
     private final CameraService cameraService;
     private final NvrRecordingClient recordingClient;
+    private final HistoryPlaybackGateway playbackGateway;
     private final CameraHistoryProperties properties;
 
     public CameraHistoryService(
             CameraService cameraService,
             NvrRecordingClient recordingClient,
+            HistoryPlaybackGateway playbackGateway,
             CameraHistoryProperties properties
     ) {
         this.cameraService = cameraService;
         this.recordingClient = recordingClient;
+        this.playbackGateway = playbackGateway;
         this.properties = properties;
     }
 
@@ -81,7 +85,60 @@ public class CameraHistoryService {
                 request.endTime(),
                 List.copyOf(items),
                 items.size(),
-                false,
+                isPlaybackConfigured(),
+                Instant.now()
+        );
+    }
+
+    public CameraRecordingPlaybackResponse startPlayback(
+            String cameraCode,
+            CameraRecordingPlaybackRequest request
+    ) {
+        if (!isPlaybackConfigured()) {
+            throw new CameraHistoryUnavailableException(
+                    "La reproducción histórica no está configurada."
+            );
+        }
+
+        validateRange(request.startTime(), request.endTime());
+        CameraResponse camera = cameraService.findByCode(cameraCode);
+
+        if (!camera.active()) {
+            throw new BadRequestException(
+                    "La cámara seleccionada está inactiva."
+            );
+        }
+
+        int trackId = trackId(camera.channelNumber());
+        LocalDateTime nvrStart = toNvrTime(request.startTime());
+        LocalDateTime nvrEnd = toNvrTime(request.endTime());
+        NvrRecordingSegment segment = recordingClient.search(
+                        trackId,
+                        nvrStart,
+                        nvrEnd
+                ).stream()
+                .filter(item -> overlaps(
+                        item.startTime(),
+                        item.endTime(),
+                        nvrStart,
+                        nvrEnd
+                ))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "La grabación seleccionada ya no está disponible."
+                ));
+
+        HistoryPlaybackSession session = playbackGateway.open(
+                camera.code(),
+                trackId,
+                segment.playbackUri()
+        );
+
+        return new CameraRecordingPlaybackResponse(
+                camera.code(),
+                camera.name(),
+                cameraService.buildViewUrl(session.pathName()),
+                session.expiresAt(),
                 Instant.now()
         );
     }
@@ -122,6 +179,11 @@ public class CameraHistoryService {
         }
     }
 
+    private boolean isPlaybackConfigured() {
+        return properties.isPlaybackConfigured()
+                && cameraService.isPlaybackConfigured();
+    }
+
     private int trackId(int channelNumber) {
         if (channelNumber < 1 || channelNumber > MAX_CHANNEL_NUMBER) {
             throw new BadRequestException(
@@ -131,6 +193,16 @@ public class CameraHistoryService {
 
         return channelNumber * TRACK_MULTIPLIER
                 + FIRST_STREAM_SUFFIX;
+    }
+
+    private boolean overlaps(
+            LocalDateTime segmentStart,
+            LocalDateTime segmentEnd,
+            LocalDateTime requestedStart,
+            LocalDateTime requestedEnd
+    ) {
+        return !segmentEnd.isBefore(requestedStart)
+                && !segmentStart.isAfter(requestedEnd);
     }
 
     private LocalDateTime toNvrTime(LocalDateTime localTime) {

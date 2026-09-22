@@ -218,6 +218,42 @@
               } @else if (historySearched() && recordingSegments().length === 0) {
                 <p class="history-message">No se encontraron grabaciones en ese periodo.</p>
               } @else if (recordingSegments().length > 0) {
+                @if (historyPlaybackError()) {
+                  <p class="history-message history-message--error">
+                    {{ historyPlaybackError() }}
+                  </p>
+                }
+
+                @if (historyPlaybackUrl(); as playbackUrl) {
+                  <section class="history-player">
+                    <header>
+                      <div>
+                        <strong>Reproducción histórica</strong>
+                        @if (historyPlaybackSegment(); as playbackSegment) {
+                          <span>
+                            {{ playbackSegment.startTime | date: 'HH:mm:ss' }} –
+                            {{ playbackSegment.endTime | date: 'HH:mm:ss' }}
+                          </span>
+                        }
+                      </div>
+                      <button type="button" (click)="closeHistoryPlayback()">
+                        <i class="pi pi-times"></i>
+                        Cerrar
+                      </button>
+                    </header>
+                    <iframe
+                      [src]="playbackUrl"
+                      [title]="'Grabación histórica de ' + camera.name"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      referrerpolicy="same-origin"
+                    ></iframe>
+                    <small>
+                      Sesión temporal hasta
+                      {{ historyPlaybackExpiresAt() | date: 'HH:mm' }}.
+                    </small>
+                  </section>
+                }
+
                 <div class="recording-list">
                   @for (segment of recordingSegments(); track segment.sequence) {
                     <article>
@@ -232,14 +268,35 @@
                           {{ segment.codecType }}
                         </span>
                       </div>
-                      <span>Segmento {{ segment.sequence }}</span>
+                      <button
+                        type="button"
+                        class="recording-action"
+                        [disabled]="
+                          !historyPlaybackConfigured() || historyPlaybackLoadingSequence() !== null
+                        "
+                        [attr.title]="
+                          historyPlaybackConfigured()
+                            ? 'Reproducir este segmento'
+                            : 'Falta habilitar la API local de MediaMTX'
+                        "
+                        (click)="playRecording(segment)"
+                      >
+                        <i
+                          class="pi"
+                          [class.pi-play]="historyPlaybackLoadingSequence() !== segment.sequence"
+                          [class.pi-spin]="historyPlaybackLoadingSequence() === segment.sequence"
+                          [class.pi-spinner]="historyPlaybackLoadingSequence() === segment.sequence"
+                        ></i>
+                        Reproducir
+                      </button>
                     </article>
                   }
                 </div>
-                <p class="history-message">
-                  Resultados localizados. La reproducción protegida se habilitará en el siguiente
-                  bloque.
-                </p>
+                @if (!historyPlaybackConfigured()) {
+                  <p class="history-message">
+                    La búsqueda funciona; falta habilitar la API local de MediaMTX para reproducir.
+                  </p>
+                }
               } @else {
                 <p class="history-message">
                   Selecciona un periodo de hasta 24 horas para consultar el NVR.

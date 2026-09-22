@@ -18,6 +18,10 @@ public class CameraHistoryProperties {
     private Duration responseTimeout = Duration.ofSeconds(15);
     private int maxSearchHours = 24;
     private int maxResults = 100;
+    private boolean playbackEnabled;
+    private URI mediaMtxControlUrl;
+    private Duration mediaMtxTimeout = Duration.ofSeconds(5);
+    private Duration playbackSessionTtl = Duration.ofHours(2);
 
     public boolean isConfigured() {
         return enabled
@@ -30,6 +34,18 @@ public class CameraHistoryProperties {
                 && !username.isBlank()
                 && password != null
                 && !password.isBlank();
+    }
+
+    public boolean isPlaybackConfigured() {
+        return isConfigured()
+                && playbackEnabled
+                && isLoopbackHttpUrl(mediaMtxControlUrl)
+                && mediaMtxTimeout != null
+                && !mediaMtxTimeout.isNegative()
+                && !mediaMtxTimeout.isZero()
+                && playbackSessionTtl != null
+                && !playbackSessionTtl.isNegative()
+                && !playbackSessionTtl.isZero();
     }
 
     public boolean isEnabled() {
@@ -110,5 +126,60 @@ public class CameraHistoryProperties {
 
     public void setMaxResults(int maxResults) {
         this.maxResults = maxResults;
+    }
+
+    public boolean isPlaybackEnabled() {
+        return playbackEnabled;
+    }
+
+    public void setPlaybackEnabled(boolean playbackEnabled) {
+        this.playbackEnabled = playbackEnabled;
+    }
+
+    public URI getMediaMtxControlUrl() {
+        return mediaMtxControlUrl;
+    }
+
+    public void setMediaMtxControlUrl(URI mediaMtxControlUrl) {
+        this.mediaMtxControlUrl = mediaMtxControlUrl;
+    }
+
+    public Duration getMediaMtxTimeout() {
+        return mediaMtxTimeout;
+    }
+
+    public void setMediaMtxTimeout(Duration mediaMtxTimeout) {
+        this.mediaMtxTimeout = mediaMtxTimeout;
+    }
+
+    public Duration getPlaybackSessionTtl() {
+        return playbackSessionTtl;
+    }
+
+    public void setPlaybackSessionTtl(Duration playbackSessionTtl) {
+        this.playbackSessionTtl = playbackSessionTtl;
+    }
+
+    private boolean isLoopbackHttpUrl(URI value) {
+        if (value == null
+                || value.getScheme() == null
+                || value.getHost() == null
+                || value.getUserInfo() != null
+                || value.getQuery() != null
+                || value.getFragment() != null) {
+            return false;
+        }
+
+        String scheme = value.getScheme();
+        String host = value.getHost();
+        String path = value.getPath();
+
+        return ("http".equalsIgnoreCase(scheme)
+                || "https".equalsIgnoreCase(scheme))
+                && ("127.0.0.1".equals(host)
+                || "localhost".equalsIgnoreCase(host)
+                || "::1".equals(host)
+                || "[::1]".equals(host))
+                && (path == null || path.isBlank() || "/".equals(path));
     }
 }

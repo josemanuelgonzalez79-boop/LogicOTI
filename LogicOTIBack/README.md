@@ -87,11 +87,23 @@ NVR_CONNECT_TIMEOUT=5s
 NVR_RESPONSE_TIMEOUT=15s
 NVR_MAX_SEARCH_HOURS=24
 NVR_MAX_RESULTS=100
+CAMERA_HISTORY_PLAYBACK_ENABLED=true
+MEDIAMTX_CONTROL_URL=http://127.0.0.1:9997
+MEDIAMTX_CONTROL_TIMEOUT=5s
+CAMERA_HISTORY_PLAYBACK_SESSION_TTL=2h
 ```
 
 El navegador recibe únicamente horario, duración, códec y tipo de grabación. La URI RTSP devuelta
-por el NVR no se expone en la respuesta pública. En esta primera etapa se localizan segmentos; la
-reproducción histórica requiere el gateway temporal que se incorporará en una etapa posterior.
+por el NVR no se expone en la respuesta pública. Al solicitar reproducción, el backend valida de
+nuevo cámara, track, host y periodo, y crea una ruta aleatoria de MediaMTX que vence automáticamente.
+La API de control debe permanecer en `127.0.0.1:9997`; no debe publicarse en Caddy ni en el firewall.
+
+MediaMTX requiere estas líneas en su archivo local `mediamtx.yml`:
+
+```yaml
+api: yes
+apiAddress: 127.0.0.1:9997
+```
 
 `TWO_FACTOR_ENCRYPTION_KEY` protege los secretos TOTP de los usuarios. Si se omite, el backend
 deriva una clave separada desde `JWT_SECRET`, pero en producción se recomienda configurarla

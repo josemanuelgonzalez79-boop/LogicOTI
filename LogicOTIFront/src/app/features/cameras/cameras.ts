@@ -48,6 +48,12 @@ export class Cameras implements OnInit {
   readonly historyError = signal('');
   readonly recordingSegments = signal<CameraRecordingSegment[]>([]);
   readonly historySearched = signal(false);
+  readonly historyPlaybackConfigured = signal(false);
+  readonly historyPlaybackLoadingSequence = signal<number | null>(null);
+  readonly historyPlaybackError = signal('');
+  readonly historyPlaybackUrl = signal<SafeResourceUrl | null>(null);
+  readonly historyPlaybackExpiresAt = signal('');
+  readonly historyPlaybackSegment = signal<CameraRecordingSegment | null>(null);
 
   readonly floorOptions: ReadonlyArray<{
     value: CameraFloorFilter;
@@ -150,6 +156,7 @@ export class Cameras implements OnInit {
       .subscribe({
         next: (response) => {
           this.recordingSegments.set(response.items);
+          this.historyPlaybackConfigured.set(response.playbackConfigured);
           this.historySearched.set(true);
         },
         error: (error: HttpErrorResponse) => {
@@ -158,6 +165,52 @@ export class Cameras implements OnInit {
           );
         },
       });
+  }
+
+  playRecording(segment: CameraRecordingSegment): void {
+    const camera = this.selectedCamera();
+    if (!camera || !this.historyPlaybackConfigured()) {
+      return;
+    }
+
+    this.historyPlaybackError.set('');
+    this.historyPlaybackUrl.set(null);
+    this.historyPlaybackSegment.set(null);
+    this.historyPlaybackLoadingSequence.set(segment.sequence);
+
+    this.cameraApi
+      .startRecordingPlayback(camera.code, {
+        startTime: segment.startTime,
+        endTime: segment.endTime,
+      })
+      .pipe(finalize(() => this.historyPlaybackLoadingSequence.set(null)))
+      .subscribe({
+        next: (response) => {
+          const safeUrl = this.createSafeHistoryUrl(response.viewUrl);
+          if (!safeUrl) {
+            this.historyPlaybackError.set(
+              'El servidor devolvió una dirección de reproducción inválida.',
+            );
+            return;
+          }
+
+          this.historyPlaybackUrl.set(safeUrl);
+          this.historyPlaybackExpiresAt.set(response.expiresAt);
+          this.historyPlaybackSegment.set(segment);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.historyPlaybackError.set(
+            error.error?.detail ?? 'No fue posible iniciar la reproducción histórica.',
+          );
+        },
+      });
+  }
+
+  closeHistoryPlayback(): void {
+    this.historyPlaybackUrl.set(null);
+    this.historyPlaybackExpiresAt.set('');
+    this.historyPlaybackSegment.set(null);
+    this.historyPlaybackError.set('');
   }
 
   recordingDuration(segment: CameraRecordingSegment): string {
@@ -230,6 +283,17 @@ export class Cameras implements OnInit {
     return this.sanitizer.bypassSecurityTrustResourceUrl(camera.viewUrl);
   }
 
+  private createSafeHistoryUrl(viewUrl: string): SafeResourceUrl | null {
+    if (!viewUrl.startsWith('http://') && !viewUrl.startsWith('https://')) {
+      return null;
+    }
+
+    const separator = viewUrl.includes('?') ? '&' : '?';
+    return this.sanitizer.bypassSecurityTrustResourceUrl(
+      `${viewUrl}${separator}controls=true&autoplay=true&muted=true&playsInline=true`,
+    );
+  }
+
   private setDefaultHistoryRange(): void {
     const now = new Date();
     const start = new Date(now.getTime() - 60 * 60 * 1000);
@@ -254,5 +318,7 @@ export class Cameras implements OnInit {
     this.historyError.set('');
     this.recordingSegments.set([]);
     this.historySearched.set(false);
+    this.historyPlaybackConfigured.set(false);
+    this.closeHistoryPlayback();
   }
 }

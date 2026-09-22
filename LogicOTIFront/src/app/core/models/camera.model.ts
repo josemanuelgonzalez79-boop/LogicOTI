@@ -47,6 +47,19 @@ export interface CameraRecordingSearchResponse {
   timestamp: string;
 }
 
+export interface CameraRecordingPlaybackRequest {
+  startTime: string;
+  endTime: string;
+}
+
+export interface CameraRecordingPlaybackResponse {
+  cameraCode: string;
+  cameraName: string;
+  viewUrl: string;
+  expiresAt: string;
+  timestamp: string;
+}
+
 export interface CameraAlertView {
   cameraCode: string;
   cameraName: string;

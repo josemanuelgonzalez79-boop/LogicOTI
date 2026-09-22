@@ -19,6 +19,8 @@
 - Cámaras mediante MediaMTX, incluido enlace temporal desde alertas de movimiento.
 - Primera etapa del histórico de cámaras: consulta autenticada al NVR Hikvision por cámara, fecha y
   horario, listado de segmentos sin exponer credenciales ni URI RTSP al navegador.
+- Reproducción histórica protegida mediante rutas WebRTC temporales de MediaMTX, con validación de
+  host y track, vencimiento configurable y limpieza automática.
 - PWA instalable con aviso de nueva versión.
 - Web Push con prueba por dispositivo, persistencia de entregas y reintentos.
 - Reconocimiento y comentarios de alarmas.
@@ -46,7 +48,6 @@
 
 ### Pendiente para liberar
 
-- Incorporar el gateway temporal para reproducir los segmentos históricos localizados.
 - Validación final en el servidor y teléfono.
 - Instalar el backend como servicio automático de Windows.
 - Pull Request de `desarrollo` hacia `main`.

@@ -60,7 +60,16 @@ class CameraApiServiceMock {
         },
       ],
       total: 1,
-      playbackConfigured: false,
+      playbackConfigured: true,
+      timestamp: '2026-09-22T17:00:00Z',
+    }),
+  );
+  readonly startRecordingPlayback = vi.fn(() =>
+    of({
+      cameraCode: 'CAM-001',
+      cameraName: 'Frente acceso',
+      viewUrl: 'https://video.local/camera/logicoti-history-session/',
+      expiresAt: '2026-09-22T19:00:00Z',
       timestamp: '2026-09-22T17:00:00Z',
     }),
   );
@@ -135,5 +144,24 @@ describe('Cameras', () => {
       endTime: '2026-09-22T10:00:00',
     });
     expect(fixture.componentInstance.recordingSegments()).toHaveLength(1);
+  });
+
+  it('inicia la reproducción temporal del segmento seleccionado', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+    fixture.componentInstance.historyDate.set('2026-09-22');
+    fixture.componentInstance.historyStartTime.set('09:00');
+    fixture.componentInstance.historyEndTime.set('10:00');
+    fixture.componentInstance.searchHistory();
+
+    const segment = fixture.componentInstance.recordingSegments()[0];
+    fixture.componentInstance.playRecording(segment);
+
+    expect(cameraApi.startRecordingPlayback).toHaveBeenCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:07:21',
+      endTime: '2026-09-22T09:44:09',
+    });
+    expect(fixture.componentInstance.historyPlaybackSegment()).toEqual(segment);
   });
 });
