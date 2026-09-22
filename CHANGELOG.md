@@ -21,6 +21,8 @@
   horario, listado de segmentos sin exponer credenciales ni URI RTSP al navegador.
 - Reproducción histórica protegida mediante rutas WebRTC temporales de MediaMTX, con validación de
   host y track, vencimiento configurable y limpieza automática.
+- Selección de hora dentro de un segmento histórico para avanzar o retroceder; cada salto valida
+  nuevamente la grabación en el NVR y abre la transmisión desde la hora elegida.
 - PWA instalable con aviso de nueva versión.
 - Web Push con prueba por dispositivo, persistencia de entregas y reintentos.
 - Reconocimiento y comentarios de alarmas.

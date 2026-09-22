@@ -426,6 +426,43 @@
   }
 }
 
+.history-seek {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 0.6rem;
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  input {
+    width: 100%;
+    accent-color: var(--p-primary-color);
+    cursor: pointer;
+  }
+
+  .history-seek__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .history-seek__actions span {
+    margin-right: auto;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
 .recording-list {
   display: grid;
   gap: 0.5rem;

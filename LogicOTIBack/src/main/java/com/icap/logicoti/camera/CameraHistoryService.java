@@ -117,12 +117,8 @@ public class CameraHistoryService {
                         nvrStart,
                         nvrEnd
                 ).stream()
-                .filter(item -> overlaps(
-                        item.startTime(),
-                        item.endTime(),
-                        nvrStart,
-                        nvrEnd
-                ))
+                .filter(item -> !item.startTime().isAfter(nvrStart)
+                        && item.endTime().isAfter(nvrStart))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "La grabación seleccionada ya no está disponible."
@@ -131,7 +127,8 @@ public class CameraHistoryService {
         HistoryPlaybackSession session = playbackGateway.open(
                 camera.code(),
                 trackId,
-                segment.playbackUri()
+                segment.playbackUri(),
+                nvrStart
         );
 
         return new CameraRecordingPlaybackResponse(
@@ -193,16 +190,6 @@ public class CameraHistoryService {
 
         return channelNumber * TRACK_MULTIPLIER
                 + FIRST_STREAM_SUFFIX;
-    }
-
-    private boolean overlaps(
-            LocalDateTime segmentStart,
-            LocalDateTime segmentEnd,
-            LocalDateTime requestedStart,
-            LocalDateTime requestedEnd
-    ) {
-        return !segmentEnd.isBefore(requestedStart)
-                && !segmentStart.isAfter(requestedEnd);
     }
 
     private LocalDateTime toNvrTime(LocalDateTime localTime) {

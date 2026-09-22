@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +23,8 @@ class MediaMtxControlClientTests {
                 URI.create("http://192.0.2.18"),
                 101,
                 "history-user",
-                "p@ss word"
+                "p@ss word",
+                LocalDateTime.of(2026, 9, 22, 9, 19, 21)
         );
 
         assertThat(source.getHost()).isEqualTo("192.0.2.18");
@@ -31,6 +33,9 @@ class MediaMtxControlClientTests {
                 "history-user:p@ss word"
         );
         assertThat(source.toASCIIString()).contains("p%40ss%20word");
+        assertThat(source.getQuery())
+                .contains("starttime=20260922T091921Z")
+                .contains("endtime=20260922T094409Z");
     }
 
     @Test
@@ -45,7 +50,8 @@ class MediaMtxControlClientTests {
                         URI.create("http://192.0.2.18"),
                         101,
                         "user",
-                        "password"
+                        "password",
+                        LocalDateTime.of(2026, 9, 22, 9, 19, 21)
                 )
         );
     }

@@ -36,6 +36,9 @@ cámara y la aplicación; así evita contenido mixto y problemas de CORS.
 La búsqueda histórica se realiza desde el backend contra ISAPI con autenticación Digest. Las
 credenciales y las URI RTSP nunca se entregan al navegador. Para reproducir, el backend crea una
 ruta aleatoria y temporal en la API local de MediaMTX; esa API escucha únicamente en loopback.
+El histórico permite saltar a una hora dentro del segmento: el backend verifica de nuevo que esa
+hora esté grabada y crea otra ruta temporal desde el punto elegido. El stream WebRTC no dispone de
+búsqueda continua mediante los controles nativos del video.
 
 ## Carpetas
 

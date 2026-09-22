@@ -2,6 +2,7 @@ package com.icap.logicoti.camera;
 
 import com.icap.logicoti.config.CameraHistoryProperties;
 import com.icap.logicoti.exception.BadRequestException;
+import com.icap.logicoti.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -169,7 +170,7 @@ class CameraHistoryServiceTests {
                         "timing",
                         playbackUri
                 )));
-        when(playbackGateway.open("CAM-001", 101, playbackUri))
+        when(playbackGateway.open("CAM-001", 101, playbackUri, start))
                 .thenReturn(new HistoryPlaybackSession(
                         "logicoti-history-session",
                         expiresAt
@@ -184,11 +185,61 @@ class CameraHistoryServiceTests {
                 new CameraRecordingPlaybackRequest(start, end)
         );
 
-        verify(playbackGateway).open("CAM-001", 101, playbackUri);
+        verify(playbackGateway).open("CAM-001", 101, playbackUri, start);
         assertThat(response.viewUrl()).isEqualTo(
                 "https://video.local/camera/logicoti-history-session/"
         );
         assertThat(response.expiresAt()).isEqualTo(expiresAt);
+    }
+
+    @Test
+    void seeksWithinTheVerifiedSegmentWithoutExposingTheNvrUri() {
+        LocalDateTime segmentStart = LocalDateTime.of(2026, 9, 22, 9, 7, 21);
+        LocalDateTime requestedStart = segmentStart.plusMinutes(12);
+        LocalDateTime segmentEnd = segmentStart.plusMinutes(37);
+        String playbackUri = "rtsp://192.0.2.18/Streaming/tracks/101/"
+                + "?starttime=20260922T090721Z&endtime=20260922T094421Z";
+        properties.setPlaybackEnabled(true);
+        properties.setMediaMtxControlUrl(URI.create("http://127.0.0.1:9997"));
+
+        when(cameraService.isPlaybackConfigured()).thenReturn(true);
+        when(cameraService.findByCode("CAM-001")).thenReturn(camera(1, true));
+        when(recordingClient.search(101, requestedStart, segmentEnd))
+                .thenReturn(List.of(new NvrRecordingSegment(
+                        segmentStart, segmentEnd, "H.264", "timing", playbackUri
+                )));
+        when(playbackGateway.open("CAM-001", 101, playbackUri, requestedStart))
+                .thenReturn(new HistoryPlaybackSession(
+                        "logicoti-history-seek", Instant.parse("2026-09-22T19:00:00Z")
+                ));
+        when(cameraService.buildViewUrl("logicoti-history-seek"))
+                .thenReturn("https://video.local/camera/logicoti-history-seek/");
+
+        service.startPlayback("CAM-001", new CameraRecordingPlaybackRequest(
+                requestedStart, segmentEnd
+        ));
+
+        verify(playbackGateway).open("CAM-001", 101, playbackUri, requestedStart);
+    }
+
+    @Test
+    void refusesToSeekIntoAnUnrecordedGap() {
+        LocalDateTime start = LocalDateTime.of(2026, 9, 22, 9, 20);
+        LocalDateTime end = start.plusMinutes(20);
+        properties.setPlaybackEnabled(true);
+        properties.setMediaMtxControlUrl(URI.create("http://127.0.0.1:9997"));
+
+        when(cameraService.isPlaybackConfigured()).thenReturn(true);
+        when(cameraService.findByCode("CAM-001")).thenReturn(camera(1, true));
+        when(recordingClient.search(101, start, end))
+                .thenReturn(List.of(new NvrRecordingSegment(
+                        start.plusMinutes(5), end, "H.264", "timing",
+                        "rtsp://192.0.2.18/Streaming/tracks/101/"
+                )));
+
+        assertThrows(ResourceNotFoundException.class, () -> service.startPlayback(
+                "CAM-001", new CameraRecordingPlaybackRequest(start, end)
+        ));
     }
 
     private CameraResponse camera(

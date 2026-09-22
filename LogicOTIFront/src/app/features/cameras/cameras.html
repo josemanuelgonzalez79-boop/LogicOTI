@@ -241,6 +241,52 @@
                         Cerrar
                       </button>
                     </header>
+                    @if (historyPlaybackSegment(); as playbackSegment) {
+                      <div class="history-seek">
+                        <label for="history-seek-position">
+                          Ir a una hora del segmento
+                          <strong>{{ seekClockTime(playbackSegment) }}</strong>
+                        </label>
+                        <input
+                          id="history-seek-position"
+                          type="range"
+                          min="0"
+                          [max]="lastSeekSecond(playbackSegment)"
+                          [ngModel]="historyPlaybackSeekSeconds()"
+                          (ngModelChange)="historyPlaybackSeekSeconds.set(+$event)"
+                          [disabled]="historyPlaybackLoadingSequence() !== null"
+                          [attr.aria-label]="'Elegir hora para la grabación de ' + camera.name"
+                        />
+                        <div class="history-seek__actions">
+                          <span>
+                            {{ playbackSegment.startTime | date: 'HH:mm:ss' }} –
+                            {{ playbackSegment.endTime | date: 'HH:mm:ss' }}
+                          </span>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="jumpRecording(-30)"
+                          >
+                            −30 s
+                          </button>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="jumpRecording(30)"
+                          >
+                            +30 s
+                          </button>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="seekRecording()"
+                          >
+                            Ir a esta hora
+                          </button>
+                        </div>
+                        <small>El video volverá a cargar desde la hora seleccionada.</small>
+                      </div>
+                    }
                     <iframe
                       [src]="playbackUrl"
                       [title]="'Grabación histórica de ' + camera.name"

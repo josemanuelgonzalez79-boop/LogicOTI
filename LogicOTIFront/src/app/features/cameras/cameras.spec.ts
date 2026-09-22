@@ -164,4 +164,22 @@ describe('Cameras', () => {
     });
     expect(fixture.componentInstance.historyPlaybackSegment()).toEqual(segment);
   });
+
+  it('salta a una hora elegida dentro del segmento', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+
+    const segment = fixture.componentInstance.recordingSegments()[0];
+    fixture.componentInstance.playRecording(segment);
+    fixture.componentInstance.historyPlaybackSeekSeconds.set(90);
+    fixture.componentInstance.seekRecording();
+
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:08:51',
+      endTime: '2026-09-22T09:44:09',
+    });
+    expect(fixture.componentInstance.historyPlaybackSeekSeconds()).toBe(90);
+  });
 });

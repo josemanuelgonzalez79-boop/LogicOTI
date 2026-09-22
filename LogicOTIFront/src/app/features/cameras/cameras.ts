@@ -54,6 +54,8 @@ export class Cameras implements OnInit {
   readonly historyPlaybackUrl = signal<SafeResourceUrl | null>(null);
   readonly historyPlaybackExpiresAt = signal('');
   readonly historyPlaybackSegment = signal<CameraRecordingSegment | null>(null);
+  readonly historyPlaybackSeekSeconds = signal(0);
+  private historyPlaybackRequestId = 0;
 
   readonly floorOptions: ReadonlyArray<{
     value: CameraFloorFilter;
@@ -133,6 +135,7 @@ export class Cameras implements OnInit {
     const end = this.historyEndTime();
 
     this.historyError.set('');
+    this.closeHistoryPlayback();
     this.recordingSegments.set([]);
     this.historySearched.set(false);
 
@@ -167,25 +170,38 @@ export class Cameras implements OnInit {
       });
   }
 
-  playRecording(segment: CameraRecordingSegment): void {
+  playRecording(segment: CameraRecordingSegment, seekSeconds = 0): void {
     const camera = this.selectedCamera();
-    if (!camera || !this.historyPlaybackConfigured()) {
+    if (
+      !camera ||
+      !this.historyPlaybackConfigured() ||
+      this.historyPlaybackLoadingSequence() !== null
+    ) {
       return;
     }
 
+    const seconds = Math.max(0, Math.min(Math.floor(seekSeconds), this.lastSeekSecond(segment)));
+    const requestId = ++this.historyPlaybackRequestId;
     this.historyPlaybackError.set('');
-    this.historyPlaybackUrl.set(null);
-    this.historyPlaybackSegment.set(null);
     this.historyPlaybackLoadingSequence.set(segment.sequence);
 
     this.cameraApi
       .startRecordingPlayback(camera.code, {
-        startTime: segment.startTime,
+        startTime: this.segmentTimeAt(segment, seconds),
         endTime: segment.endTime,
       })
-      .pipe(finalize(() => this.historyPlaybackLoadingSequence.set(null)))
+      .pipe(
+        finalize(() => {
+          if (requestId === this.historyPlaybackRequestId) {
+            this.historyPlaybackLoadingSequence.set(null);
+          }
+        }),
+      )
       .subscribe({
         next: (response) => {
+          if (requestId !== this.historyPlaybackRequestId) {
+            return;
+          }
           const safeUrl = this.createSafeHistoryUrl(response.viewUrl);
           if (!safeUrl) {
             this.historyPlaybackError.set(
@@ -197,8 +213,12 @@ export class Cameras implements OnInit {
           this.historyPlaybackUrl.set(safeUrl);
           this.historyPlaybackExpiresAt.set(response.expiresAt);
           this.historyPlaybackSegment.set(segment);
+          this.historyPlaybackSeekSeconds.set(seconds);
         },
         error: (error: HttpErrorResponse) => {
+          if (requestId !== this.historyPlaybackRequestId) {
+            return;
+          }
           this.historyPlaybackError.set(
             error.error?.detail ?? 'No fue posible iniciar la reproducción histórica.',
           );
@@ -207,10 +227,35 @@ export class Cameras implements OnInit {
   }
 
   closeHistoryPlayback(): void {
+    this.historyPlaybackRequestId++;
     this.historyPlaybackUrl.set(null);
     this.historyPlaybackExpiresAt.set('');
     this.historyPlaybackSegment.set(null);
+    this.historyPlaybackSeekSeconds.set(0);
+    this.historyPlaybackLoadingSequence.set(null);
     this.historyPlaybackError.set('');
+  }
+
+  seekRecording(): void {
+    const segment = this.historyPlaybackSegment();
+    if (segment) {
+      this.playRecording(segment, this.historyPlaybackSeekSeconds());
+    }
+  }
+
+  jumpRecording(seconds: number): void {
+    const segment = this.historyPlaybackSegment();
+    if (segment) {
+      this.playRecording(segment, this.historyPlaybackSeekSeconds() + seconds);
+    }
+  }
+
+  lastSeekSecond(segment: CameraRecordingSegment): number {
+    return Math.max(0, this.segmentSeconds(segment) - 1);
+  }
+
+  seekClockTime(segment: CameraRecordingSegment): string {
+    return this.segmentTimeAt(segment, this.historyPlaybackSeekSeconds()).slice(11);
   }
 
   recordingDuration(segment: CameraRecordingSegment): string {
@@ -312,6 +357,19 @@ export class Cameras implements OnInit {
 
   private localTime(value: Date): string {
     return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+  }
+
+  private segmentSeconds(segment: CameraRecordingSegment): number {
+    return Math.max(
+      0,
+      Math.floor((Date.parse(`${segment.endTime}Z`) - Date.parse(`${segment.startTime}Z`)) / 1000),
+    );
+  }
+
+  private segmentTimeAt(segment: CameraRecordingSegment, seconds: number): string {
+    return new Date(Date.parse(`${segment.startTime}Z`) + seconds * 1000)
+      .toISOString()
+      .slice(0, 19);
   }
 
   private clearHistoryResults(): void {
