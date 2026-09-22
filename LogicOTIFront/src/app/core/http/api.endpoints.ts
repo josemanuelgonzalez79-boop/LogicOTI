@@ -77,6 +77,8 @@ export const API_ENDPOINTS = {
   cameras: {
     list: '/cameras',
     detail: (cameraCode: string) => `/cameras/${cameraCode}`,
+    recordings: (cameraCode: string) =>
+      `/cameras/${encodeURIComponent(cameraCode)}/recordings/search`,
     alertView: '/camera-alerts/view',
   },
 

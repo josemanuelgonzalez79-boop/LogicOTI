@@ -66,7 +66,32 @@ TWO_FACTOR_ENCRYPTION_KEY=OTRO_SECRETO_ALEATORIO_DE_64_BYTES_O_MAS
 
 Para Web Push también se requieren `WEB_PUSH_ENABLED`, las dos claves VAPID y
 `WEB_PUSH_SUBJECT`. Para cámaras se configuran `CAMERAS_ENABLED`, `CAMERA_PLAYBACK_BASE_URL` y
-`CAMERA_AVAILABLE_STREAMS`.
+`CAMERA_AVAILABLE_STREAMS`. La búsqueda de grabaciones del NVR se habilita por separado con
+`CAMERA_HISTORY_ENABLED` y las variables `NVR_*`; sus credenciales permanecen exclusivamente en el
+backend.
+
+### Búsqueda de grabaciones Hikvision
+
+El endpoint autenticado `POST /api/cameras/{cameraCode}/recordings/search` consulta ISAPI mediante
+Digest y recibe fechas locales sin zona horaria. Para el NVR DS-7632NXI-K2/16P validado se conserva
+`NVR_LOCAL_TIME_AS_UTC=true`, ya que su firmware V4.83.005 espera la hora local con sufijo `Z`.
+
+```text
+CAMERA_HISTORY_ENABLED=true
+NVR_BASE_URL=http://direccion-del-nvr
+NVR_USERNAME=cuenta-exclusiva-de-solo-lectura
+NVR_PASSWORD=CAMBIAR_LOCALMENTE
+NVR_TIME_ZONE=America/Mazatlan
+NVR_LOCAL_TIME_AS_UTC=true
+NVR_CONNECT_TIMEOUT=5s
+NVR_RESPONSE_TIMEOUT=15s
+NVR_MAX_SEARCH_HOURS=24
+NVR_MAX_RESULTS=100
+```
+
+El navegador recibe únicamente horario, duración, códec y tipo de grabación. La URI RTSP devuelta
+por el NVR no se expone en la respuesta pública. En esta primera etapa se localizan segmentos; la
+reproducción histórica requiere el gateway temporal que se incorporará en una etapa posterior.
 
 `TWO_FACTOR_ENCRYPTION_KEY` protege los secretos TOTP de los usuarios. Si se omite, el backend
 deriva una clave separada desde `JWT_SECRET`, pero en producción se recomienda configurarla

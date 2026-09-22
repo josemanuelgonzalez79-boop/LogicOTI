@@ -226,6 +226,16 @@ public class SecurityConfig {
                                 "/api/history/retention/**"
                         ).hasRole(ADMIN_ROLE)
 
+                        // La consulta histórica es de solo lectura para todo el personal autenticado.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/cameras/*/recordings/search"
+                        ).hasAnyRole(
+                                ADMIN_ROLE,
+                                OPERATOR_ROLE,
+                                MONITORING_ROLE
+                        )
+
                         // Consultas del edificio, oficinas, PLC, etc.
                         .requestMatchers(
                                 HttpMethod.GET,

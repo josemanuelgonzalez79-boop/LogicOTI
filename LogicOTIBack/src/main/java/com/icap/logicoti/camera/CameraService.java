@@ -1,5 +1,6 @@
 package com.icap.logicoti.camera;
 
+import com.icap.logicoti.config.CameraHistoryProperties;
 import com.icap.logicoti.config.CameraProperties;
 import com.icap.logicoti.exception.ResourceNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,13 +34,16 @@ public class CameraService {
 
     private final JdbcTemplate jdbcTemplate;
     private final CameraProperties cameraProperties;
+    private final CameraHistoryProperties cameraHistoryProperties;
 
     public CameraService(
             JdbcTemplate jdbcTemplate,
-            CameraProperties cameraProperties
+            CameraProperties cameraProperties,
+            CameraHistoryProperties cameraHistoryProperties
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.cameraProperties = cameraProperties;
+        this.cameraHistoryProperties = cameraHistoryProperties;
     }
 
     public CameraListResponse findAll(
@@ -77,6 +81,7 @@ public class CameraService {
                 items,
                 items.size(),
                 isPlaybackConfigured(),
+                cameraHistoryProperties.isConfigured(),
                 Instant.now()
         );
     }

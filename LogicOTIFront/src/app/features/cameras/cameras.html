@@ -3,7 +3,7 @@
     <div>
       <span class="cameras-header__eyebrow">Videovigilancia OTI</span>
       <h1>Cámaras</h1>
-      <p>Consulta el inventario de CCTV y abre únicamente la transmisión que necesites revisar.</p>
+      <p>Consulta video en vivo y localiza grabaciones del NVR por cámara y periodo.</p>
     </div>
 
     <button type="button" class="refresh-button" [disabled]="loading()" (click)="refresh()">
@@ -127,25 +127,126 @@
             </span>
           </header>
 
-          <div class="video-frame">
-            @if (safeViewUrl(); as viewUrl) {
-              <iframe
-                [src]="viewUrl"
-                [title]="'Video en vivo de ' + camera.name"
-                allow="autoplay; fullscreen; picture-in-picture"
-                referrerpolicy="same-origin"
-              ></iframe>
-            } @else {
-              <div class="video-placeholder">
-                <span class="video-placeholder__icon">
-                  <i class="pi pi-video"></i>
-                </span>
-                <strong>La cámara está registrada</strong>
-                <p>El video se habilitará al configurar el gateway con la IP definitiva del NVR.</p>
-                <small>{{ camera.streamKey }}</small>
-              </div>
-            }
-          </div>
+          <nav class="viewer-tabs" aria-label="Modo de consulta">
+            <button
+              type="button"
+              [class.active]="viewerMode() === 'live'"
+              (click)="selectViewerMode('live')"
+            >
+              <i class="pi pi-circle-fill"></i>
+              En vivo
+            </button>
+            <button
+              type="button"
+              [class.active]="viewerMode() === 'history'"
+              [disabled]="!historyConfigured()"
+              [attr.title]="
+                historyConfigured() ? null : 'Configura el acceso histórico al NVR en el backend'
+              "
+              (click)="selectViewerMode('history')"
+            >
+              <i class="pi pi-history"></i>
+              Histórico
+            </button>
+          </nav>
+
+          @if (viewerMode() === 'live') {
+            <div class="video-frame">
+              @if (safeViewUrl(); as viewUrl) {
+                <iframe
+                  [src]="viewUrl"
+                  [title]="'Video en vivo de ' + camera.name"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  referrerpolicy="same-origin"
+                ></iframe>
+              } @else {
+                <div class="video-placeholder">
+                  <span class="video-placeholder__icon">
+                    <i class="pi pi-video"></i>
+                  </span>
+                  <strong>La cámara está registrada</strong>
+                  <p>
+                    El video se habilitará al configurar el gateway con la IP definitiva del NVR.
+                  </p>
+                  <small>{{ camera.streamKey }}</small>
+                </div>
+              }
+            </div>
+          } @else {
+            <section class="history-panel">
+              <form class="history-form" (ngSubmit)="searchHistory()">
+                <label>
+                  Fecha
+                  <input
+                    type="date"
+                    name="historyDate"
+                    [ngModel]="historyDate()"
+                    (ngModelChange)="historyDate.set($event)"
+                  />
+                </label>
+                <label>
+                  Desde
+                  <input
+                    type="time"
+                    name="historyStart"
+                    [ngModel]="historyStartTime()"
+                    (ngModelChange)="historyStartTime.set($event)"
+                  />
+                </label>
+                <label>
+                  Hasta
+                  <input
+                    type="time"
+                    name="historyEnd"
+                    [ngModel]="historyEndTime()"
+                    (ngModelChange)="historyEndTime.set($event)"
+                  />
+                </label>
+                <button type="submit" [disabled]="historyLoading()">
+                  <i
+                    class="pi"
+                    [class.pi-search]="!historyLoading()"
+                    [class.pi-spin]="historyLoading()"
+                    [class.pi-spinner]="historyLoading()"
+                  ></i>
+                  Buscar
+                </button>
+              </form>
+
+              @if (historyError()) {
+                <p class="history-message history-message--error">{{ historyError() }}</p>
+              } @else if (historySearched() && recordingSegments().length === 0) {
+                <p class="history-message">No se encontraron grabaciones en ese periodo.</p>
+              } @else if (recordingSegments().length > 0) {
+                <div class="recording-list">
+                  @for (segment of recordingSegments(); track segment.sequence) {
+                    <article>
+                      <i class="pi pi-video"></i>
+                      <div>
+                        <strong>
+                          {{ segment.startTime | date: 'HH:mm:ss' }} –
+                          {{ segment.endTime | date: 'HH:mm:ss' }}
+                        </strong>
+                        <span>
+                          {{ recordingDuration(segment) }} · {{ segment.recordingType }} ·
+                          {{ segment.codecType }}
+                        </span>
+                      </div>
+                      <span>Segmento {{ segment.sequence }}</span>
+                    </article>
+                  }
+                </div>
+                <p class="history-message">
+                  Resultados localizados. La reproducción protegida se habilitará en el siguiente
+                  bloque.
+                </p>
+              } @else {
+                <p class="history-message">
+                  Selecciona un periodo de hasta 24 horas para consultar el NVR.
+                </p>
+              }
+            </section>
+          }
 
           <dl class="camera-details">
             <div>
