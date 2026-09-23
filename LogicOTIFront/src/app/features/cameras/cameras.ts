@@ -302,10 +302,17 @@ export class Cameras implements OnInit {
     }
 
     const seconds = Math.max(0, Math.min(Math.floor(seekSeconds), this.lastSeekSecond(segment)));
+    const playbackStartTime = this.segmentTimeAt(segment, seconds);
     const range = this.historySearchRange();
     if (range) {
       this.historyTimelinePositionSeconds.set(
-        this.secondsBetween(range.startTime, segment.startTime) + seconds,
+        Math.max(
+          0,
+          Math.min(
+            this.secondsBetween(range.startTime, playbackStartTime),
+            this.historyTimelineDurationSeconds() - 1,
+          ),
+        ),
       );
     }
     const requestId = ++this.historyPlaybackRequestId;
@@ -314,7 +321,7 @@ export class Cameras implements OnInit {
 
     this.cameraApi
       .startRecordingPlayback(camera.code, {
-        startTime: this.segmentTimeAt(segment, seconds),
+        startTime: playbackStartTime,
         endTime: segment.endTime,
       })
       .pipe(

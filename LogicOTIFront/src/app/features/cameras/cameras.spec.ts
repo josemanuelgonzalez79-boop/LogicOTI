@@ -233,6 +233,39 @@ describe('Cameras', () => {
     expect(fixture.componentInstance.historyPlaybackLoadingSequence()).toBeNull();
   });
 
+  it('mantiene el cursor donde se soltó si la grabación empieza antes de la búsqueda', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    cameraApi.searchRecordings.mockReturnValueOnce(of({
+      cameraCode: 'CAM-001', cameraName: 'Frente acceso', channelNumber: 1,
+      requestedStartTime: '2026-09-23T01:27:00', requestedEndTime: '2026-09-23T05:00:00',
+      items: [{ sequence: 1, startTime: '2026-09-23T00:44:15',
+        endTime: '2026-09-23T04:39:12', codecType: 'H.264', recordingType: 'timing' }],
+      motionItems: [], motionStatus: 'available' as const, total: 1,
+      playbackConfigured: true, timestamp: '2026-09-23T17:00:00Z',
+    }));
+    fixture.detectChanges();
+    fixture.componentInstance.historyDate.set('2026-09-23');
+    fixture.componentInstance.historyStartTime.set('01:27');
+    fixture.componentInstance.historyEndTime.set('05:00');
+    fixture.componentInstance.searchHistory();
+    fixture.componentInstance.selectViewerMode('history');
+    fixture.detectChanges();
+
+    const timeline = fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+    timeline.value = String(39 * 60 + 34);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-23T02:06:34', endTime: '2026-09-23T04:39:12',
+    });
+    expect(fixture.componentInstance.historyTimelinePositionSeconds()).toBe(39 * 60 + 34);
+    expect(fixture.componentInstance.timelineClockTime()).toBe('02:06:34');
+    expect(timeline.value).toBe(String(39 * 60 + 34));
+  });
+
   it('distingue movimiento, grabación sin marca y huecos en el periodo', () => {
     const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
     cameraApi.searchRecordings.mockReturnValueOnce(

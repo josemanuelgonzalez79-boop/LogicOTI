@@ -113,6 +113,8 @@ del paquete Win64, incluyendo sus subcarpetas y las DLL auxiliares, a
 el cargador necesita las dependencias que vienen con el SDK. Esta carpeta está
 ignorada por Git. Actualice `CAMERA_MOTION_SDK_DLL` a la nueva ruta absoluta;
 `CAMERA_MOTION_SDK_SCRIPT` continúa apuntando al script del repositorio.
+También se admite `LogicOTI/lib/HCNetSDK.dll` si se copió allí la carpeta
+completa del SDK; `LogicOTI/lib/` está igualmente excluida de Git.
 
 La búsqueda histórica crea una ruta temporal de MediaMTX para cada salto. El
 backend envía la misma hora al NVR en `starttime` y en el encabezado RTSP
