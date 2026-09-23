@@ -71,7 +71,6 @@ export class Cameras implements OnInit {
   readonly historyPlaybackUrl = signal<SafeResourceUrl | null>(null);
   readonly historyPlaybackExpiresAt = signal('');
   readonly historyPlaybackSegment = signal<CameraRecordingSegment | null>(null);
-  readonly historyPlaybackSeekSeconds = signal(0);
   private historyPlaybackRequestId = 0;
   private historySearchRequestId = 0;
 
@@ -333,7 +332,6 @@ export class Cameras implements OnInit {
           this.historyPlaybackUrl.set(safeUrl);
           this.historyPlaybackExpiresAt.set(response.expiresAt);
           this.historyPlaybackSegment.set(segment);
-          this.historyPlaybackSeekSeconds.set(seconds);
           const range = this.historySearchRange();
           if (range) {
             this.historyTimelinePositionSeconds.set(
@@ -357,16 +355,8 @@ export class Cameras implements OnInit {
     this.historyPlaybackUrl.set(null);
     this.historyPlaybackExpiresAt.set('');
     this.historyPlaybackSegment.set(null);
-    this.historyPlaybackSeekSeconds.set(0);
     this.historyPlaybackLoadingSequence.set(null);
     this.historyPlaybackError.set('');
-  }
-
-  seekRecording(): void {
-    const segment = this.historyPlaybackSegment();
-    if (segment) {
-      this.playRecording(segment, this.historyPlaybackSeekSeconds());
-    }
   }
 
   seekTimeline(): void {
@@ -404,18 +394,16 @@ export class Cameras implements OnInit {
   }
 
   jumpRecording(seconds: number): void {
-    const segment = this.historyPlaybackSegment();
-    if (segment) {
-      this.playRecording(segment, this.historyPlaybackSeekSeconds() + seconds);
+    if (this.historyPlaybackSegment() && this.historyTimelineDurationSeconds() > 0) {
+      this.historyTimelinePositionSeconds.update((position) =>
+        Math.max(0, Math.min(position + seconds, this.historyTimelineDurationSeconds() - 1)),
+      );
+      this.seekTimeline();
     }
   }
 
   lastSeekSecond(segment: CameraRecordingSegment): number {
     return Math.max(0, this.segmentSeconds(segment) - 1);
-  }
-
-  seekClockTime(segment: CameraRecordingSegment): string {
-    return this.segmentTimeAt(segment, this.historyPlaybackSeekSeconds()).slice(11);
   }
 
   recordingDuration(segment: CameraRecordingSegment): string {
