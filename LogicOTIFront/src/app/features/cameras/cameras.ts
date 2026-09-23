@@ -297,15 +297,17 @@ export class Cameras implements OnInit {
 
   playRecording(segment: CameraRecordingSegment, seekSeconds = 0): void {
     const camera = this.selectedCamera();
-    if (
-      !camera ||
-      !this.historyPlaybackConfigured() ||
-      this.historyPlaybackLoadingSequence() !== null
-    ) {
+    if (!camera || !this.historyPlaybackConfigured()) {
       return;
     }
 
     const seconds = Math.max(0, Math.min(Math.floor(seekSeconds), this.lastSeekSecond(segment)));
+    const range = this.historySearchRange();
+    if (range) {
+      this.historyTimelinePositionSeconds.set(
+        this.secondsBetween(range.startTime, segment.startTime) + seconds,
+      );
+    }
     const requestId = ++this.historyPlaybackRequestId;
     this.historyPlaybackError.set('');
     this.historyPlaybackLoadingSequence.set(segment.sequence);
@@ -338,12 +340,6 @@ export class Cameras implements OnInit {
           this.historyPlaybackUrl.set(safeUrl);
           this.historyPlaybackExpiresAt.set(response.expiresAt);
           this.historyPlaybackSegment.set(segment);
-          const range = this.historySearchRange();
-          if (range) {
-            this.historyTimelinePositionSeconds.set(
-              this.secondsBetween(range.startTime, segment.startTime) + seconds,
-            );
-          }
         },
         error: (error: HttpErrorResponse) => {
           if (requestId !== this.historyPlaybackRequestId) {
@@ -365,10 +361,29 @@ export class Cameras implements OnInit {
     this.historyPlaybackError.set('');
   }
 
-  seekTimeline(): void {
-    const range = this.historySearchRange();
-    if (!range || this.historyPlaybackLoadingSequence() !== null) {
+  previewTimeline(event: Event): void {
+    const position = Number((event.target as HTMLInputElement).value);
+    if (!Number.isFinite(position)) {
       return;
+    }
+    // A pending request must not move the thumb back after the user drags again.
+    if (this.historyPlaybackLoadingSequence() !== null) {
+      this.historyPlaybackRequestId++;
+      this.historyPlaybackLoadingSequence.set(null);
+    }
+    this.historyTimelinePositionSeconds.set(position);
+    this.historyTimelineError.set('');
+  }
+
+  seekTimeline(event?: Event): void {
+    const range = this.historySearchRange();
+    if (!range) {
+      return;
+    }
+
+    // Read the input itself on release; ngModelChange may not have run yet.
+    if (event) {
+      this.previewTimeline(event);
     }
 
     const offset = Math.max(
@@ -387,6 +402,7 @@ export class Cameras implements OnInit {
     }
 
     this.historyTimelineError.set('');
+    this.historyTimelinePositionSeconds.set(offset);
     this.playRecording(segment, this.secondsBetween(segment.startTime, time));
   }
 

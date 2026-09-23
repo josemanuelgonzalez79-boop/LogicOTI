@@ -34,3 +34,6 @@ target/
 .env
 *.log
 logs/
+
+# SDK de Hikvision: archivos nativos y dependencias locales, nunca en Git.
+/vendor/hikvision-sdk/

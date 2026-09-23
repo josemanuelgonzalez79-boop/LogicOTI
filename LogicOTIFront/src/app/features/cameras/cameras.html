@@ -295,10 +295,9 @@
                       type="range"
                       min="0"
                       [max]="historyTimelineDurationSeconds() - 1"
-                      [ngModel]="historyTimelinePositionSeconds()"
-                      (ngModelChange)="historyTimelinePositionSeconds.set(+$event)"
-                      (change)="seekTimeline()"
-                      [disabled]="historyPlaybackLoadingSequence() !== null"
+                      [value]="historyTimelinePositionSeconds()"
+                      (input)="previewTimeline($event)"
+                      (change)="seekTimeline($event)"
                       aria-label="Elegir hora en la línea de tiempo"
                     />
                   </div>

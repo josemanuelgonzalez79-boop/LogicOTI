@@ -36,6 +36,11 @@ class MediaMtxControlClientTests {
         assertThat(source.getQuery())
                 .contains("starttime=20260922T091921Z")
                 .contains("endtime=20260922T094409Z");
+        assertThat(MediaMtxControlClient.playbackPathSettings(
+                source, LocalDateTime.of(2026, 9, 22, 9, 19, 21)
+        ))
+                .containsEntry("rtspRangeType", "clock")
+                .containsEntry("rtspRangeStart", "20260922T091921Z");
     }
 
     @Test

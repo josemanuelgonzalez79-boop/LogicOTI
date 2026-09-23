@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
-import { CameraListResponse } from '../../core/models/camera.model';
+import { CameraListResponse, CameraRecordingPlaybackResponse } from '../../core/models/camera.model';
 import { CameraApiService } from '../../core/services/camera-api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cameras } from './cameras';
@@ -198,6 +198,39 @@ describe('Cameras', () => {
       startTime: '2026-09-22T09:09:21',
       endTime: '2026-09-22T09:44:09',
     });
+  });
+
+  it('conserva el último salto aunque el anterior responda después', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+    fixture.componentInstance.selectViewerMode('history');
+    fixture.detectChanges();
+
+    const first = new Subject<CameraRecordingPlaybackResponse>();
+    cameraApi.startRecordingPlayback.mockReturnValueOnce(first.asObservable());
+    const timeline = fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+    timeline.value = String(8 * 60 + 51);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(fixture.componentInstance.historyPlaybackLoadingSequence()).toBe(1);
+
+    timeline.value = String(9 * 60 + 21);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:09:21', endTime: '2026-09-22T09:44:09',
+    });
+    first.next({
+      cameraCode: 'CAM-001', cameraName: 'Frente acceso',
+      viewUrl: 'https://video.local/camera/old-session/',
+      expiresAt: '2026-09-22T19:00:00Z', timestamp: '2026-09-22T17:00:00Z',
+    });
+    first.complete();
+
+    expect(fixture.componentInstance.historyTimelinePositionSeconds()).toBe(9 * 60 + 21);
+    expect(fixture.componentInstance.historyPlaybackLoadingSequence()).toBeNull();
   });
 
   it('distingue movimiento, grabación sin marca y huecos en el periodo', () => {

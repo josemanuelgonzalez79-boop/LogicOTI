@@ -79,13 +79,7 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
                 properties.getPassword(),
                 startTime
         );
-        String body = jsonMapper.writeValueAsString(Map.of(
-                "source", source.toASCIIString(),
-                "sourceOnDemand", true,
-                "sourceOnDemandStartTimeout", "20s",
-                "sourceOnDemandCloseAfter", "15s",
-                "rtspTransport", "tcp"
-        ));
+        String body = jsonMapper.writeValueAsString(playbackPathSettings(source, startTime));
 
         HttpResponse<String> response = send(
                 "POST",
@@ -95,12 +89,25 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
         requireSuccess(response, "crear la reproducción temporal");
 
         LOGGER.info(
-                "Se creó la ruta histórica temporal {} hasta {}.",
+                "Se creó la ruta histórica temporal {} desde {} hasta {}.",
                 pathName,
+                startTime,
                 expiresAt
         );
 
         return new HistoryPlaybackSession(pathName, expiresAt);
+    }
+
+    static Map<String, Object> playbackPathSettings(URI source, LocalDateTime startTime) {
+        return Map.of(
+                "source", source.toASCIIString(),
+                "sourceOnDemand", true,
+                "sourceOnDemandStartTimeout", "20s",
+                "sourceOnDemandCloseAfter", "15s",
+                "rtspTransport", "tcp",
+                "rtspRangeType", "clock",
+                "rtspRangeStart", NVR_RTSP_TIME.format(startTime)
+        );
     }
 
     @Override

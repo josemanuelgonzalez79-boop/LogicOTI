@@ -101,11 +101,23 @@ en el mismo equipo donde corre el backend y configure, por ejemplo:
 
 ```text
 CAMERA_MOTION_SDK_ENABLED=true
-CAMERA_MOTION_SDK_DLL=C:/ruta/al/SDK/lib/HCNetSDK.dll
+CAMERA_MOTION_SDK_DLL=C:/ruta/a/LogicOTI/LogicOTIBack/vendor/hikvision-sdk/lib/HCNetSDK.dll
 CAMERA_MOTION_SDK_SCRIPT=C:/ruta/a/LogicOTI/scripts/diagnosticar-eventos-sdk-nvr.ps1
 CAMERA_MOTION_SDK_PORT=8000
 CAMERA_MOTION_SDK_TIMEOUT=65s
 ```
+
+Para conservar el SDK junto al proyecto, copie **todo el contenido de la carpeta `lib`**
+del paquete Win64, incluyendo sus subcarpetas y las DLL auxiliares, a
+`LogicOTIBack/vendor/hikvision-sdk/lib/`. No basta con copiar `HCNetSDK.dll`:
+el cargador necesita las dependencias que vienen con el SDK. Esta carpeta está
+ignorada por Git. Actualice `CAMERA_MOTION_SDK_DLL` a la nueva ruta absoluta;
+`CAMERA_MOTION_SDK_SCRIPT` continúa apuntando al script del repositorio.
+
+La búsqueda histórica crea una ruta temporal de MediaMTX para cada salto. El
+backend envía la misma hora al NVR en `starttime` y en el encabezado RTSP
+`Range: clock`. Conviene comprobar la hora superpuesta en la imagen en una
+grabación real: el momento efectivo de inicio depende del firmware del NVR.
 
 El backend usa `NVR_USERNAME` y `NVR_PASSWORD` en el proceso auxiliar de PowerShell,
 sin incluirlos en la línea de comandos ni enviar las DLL al navegador. Para una
