@@ -48,10 +48,24 @@ try {
 "@
         $content = [System.Net.Http.StringContent]::new($xmlRequest, [System.Text.Encoding]::UTF8, 'application/xml')
         try {
+            Write-Host "Consultando $($filter.Name) para CAM-$('{0:D3}' -f $Channel)..."
             $response = $client.PostAsync("$($NvrUrl.TrimEnd('/'))/ISAPI/ContentMgmt/search", $content).GetAwaiter().GetResult()
             try {
-                $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-                $document = [xml]$body
+                Write-Host "  HTTP $([int]$response.StatusCode)"
+                # El NVR puede enviar un charset inválido en Content-Type. XmlReader lee
+                # los bytes y usa la codificación declarada en el propio documento XML.
+                $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+                $settings = [System.Xml.XmlReaderSettings]::new()
+                $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+                $settings.XmlResolver = $null
+                $reader = [System.Xml.XmlReader]::Create($stream, $settings)
+                try {
+                    $document = [System.Xml.XmlDocument]::new()
+                    $document.XmlResolver = $null
+                    $document.Load($reader)
+                } finally {
+                    $reader.Dispose()
+                }
                 $matches = @($document.SelectNodes("//*[local-name()='searchMatchItem']"))
                 $statusNode = $document.SelectSingleNode("//*[local-name()='responseStatusStrg']")
                 $statusText = if ($null -eq $statusNode) { 'Sin estado' } else { $statusNode.InnerText }
