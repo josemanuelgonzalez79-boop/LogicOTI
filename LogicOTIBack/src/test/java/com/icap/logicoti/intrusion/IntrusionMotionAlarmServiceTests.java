@@ -64,7 +64,8 @@ class IntrusionMotionAlarmServiceTests {
                 "oti-cam-08",
                 true,
                 true,
-                "http://video.local:8889/oti-cam-08/"
+                "http://video.local:8889/oti-cam-08/",
+                false
         );
 
         when(jdbcTemplate.queryForObject(

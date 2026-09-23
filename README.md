@@ -36,6 +36,24 @@ cámara y la aplicación; así evita contenido mixto y problemas de CORS.
 La búsqueda histórica se realiza desde el backend contra ISAPI con autenticación Digest. Las
 credenciales y las URI RTSP nunca se entregan al navegador. Para reproducir, el backend crea una
 ruta aleatoria y temporal en la API local de MediaMTX; esa API escucha únicamente en loopback.
+El histórico permite saltar a una hora dentro del segmento: el backend verifica de nuevo que esa
+hora esté grabada y crea otra ruta temporal desde el punto elegido. El stream WebRTC no dispone de
+búsqueda continua mediante los controles nativos del video.
+La línea de tiempo del histórico usa los segmentos que devuelve el NVR: muestra en rojo los
+intervalos cuya grabación está marcada como movimiento, en azul los demás intervalos grabados y
+en gris los periodos sin un segmento devuelto. Se puede elegir una hora en esa barra para iniciar
+la reproducción. Una grabación de tipo `timing` no identifica por sí sola los momentos de
+movimiento; el azul significa que el NVR no devolvió esa marca, no que se haya probado inactividad.
+
+El control PTZ se habilita por separado con `CAMERA_PTZ_ENABLED=true` en el `.env` del backend.
+Solo aparece en vivo para los canales indicados por `CAMERA_PTZ_CHANNELS` (por defecto 25–28)
+y para usuarios ADMIN u OPERATOR. El backend envía una orden ISAPI al NVR, espera 350 ms y envía
+una orden de parada; no transmite credenciales al navegador. Utiliza `NVR_BASE_URL` y, salvo
+que se indiquen `CAMERA_PTZ_USERNAME` y `CAMERA_PTZ_PASSWORD`, las credenciales `NVR_USERNAME`
+y `NVR_PASSWORD`. Si el firmware no admite la ruta directa, se puede configurar
+`CAMERA_PTZ_ENDPOINT_MODE=proxy`. Requiere verificar en el NVR el permiso de movimiento de esa
+cuenta y probar un pulso corto con visión directa de la cámara. Si no se detiene, deshabilita
+PTZ y detén la cámara desde el NVR; la entrega de la orden de parada depende de la conexión.
 
 ## Carpetas
 

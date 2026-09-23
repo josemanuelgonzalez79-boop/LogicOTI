@@ -4,6 +4,12 @@
 
 ### Incorporado
 
+- Línea de tiempo interactiva del histórico con segmentos de movimiento, grabaciones sin marca y
+  periodos sin segmento devuelto; salto a la hora seleccionada.
+
+- Control PTZ opcional para las cámaras 25–28: movimientos breves, parada desde el backend,
+  roles ADMIN/OPERATOR y conexión ISAPI directa o mediante proxy del NVR.
+
 - Armado independiente o conjunto de Planta Baja, Piso 1, Piso 2 y Patio/Exterior.
 - Armado por zonas limitado a habilitar alarmas; al completar el armado apaga las luces y los
   minisplits de las zonas seleccionadas para dejar el edificio sin consumo innecesario.
@@ -21,6 +27,8 @@
   horario, listado de segmentos sin exponer credenciales ni URI RTSP al navegador.
 - Reproducción histórica protegida mediante rutas WebRTC temporales de MediaMTX, con validación de
   host y track, vencimiento configurable y limpieza automática.
+- Selección de hora dentro de un segmento histórico para avanzar o retroceder; cada salto valida
+  nuevamente la grabación en el NVR y abre la transmisión desde la hora elegida.
 - PWA instalable con aviso de nueva versión.
 - Web Push con prueba por dispositivo, persistencia de entregas y reintentos.
 - Reconocimiento y comentarios de alarmas.

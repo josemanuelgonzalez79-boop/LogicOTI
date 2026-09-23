@@ -11,6 +11,7 @@ public record CameraResponse(
         String streamKey,
         boolean active,
         boolean videoAvailable,
-        String viewUrl
+        String viewUrl,
+        boolean ptzAvailable
 ) {
 }

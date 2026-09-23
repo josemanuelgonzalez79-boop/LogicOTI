@@ -172,6 +172,69 @@
                 </div>
               }
             </div>
+            @if (camera.ptzAvailable && canControlPtz) {
+              <section class="ptz-panel" aria-label="Control PTZ">
+                <div>
+                  <strong>Control PTZ</strong>
+                  <small>Cada pulsación mueve la cámara brevemente.</small>
+                </div>
+                <div class="ptz-panel__buttons">
+                  <button
+                    type="button"
+                    aria-label="Girar a la izquierda"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('LEFT')"
+                  >
+                    <i class="pi pi-arrow-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Mover hacia arriba"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('UP')"
+                  >
+                    <i class="pi pi-arrow-up"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Mover hacia abajo"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('DOWN')"
+                  >
+                    <i class="pi pi-arrow-down"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Girar a la derecha"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('RIGHT')"
+                  >
+                    <i class="pi pi-arrow-right"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Acercar zoom"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('ZOOM_IN')"
+                  >
+                    <i class="pi pi-search-plus"></i>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Alejar zoom"
+                    [disabled]="ptzMoving()"
+                    (click)="movePtz('ZOOM_OUT')"
+                  >
+                    <i class="pi pi-search-minus"></i>
+                  </button>
+                </div>
+                @if (ptzError()) {
+                  <p class="history-message history-message--error" role="alert">
+                    {{ ptzError() }}
+                  </p>
+                }
+              </section>
+            }
           } @else {
             <section class="history-panel">
               <form class="history-form" (ngSubmit)="searchHistory()">
@@ -213,6 +276,66 @@
                 </button>
               </form>
 
+              @if (historySearched() && historyTimelineDurationSeconds() > 0) {
+                <section class="history-timeline" aria-label="Línea de tiempo de grabaciones">
+                  <div class="history-timeline__header">
+                    <strong>Línea de tiempo</strong>
+                    <span>Hora elegida: {{ timelineClockTime() }}</span>
+                  </div>
+                  <div class="history-timeline__track">
+                    @for (slice of historyTimelineSlices(); track $index) {
+                      <span
+                        [class.history-timeline__motion]="slice.kind === 'motion'"
+                        [class.history-timeline__recorded]="slice.kind === 'recorded'"
+                        [class.history-timeline__gap]="slice.kind === 'gap'"
+                        [style.width.%]="slice.percent"
+                      ></span>
+                    }
+                    <input
+                      type="range"
+                      min="0"
+                      [max]="historyTimelineDurationSeconds() - 1"
+                      [ngModel]="historyTimelinePositionSeconds()"
+                      (ngModelChange)="historyTimelinePositionSeconds.set(+$event)"
+                      [disabled]="historyPlaybackLoadingSequence() !== null"
+                      aria-label="Elegir hora en la línea de tiempo"
+                    />
+                  </div>
+                  @if (historySearchRange(); as range) {
+                    <div class="history-timeline__times">
+                      <span>{{ range.startTime | date: 'HH:mm' }}</span>
+                      <span>{{ range.endTime | date: 'HH:mm' }}</span>
+                    </div>
+                  }
+                  <div class="history-timeline__legend">
+                    <span><i class="history-timeline__motion"></i> Movimiento marcado</span>
+                    <span><i class="history-timeline__recorded"></i> Grabado sin marca</span>
+                    <span><i class="history-timeline__gap"></i> Sin segmento devuelto</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="recording-action"
+                    [disabled]="
+                      !historyPlaybackConfigured() || historyPlaybackLoadingSequence() !== null
+                    "
+                    (click)="seekTimeline()"
+                  >
+                    Ir a la hora elegida
+                  </button>
+                  @if (historyTimelineError()) {
+                    <p class="history-message history-message--error" role="alert">
+                      {{ historyTimelineError() }}
+                    </p>
+                  }
+                  @if (!historyHasMotion()) {
+                    <small>
+                      El NVR no devolvió intervalos marcados como movimiento. El azul indica
+                      grabación sin esa marca; no confirma que no haya habido movimiento.
+                    </small>
+                  }
+                </section>
+              }
+
               @if (historyError()) {
                 <p class="history-message history-message--error">{{ historyError() }}</p>
               } @else if (historySearched() && recordingSegments().length === 0) {
@@ -241,6 +364,52 @@
                         Cerrar
                       </button>
                     </header>
+                    @if (historyPlaybackSegment(); as playbackSegment) {
+                      <div class="history-seek">
+                        <label for="history-seek-position">
+                          Ir a una hora del segmento
+                          <strong>{{ seekClockTime(playbackSegment) }}</strong>
+                        </label>
+                        <input
+                          id="history-seek-position"
+                          type="range"
+                          min="0"
+                          [max]="lastSeekSecond(playbackSegment)"
+                          [ngModel]="historyPlaybackSeekSeconds()"
+                          (ngModelChange)="historyPlaybackSeekSeconds.set(+$event)"
+                          [disabled]="historyPlaybackLoadingSequence() !== null"
+                          [attr.aria-label]="'Elegir hora para la grabación de ' + camera.name"
+                        />
+                        <div class="history-seek__actions">
+                          <span>
+                            {{ playbackSegment.startTime | date: 'HH:mm:ss' }} –
+                            {{ playbackSegment.endTime | date: 'HH:mm:ss' }}
+                          </span>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="jumpRecording(-30)"
+                          >
+                            −30 s
+                          </button>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="jumpRecording(30)"
+                          >
+                            +30 s
+                          </button>
+                          <button
+                            type="button"
+                            [disabled]="historyPlaybackLoadingSequence() !== null"
+                            (click)="seekRecording()"
+                          >
+                            Ir a esta hora
+                          </button>
+                        </div>
+                        <small>El video volverá a cargar desde la hora seleccionada.</small>
+                      </div>
+                    }
                     <iframe
                       [src]="playbackUrl"
                       [title]="'Grabación histórica de ' + camera.name"

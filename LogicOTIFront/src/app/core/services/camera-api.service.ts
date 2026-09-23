@@ -8,6 +8,7 @@ import {
   CameraAlertView,
   CameraFloorCode,
   CameraItem,
+  CameraPtzDirection,
   CameraListResponse,
   CameraRecordingSearchRequest,
   CameraRecordingSearchResponse,
@@ -59,6 +60,13 @@ export class CameraApiService {
     return this.http.post<CameraRecordingPlaybackResponse>(
       `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.recordingPlayback(cameraCode)}`,
       request,
+    );
+  }
+
+  movePtz(cameraCode: string, direction: CameraPtzDirection): Observable<void> {
+    return this.http.post<void>(
+      `${environment.apiBaseUrl}${API_ENDPOINTS.cameras.ptzMove(cameraCode)}`,
+      { direction },
     );
   }
 

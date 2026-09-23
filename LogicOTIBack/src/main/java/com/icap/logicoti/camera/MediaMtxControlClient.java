@@ -14,6 +14,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +33,8 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
             Duration.ofMinutes(5);
     private static final Duration MAXIMUM_SESSION_TTL =
             Duration.ofHours(24);
+    private static final DateTimeFormatter NVR_RTSP_TIME =
+            DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT);
 
     private final CameraHistoryProperties properties;
     private final JsonMapper jsonMapper;
@@ -51,7 +55,8 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
     public HistoryPlaybackSession open(
             String cameraCode,
             int trackId,
-            String playbackUri
+            String playbackUri,
+            LocalDateTime startTime
     ) {
         ensureConfigured();
         Instant expiresAt = Instant.now().plus(normalizedSessionTtl());
@@ -71,7 +76,8 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
                 properties.getBaseUrl(),
                 trackId,
                 properties.getUsername(),
-                properties.getPassword()
+                properties.getPassword(),
+                startTime
         );
         String body = jsonMapper.writeValueAsString(Map.of(
                 "source", source.toASCIIString(),
@@ -146,7 +152,8 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
             URI nvrBaseUrl,
             int trackId,
             String username,
-            String password
+            String password,
+            LocalDateTime startTime
     ) {
         if (playbackUri == null
                 || playbackUri.getScheme() == null
@@ -168,13 +175,27 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
 
         String expectedPath = "/Streaming/tracks/" + trackId;
         String path = playbackUri.getPath();
-        String query = playbackUri.getRawQuery();
+        String query = playbackUri.getQuery();
         if (path == null
                 || !(path.equals(expectedPath)
                 || path.equals(expectedPath + "/"))
                 || query == null
-                || !query.contains("starttime=")
-                || !query.contains("endtime=")) {
+                || startTime == null) {
+            throw invalidPlaybackUri();
+        }
+
+        String[] parameters = query.split("&", -1);
+        int startCount = 0;
+        int endCount = 0;
+        for (int index = 0; index < parameters.length; index++) {
+            if (parameters[index].startsWith("starttime=")) {
+                startCount++;
+                parameters[index] = "starttime=" + NVR_RTSP_TIME.format(startTime);
+            } else if (parameters[index].startsWith("endtime=")) {
+                endCount++;
+            }
+        }
+        if (startCount != 1 || endCount != 1) {
             throw invalidPlaybackUri();
         }
 
@@ -185,7 +206,7 @@ class MediaMtxControlClient implements HistoryPlaybackGateway {
                     playbackUri.getHost(),
                     effectiveRtspPort(playbackUri),
                     path,
-                    playbackUri.getQuery(),
+                    String.join("&", parameters),
                     null
             );
         } catch (URISyntaxException exception) {

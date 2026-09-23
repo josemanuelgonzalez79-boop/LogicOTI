@@ -12,7 +12,10 @@ export interface CameraItem {
   active: boolean;
   videoAvailable: boolean;
   viewUrl: string | null;
+  ptzAvailable: boolean;
 }
+
+export type CameraPtzDirection = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'ZOOM_IN' | 'ZOOM_OUT';
 
 export interface CameraListResponse {
   items: CameraItem[];
