@@ -1,5 +1,5 @@
 # Consulta de solo lectura. Ejecutar con un intervalo donde se haya confirmado movimiento:
-# .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 28 -Start '2026-09-23T08:00:00' -End '2026-09-23T09:00:00'
+# .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 20 -Start '2026-09-23T07:50:00' -End '2026-09-23T09:36:00' -SmartSearch
 param(
     [Parameter(Mandatory = $true)]
     [ValidateRange(1, 32)]
@@ -11,7 +11,10 @@ param(
     [Parameter(Mandatory = $true)]
     [datetime]$End,
 
-    [string]$NvrUrl = 'http://192.168.5.18'
+    [string]$NvrUrl = 'http://192.168.5.18',
+
+    # Prueba opcional de búsqueda VCA. No modifica la configuración del NVR.
+    [switch]$SmartSearch
 )
 
 if ($End -le $Start) {
@@ -81,6 +84,66 @@ try {
             }
         } catch {
             Write-Host "$($filter.Name): error $($_.Exception.Message)"
+        } finally {
+            $content.Dispose()
+        }
+    }
+
+    if ($SmartSearch) {
+        # 22 columnas x 18 filas; los dos bits de relleno al final de cada fila
+        # quedan desactivados. La consulta examina el área completa de la imagen.
+        $gridMap = 'FFFFFC' * 18
+        $xmlRequest = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<SmartSearchDescription version="1.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
+  <searchID>{$([guid]::NewGuid())}</searchID>
+  <searchResultPosition>0</searchResultPosition>
+  <maxResults>100</maxResults>
+  <trackID>$trackId</trackID>
+  <startTime>$($Start.ToString("yyyy-MM-ddTHH:mm:ss'Z'"))</startTime>
+  <endTime>$($End.ToString("yyyy-MM-ddTHH:mm:ss'Z'"))</endTime>
+  <type>motionDetection</type>
+  <MotionDetection>
+    <Grid><rowGranularity>18</rowGranularity><columnGranularity>22</columnGranularity></Grid>
+    <MotionDetectionLayout><layout><gridMap>$gridMap</gridMap></layout></MotionDetectionLayout>
+  </MotionDetection>
+</SmartSearchDescription>
+"@
+        $content = [System.Net.Http.StringContent]::new($xmlRequest, [System.Text.Encoding]::UTF8, 'application/xml')
+        try {
+            Write-Host "Consultando SmartSearch (motionDetection) para CAM-$('{0:D3}' -f $Channel)..."
+            $response = $client.PostAsync("$($NvrUrl.TrimEnd('/'))/ISAPI/ContentMgmt/SmartSearch", $content).GetAwaiter().GetResult()
+            try {
+                Write-Host "  HTTP $([int]$response.StatusCode)"
+                # XmlReader respeta el encoding del XML incluso si Content-Type tiene un charset inválido.
+                $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+                $settings = [System.Xml.XmlReaderSettings]::new()
+                $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+                $settings.XmlResolver = $null
+                $reader = [System.Xml.XmlReader]::Create($stream, $settings)
+                try {
+                    $document = [System.Xml.XmlDocument]::new()
+                    $document.XmlResolver = $null
+                    $document.Load($reader)
+                } finally {
+                    $reader.Dispose()
+                }
+                $status = $document.SelectSingleNode("//*[local-name()='responseStatusStrg' or local-name()='statusString' or local-name()='subStatusCode']")
+                $statusText = if ($null -eq $status) { $document.DocumentElement.LocalName } else { $status.InnerText }
+                $matches = @($document.SelectNodes("//*[local-name()='searchMatchItem']"))
+                Write-Host "SmartSearch: HTTP $([int]$response.StatusCode), estado $statusText, resultados primera pagina $($matches.Count)"
+                $matches | Select-Object -First 10 | ForEach-Object {
+                    $from = $_.SelectSingleNode("./*[local-name()='timeSpan']/*[local-name()='startTime']")
+                    $until = $_.SelectSingleNode("./*[local-name()='timeSpan']/*[local-name()='endTime']")
+                    if ($null -ne $from -and $null -ne $until) {
+                        Write-Host "  $($from.InnerText) - $($until.InnerText)"
+                    }
+                }
+            } finally {
+                $response.Dispose()
+            }
+        } catch {
+            Write-Host "SmartSearch: error $($_.Exception.Message)"
         } finally {
             $content.Dispose()
         }
