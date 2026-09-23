@@ -1,6 +1,7 @@
 # Consulta de solo lectura. Ejecutar con un intervalo donde se haya confirmado movimiento:
 # .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 20 -Start '2026-09-23T07:50:00' -End '2026-09-23T09:36:00' -SmartSearch
 # .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 17 -Start '2026-09-23T09:00:00' -End '2026-09-23T13:00:00' -MotionFormats
+# .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 17 -Start '2026-09-23T09:30:00' -End '2026-09-23T10:00:00' -InspectMetadata
 param(
     [Parameter(Mandatory = $true)]
     [ValidateRange(1, 32)]
@@ -18,11 +19,17 @@ param(
     [switch]$SmartSearch,
 
     # Compara formatos de metadataDescriptor documentados por Hikvision.
-    [switch]$MotionFormats
+    [switch]$MotionFormats,
+
+    # Consulta sin metadataList y muestra el perfil de busqueda publicado por el NVR.
+    [switch]$InspectMetadata
 )
 
 if ($End -le $Start) {
     throw 'La hora final debe ser posterior a la inicial.'
+}
+if ($MotionFormats -and $InspectMetadata) {
+    throw 'Use -MotionFormats o -InspectMetadata por separado.'
 }
 
 Add-Type -AssemblyName System.Net.Http
@@ -34,7 +41,40 @@ $client.Timeout = [timespan]::FromSeconds(25)
 $trackId = $Channel * 100 + 1
 
 try {
-    $filters = if ($MotionFormats) { @(
+    if ($InspectMetadata) {
+        try {
+            Write-Host 'Consultando perfil de busqueda del NVR...'
+            $response = $client.GetAsync("$($NvrUrl.TrimEnd('/'))/ISAPI/ContentMgmt/search/profile").GetAwaiter().GetResult()
+            try {
+                Write-Host "  HTTP $([int]$response.StatusCode)"
+                $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+                $settings = [System.Xml.XmlReaderSettings]::new()
+                $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+                $settings.XmlResolver = $null
+                $reader = [System.Xml.XmlReader]::Create($stream, $settings)
+                try {
+                    $profile = [System.Xml.XmlDocument]::new()
+                    $profile.XmlResolver = $null
+                    $profile.Load($reader)
+                } finally {
+                    $reader.Dispose()
+                }
+                Write-Host "  Tipo: $($profile.DocumentElement.LocalName)"
+                foreach ($name in @('searchProfile', 'maxSearchMetadatas', 'maxSearchMatchResults', 'statusString', 'subStatusCode')) {
+                    $node = $profile.SelectSingleNode("//*[local-name()='$name']")
+                    if ($null -ne $node) { Write-Host "  ${name}: $($node.InnerText)" }
+                }
+            } finally {
+                $response.Dispose()
+            }
+        } catch {
+            Write-Host "Perfil de busqueda: error $($_.Exception.Message)"
+        }
+    }
+
+    $filters = if ($InspectMetadata) { @(
+        @{ Name = 'Grabaciones sin filtro de metadatos'; Descriptor = $null }
+    ) } elseif ($MotionFormats) { @(
         @{ Name = 'Movimiento sin barra (motion)'; Descriptor = 'recordType.meta.hikvision.com/motion' },
         @{ Name = 'Movimiento sin barra (MOTION)'; Descriptor = 'recordType.meta.hikvision.com/MOTION' },
         @{ Name = 'Movimiento con doble barra (MOTION)'; Descriptor = '//recordType.meta.hikvision.com/MOTION' },
@@ -45,13 +85,18 @@ try {
         @{ Name = 'Movimiento (motion)'; Descriptor = '/recordType.meta.hikvision.com/motion' }
     ) }
 
-    $contentTypeList = if ($MotionFormats) {
+    $contentTypeList = if ($MotionFormats -or $InspectMetadata) {
         '<contentTypeList><contentType>video</contentType></contentTypeList>'
     } else {
         ''
     }
 
     foreach ($filter in $filters) {
+        $metadataList = if ($null -eq $filter.Descriptor) {
+            ''
+        } else {
+            "<metadataList><metadataDescriptor>$($filter.Descriptor)</metadataDescriptor></metadataList>"
+        }
         $xmlRequest = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <CMSearchDescription version="1.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
@@ -64,7 +109,7 @@ try {
   $contentTypeList
   <maxResults>100</maxResults>
   <searchResultPostion>0</searchResultPostion>
-  <metadataList><metadataDescriptor>$($filter.Descriptor)</metadataDescriptor></metadataList>
+  $metadataList
 </CMSearchDescription>
 "@
         $content = [System.Net.Http.StringContent]::new($xmlRequest, [System.Text.Encoding]::UTF8, 'application/xml')
@@ -90,7 +135,9 @@ try {
                 $matches = @($document.SelectNodes("//*[local-name()='searchMatchItem']"))
                 $statusNode = $document.SelectSingleNode("//*[local-name()='responseStatusStrg']")
                 $statusText = if ($null -eq $statusNode) { 'Sin estado' } else { $statusNode.InnerText }
-                Write-Host "$($filter.Name): HTTP $([int]$response.StatusCode), estado $statusText, resultados primera pagina $($matches.Count)"
+                $totalNode = $document.SelectSingleNode("//*[local-name()='numOfMatches']")
+                $totalText = if ($null -eq $totalNode) { '' } else { ", total indicado $($totalNode.InnerText)" }
+                Write-Host "$($filter.Name): HTTP $([int]$response.StatusCode), estado $statusText, resultados primera pagina $($matches.Count)$totalText"
                 $matches | Select-Object -First 10 | ForEach-Object {
                     $from = $_.SelectSingleNode("./*[local-name()='timeSpan']/*[local-name()='startTime']").InnerText
                     $until = $_.SelectSingleNode("./*[local-name()='timeSpan']/*[local-name()='endTime']").InnerText
