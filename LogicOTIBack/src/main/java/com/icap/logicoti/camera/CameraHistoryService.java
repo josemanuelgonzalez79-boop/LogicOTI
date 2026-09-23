@@ -90,8 +90,8 @@ public class CameraHistoryService {
                         camera.channelNumber(), request.startTime(), request.endTime());
                 for (NvrMotionInterval event : events) {
                     for (CameraRecordingSegmentResponse recording : items) {
-                        LocalDateTime from = max(event.startTime(), recording.startTime(), request.startTime());
-                        LocalDateTime until = min(event.endTime(), recording.endTime(), request.endTime());
+                        LocalDateTime from = max(event.start(), recording.startTime(), request.startTime());
+                        LocalDateTime until = min(event.end(), recording.endTime(), request.endTime());
                         if (until.isAfter(from)) {
                             motionItems.add(new CameraRecordingSegmentResponse(
                                     motionItems.size() + 1, from, until, "", "MOTION"));
