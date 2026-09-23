@@ -267,6 +267,32 @@ describe('Cameras', () => {
     expect(fixture.componentInstance.historyTimelineError()).toContain('no devolvió');
   });
 
+  it('pinta eventos del SDK en rojo y sigue reproduciendo la grabación ISAPI', () => {
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    cameraApi.searchRecordings.mockReturnValueOnce(of({
+      cameraCode: 'CAM-017', cameraName: 'Pasillo', channelNumber: 17,
+      requestedStartTime: '2026-09-23T09:30:00', requestedEndTime: '2026-09-23T10:00:00',
+      items: [{ sequence: 1, startTime: '2026-09-23T09:30:00',
+        endTime: '2026-09-23T10:00:00', codecType: 'H.264', recordingType: 'timing' }],
+      motionItems: [{ sequence: 1, startTime: '2026-09-23T09:43:00',
+        endTime: '2026-09-23T09:58:02', codecType: '', recordingType: 'MOTION' }],
+      motionStatus: 'available' as const, total: 1, playbackConfigured: true,
+      timestamp: '2026-09-23T17:00:00Z',
+    }));
+    const fixture = TestBed.createComponent(Cameras);
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+
+    expect(fixture.componentInstance.historyTimelineSlices().map((slice) => slice.kind))
+      .toEqual(['recorded', 'motion', 'recorded']);
+    expect(fixture.componentInstance.recordingSegments()).toHaveLength(1);
+    fixture.componentInstance.historyTimelinePositionSeconds.set(14 * 60);
+    fixture.componentInstance.seekTimeline();
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-23T09:44:00', endTime: '2026-09-23T10:00:00',
+    });
+  });
+
   it('envía un movimiento solo desde una cámara PTZ para un rol operativo', () => {
     requestedCameraCode = 'CAM-025';
     const fixture = TestBed.createComponent(Cameras);

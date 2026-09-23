@@ -61,6 +61,8 @@ export class Cameras implements OnInit {
   readonly historyLoading = signal(false);
   readonly historyError = signal('');
   readonly recordingSegments = signal<CameraRecordingSegment[]>([]);
+  readonly motionSegments = signal<CameraRecordingSegment[]>([]);
+  readonly motionStatus = signal<'disabled' | 'available' | 'unavailable'>('disabled');
   readonly historySearched = signal(false);
   readonly historySearchRange = signal<{ startTime: string; endTime: string } | null>(null);
   readonly historyTimelinePositionSeconds = signal(0);
@@ -128,7 +130,7 @@ export class Cameras implements OnInit {
     }
 
     const start = Date.parse(`${range.startTime}Z`);
-    const intervals = this.recordingSegments()
+    const intervals = [...this.recordingSegments(), ...this.motionSegments()]
       .map((segment) => ({
         start: Math.max(0, (Date.parse(`${segment.startTime}Z`) - start) / 1000),
         end: Math.min(duration, (Date.parse(`${segment.endTime}Z`) - start) / 1000),
@@ -239,6 +241,8 @@ export class Cameras implements OnInit {
     this.historySearchRange.set(null);
     this.closeHistoryPlayback();
     this.recordingSegments.set([]);
+    this.motionSegments.set([]);
+    this.motionStatus.set('disabled');
     this.historySearched.set(false);
 
     if (!camera || !date || !start || !end) {
@@ -270,6 +274,8 @@ export class Cameras implements OnInit {
             return;
           }
           this.recordingSegments.set(response.items);
+          this.motionSegments.set(response.motionItems ?? []);
+          this.motionStatus.set(response.motionStatus ?? 'disabled');
           this.historySearchRange.set({
             startTime: response.requestedStartTime,
             endTime: response.requestedEndTime,
@@ -534,6 +540,8 @@ export class Cameras implements OnInit {
     this.historyLoading.set(false);
     this.historyError.set('');
     this.recordingSegments.set([]);
+    this.motionSegments.set([]);
+    this.motionStatus.set('disabled');
     this.historySearched.set(false);
     this.historySearchRange.set(null);
     this.historyTimelinePositionSeconds.set(0);

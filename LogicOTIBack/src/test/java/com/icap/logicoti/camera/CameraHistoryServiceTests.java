@@ -30,6 +30,9 @@ class CameraHistoryServiceTests {
     private NvrRecordingClient recordingClient;
 
     @Mock
+    private NvrMotionClient motionClient;
+
+    @Mock
     private HistoryPlaybackGateway playbackGateway;
 
     private CameraHistoryProperties properties;
@@ -49,6 +52,7 @@ class CameraHistoryServiceTests {
         service = new CameraHistoryService(
                 cameraService,
                 recordingClient,
+                motionClient,
                 playbackGateway,
                 properties
         );
@@ -89,6 +93,50 @@ class CameraHistoryServiceTests {
         assertThat(response.items().getFirst().codecType())
                 .isEqualTo("H.264-BP");
         assertThat(response.playbackConfigured()).isFalse();
+    }
+
+    @Test
+    void overlaysOnlyRecordedPortionsOfSdkMotionWithoutMakingEventsPlayable() {
+        LocalDateTime start = LocalDateTime.of(2026, 9, 23, 9, 30);
+        LocalDateTime end = start.plusMinutes(30);
+        when(cameraService.findByCode("CAM-017")).thenReturn(camera(17, true));
+        when(recordingClient.search(1701, start, end)).thenReturn(List.of(
+                new NvrRecordingSegment(start, start.plusMinutes(12), "H.264", "timing", "rtsp://nvr/1"),
+                new NvrRecordingSegment(start.plusMinutes(13), end, "H.264", "timing", "rtsp://nvr/2")
+        ));
+        when(motionClient.enabled()).thenReturn(true);
+        when(motionClient.search(17, start, end)).thenReturn(List.of(
+                new NvrMotionInterval(start.plusMinutes(10), end.plusMinutes(4))));
+
+        CameraRecordingSearchResponse response = service.search("CAM-017",
+                new CameraRecordingSearchRequest(start, end));
+
+        assertThat(response.total()).isEqualTo(2);
+        assertThat(response.items()).allMatch(item -> item.recordingType().equals("timing"));
+        assertThat(response.motionItems()).extracting(CameraRecordingSegmentResponse::startTime)
+                .containsExactly(start.plusMinutes(10), start.plusMinutes(13));
+        assertThat(response.motionItems()).extracting(CameraRecordingSegmentResponse::endTime)
+                .containsExactly(start.plusMinutes(12), end);
+        assertThat(response.motionStatus()).isEqualTo("available");
+    }
+
+    @Test
+    void preservesPlaybackSegmentsWhenSdkIsUnavailable() {
+        LocalDateTime start = LocalDateTime.of(2026, 9, 23, 9, 30);
+        LocalDateTime end = start.plusMinutes(15);
+        when(cameraService.findByCode("CAM-017")).thenReturn(camera(17, true));
+        when(recordingClient.search(1701, start, end)).thenReturn(List.of(
+                new NvrRecordingSegment(start, end, "H.264", "timing", "rtsp://nvr/1")));
+        when(motionClient.enabled()).thenReturn(true);
+        when(motionClient.search(17, start, end)).thenThrow(
+                new CameraHistoryUnavailableException("SDK temporalmente inaccesible"));
+
+        CameraRecordingSearchResponse response = service.search("CAM-017",
+                new CameraRecordingSearchRequest(start, end));
+
+        assertThat(response.total()).isEqualTo(1);
+        assertThat(response.motionItems()).isEmpty();
+        assertThat(response.motionStatus()).isEqualTo("unavailable");
     }
 
     @Test

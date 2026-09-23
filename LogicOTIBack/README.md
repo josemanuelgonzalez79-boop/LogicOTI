@@ -87,11 +87,34 @@ NVR_CONNECT_TIMEOUT=5s
 NVR_RESPONSE_TIMEOUT=15s
 NVR_MAX_SEARCH_HOURS=24
 NVR_MAX_RESULTS=100
+CAMERA_MOTION_SDK_ENABLED=false
+CAMERA_MOTION_SDK_DLL=
+CAMERA_MOTION_SDK_SCRIPT=
 CAMERA_HISTORY_PLAYBACK_ENABLED=true
 MEDIAMTX_CONTROL_URL=http://127.0.0.1:9997
 MEDIAMTX_CONTROL_TIMEOUT=5s
 CAMERA_HISTORY_PLAYBACK_SESSION_TTL=2h
 ```
+
+Para mostrar las franjas rojas de actividad en Windows, instale el SDK Hikvision x64
+en el mismo equipo donde corre el backend y configure, por ejemplo:
+
+```text
+CAMERA_MOTION_SDK_ENABLED=true
+CAMERA_MOTION_SDK_DLL=C:/ruta/al/SDK/lib/HCNetSDK.dll
+CAMERA_MOTION_SDK_SCRIPT=C:/ruta/a/LogicOTI/scripts/diagnosticar-eventos-sdk-nvr.ps1
+CAMERA_MOTION_SDK_PORT=8000
+CAMERA_MOTION_SDK_TIMEOUT=65s
+```
+
+El backend usa `NVR_USERNAME` y `NVR_PASSWORD` en el proceso auxiliar de PowerShell,
+sin incluirlos en la línea de comandos ni enviar las DLL al navegador. Para una
+búsqueda de grabaciones consulta también los eventos locales del canal digital que
+informa el SDK. Los intervalos rojos se recortan a vídeo disponible; los segmentos
+reproducibles siguen viniendo de ISAPI. Si la consulta SDK falla, la reproducción
+continúa y la pantalla indica que faltan las marcas. Para intervalos muy extensos
+el SDK puede tardar hasta el límite configurado; reduzca la ventana si aparece
+ese aviso. Tras modificar `.env`, reinicie el backend y reconstruya el frontend.
 
 El navegador recibe únicamente horario, duración, códec y tipo de grabación. La URI RTSP devuelta
 por el NVR no se expone en la respuesta pública. Al solicitar reproducción, el backend valida de

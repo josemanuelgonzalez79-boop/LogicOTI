@@ -22,17 +22,20 @@ public class CameraHistoryService {
 
     private final CameraService cameraService;
     private final NvrRecordingClient recordingClient;
+    private final NvrMotionClient motionClient;
     private final HistoryPlaybackGateway playbackGateway;
     private final CameraHistoryProperties properties;
 
     public CameraHistoryService(
             CameraService cameraService,
             NvrRecordingClient recordingClient,
+            NvrMotionClient motionClient,
             HistoryPlaybackGateway playbackGateway,
             CameraHistoryProperties properties
     ) {
         this.cameraService = cameraService;
         this.recordingClient = recordingClient;
+        this.motionClient = motionClient;
         this.playbackGateway = playbackGateway;
         this.properties = properties;
     }
@@ -77,6 +80,30 @@ public class CameraHistoryService {
             ));
         }
 
+        List<CameraRecordingSegmentResponse> motionItems = new ArrayList<>();
+        String motionStatus = "disabled";
+        if (motionClient.enabled() && !matches.isEmpty()) {
+            try {
+                // SDK event timestamps are the NVR's local wall clock, regardless of
+                // the ISAPI search workaround NVR_LOCAL_TIME_AS_UTC.
+                List<NvrMotionInterval> events = motionClient.search(
+                        camera.channelNumber(), request.startTime(), request.endTime());
+                for (NvrMotionInterval event : events) {
+                    for (CameraRecordingSegmentResponse recording : items) {
+                        LocalDateTime from = max(event.startTime(), recording.startTime(), request.startTime());
+                        LocalDateTime until = min(event.endTime(), recording.endTime(), request.endTime());
+                        if (until.isAfter(from)) {
+                            motionItems.add(new CameraRecordingSegmentResponse(
+                                    motionItems.size() + 1, from, until, "", "MOTION"));
+                        }
+                    }
+                }
+                motionStatus = "available";
+            } catch (CameraHistoryUnavailableException exception) {
+                motionStatus = "unavailable";
+            }
+        }
+
         return new CameraRecordingSearchResponse(
                 camera.code(),
                 camera.name(),
@@ -85,6 +112,8 @@ public class CameraHistoryService {
                 request.endTime(),
                 List.copyOf(items),
                 items.size(),
+                List.copyOf(motionItems),
+                motionStatus,
                 isPlaybackConfigured(),
                 Instant.now()
         );
@@ -221,5 +250,13 @@ public class CameraHistoryService {
                     exception
             );
         }
+    }
+
+    private LocalDateTime max(LocalDateTime a, LocalDateTime b, LocalDateTime c) {
+        return a.isAfter(b) ? (a.isAfter(c) ? a : c) : (b.isAfter(c) ? b : c);
+    }
+
+    private LocalDateTime min(LocalDateTime a, LocalDateTime b, LocalDateTime c) {
+        return a.isBefore(b) ? (a.isBefore(c) ? a : c) : (b.isBefore(c) ? b : c);
     }
 }

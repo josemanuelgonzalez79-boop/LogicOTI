@@ -346,7 +346,11 @@
                       {{ historyTimelineError() }}
                     </p>
                   }
-                  @if (!historyHasMotion()) {
+                  @if (motionStatus() === 'unavailable') {
+                    <small>No se pudieron consultar las marcas de movimiento del NVR; puedes seguir navegando por las grabaciones.</small>
+                  } @else if (motionStatus() === 'disabled') {
+                    <small>Las marcas de movimiento requieren habilitar la consulta SDK en el backend.</small>
+                  } @else if (!historyHasMotion()) {
                     <small>
                       El NVR no devolvió eventos de movimiento en esta búsqueda. El azul indica
                       video disponible, no tiempo sin actividad.
