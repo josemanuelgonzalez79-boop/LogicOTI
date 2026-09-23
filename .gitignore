@@ -5,6 +5,9 @@ MediaMTX/mediamtx.yml
 MediaMTX/auto.crt
 MediaMTX/auto.key
 
+# SDK nativo de Hikvision copiado localmente en la raíz del proyecto.
+/lib/
+
 # Archivos generados por los servicios locales de MediaMTX/WinSW.
 MediaMTX/*.log
 MediaMTX/*.out.log

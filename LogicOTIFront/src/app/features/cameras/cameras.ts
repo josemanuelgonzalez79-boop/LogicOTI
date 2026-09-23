@@ -61,6 +61,8 @@ export class Cameras implements OnInit {
   readonly historyLoading = signal(false);
   readonly historyError = signal('');
   readonly recordingSegments = signal<CameraRecordingSegment[]>([]);
+  readonly motionSegments = signal<CameraRecordingSegment[]>([]);
+  readonly motionStatus = signal<'disabled' | 'available' | 'unavailable'>('disabled');
   readonly historySearched = signal(false);
   readonly historySearchRange = signal<{ startTime: string; endTime: string } | null>(null);
   readonly historyTimelinePositionSeconds = signal(0);
@@ -128,7 +130,7 @@ export class Cameras implements OnInit {
     }
 
     const start = Date.parse(`${range.startTime}Z`);
-    const intervals = this.recordingSegments()
+    const intervals = [...this.recordingSegments(), ...this.motionSegments()]
       .map((segment) => ({
         start: Math.max(0, (Date.parse(`${segment.startTime}Z`) - start) / 1000),
         end: Math.min(duration, (Date.parse(`${segment.endTime}Z`) - start) / 1000),
@@ -239,6 +241,8 @@ export class Cameras implements OnInit {
     this.historySearchRange.set(null);
     this.closeHistoryPlayback();
     this.recordingSegments.set([]);
+    this.motionSegments.set([]);
+    this.motionStatus.set('disabled');
     this.historySearched.set(false);
 
     if (!camera || !date || !start || !end) {
@@ -270,6 +274,8 @@ export class Cameras implements OnInit {
             return;
           }
           this.recordingSegments.set(response.items);
+          this.motionSegments.set(response.motionItems ?? []);
+          this.motionStatus.set(response.motionStatus ?? 'disabled');
           this.historySearchRange.set({
             startTime: response.requestedStartTime,
             endTime: response.requestedEndTime,
@@ -291,22 +297,31 @@ export class Cameras implements OnInit {
 
   playRecording(segment: CameraRecordingSegment, seekSeconds = 0): void {
     const camera = this.selectedCamera();
-    if (
-      !camera ||
-      !this.historyPlaybackConfigured() ||
-      this.historyPlaybackLoadingSequence() !== null
-    ) {
+    if (!camera || !this.historyPlaybackConfigured()) {
       return;
     }
 
     const seconds = Math.max(0, Math.min(Math.floor(seekSeconds), this.lastSeekSecond(segment)));
+    const playbackStartTime = this.segmentTimeAt(segment, seconds);
+    const range = this.historySearchRange();
+    if (range) {
+      this.historyTimelinePositionSeconds.set(
+        Math.max(
+          0,
+          Math.min(
+            this.secondsBetween(range.startTime, playbackStartTime),
+            this.historyTimelineDurationSeconds() - 1,
+          ),
+        ),
+      );
+    }
     const requestId = ++this.historyPlaybackRequestId;
     this.historyPlaybackError.set('');
     this.historyPlaybackLoadingSequence.set(segment.sequence);
 
     this.cameraApi
       .startRecordingPlayback(camera.code, {
-        startTime: this.segmentTimeAt(segment, seconds),
+        startTime: playbackStartTime,
         endTime: segment.endTime,
       })
       .pipe(
@@ -332,12 +347,6 @@ export class Cameras implements OnInit {
           this.historyPlaybackUrl.set(safeUrl);
           this.historyPlaybackExpiresAt.set(response.expiresAt);
           this.historyPlaybackSegment.set(segment);
-          const range = this.historySearchRange();
-          if (range) {
-            this.historyTimelinePositionSeconds.set(
-              this.secondsBetween(range.startTime, segment.startTime) + seconds,
-            );
-          }
         },
         error: (error: HttpErrorResponse) => {
           if (requestId !== this.historyPlaybackRequestId) {
@@ -359,10 +368,29 @@ export class Cameras implements OnInit {
     this.historyPlaybackError.set('');
   }
 
-  seekTimeline(): void {
-    const range = this.historySearchRange();
-    if (!range || this.historyPlaybackLoadingSequence() !== null) {
+  previewTimeline(event: Event): void {
+    const position = Number((event.target as HTMLInputElement).value);
+    if (!Number.isFinite(position)) {
       return;
+    }
+    // A pending request must not move the thumb back after the user drags again.
+    if (this.historyPlaybackLoadingSequence() !== null) {
+      this.historyPlaybackRequestId++;
+      this.historyPlaybackLoadingSequence.set(null);
+    }
+    this.historyTimelinePositionSeconds.set(position);
+    this.historyTimelineError.set('');
+  }
+
+  seekTimeline(event?: Event): void {
+    const range = this.historySearchRange();
+    if (!range) {
+      return;
+    }
+
+    // Read the input itself on release; ngModelChange may not have run yet.
+    if (event) {
+      this.previewTimeline(event);
     }
 
     const offset = Math.max(
@@ -381,6 +409,7 @@ export class Cameras implements OnInit {
     }
 
     this.historyTimelineError.set('');
+    this.historyTimelinePositionSeconds.set(offset);
     this.playRecording(segment, this.secondsBetween(segment.startTime, time));
   }
 
@@ -534,6 +563,8 @@ export class Cameras implements OnInit {
     this.historyLoading.set(false);
     this.historyError.set('');
     this.recordingSegments.set([]);
+    this.motionSegments.set([]);
+    this.motionStatus.set('disabled');
     this.historySearched.set(false);
     this.historySearchRange.set(null);
     this.historyTimelinePositionSeconds.set(0);

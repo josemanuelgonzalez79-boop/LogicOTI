@@ -18,6 +18,11 @@ public class CameraHistoryProperties {
     private Duration responseTimeout = Duration.ofSeconds(15);
     private int maxSearchHours = 24;
     private int maxResults = 100;
+    private boolean motionSdkEnabled;
+    private String motionSdkDll = "";
+    private String motionSdkScript = "";
+    private int motionSdkPort = 8000;
+    private Duration motionSdkTimeout = Duration.ofSeconds(65);
     private boolean playbackEnabled;
     private URI mediaMtxControlUrl;
     private Duration mediaMtxTimeout = Duration.ofSeconds(5);
@@ -127,6 +132,17 @@ public class CameraHistoryProperties {
     public void setMaxResults(int maxResults) {
         this.maxResults = maxResults;
     }
+
+    public boolean isMotionSdkEnabled() { return motionSdkEnabled; }
+    public void setMotionSdkEnabled(boolean enabled) { this.motionSdkEnabled = enabled; }
+    public String getMotionSdkDll() { return motionSdkDll; }
+    public void setMotionSdkDll(String dll) { this.motionSdkDll = dll; }
+    public String getMotionSdkScript() { return motionSdkScript; }
+    public void setMotionSdkScript(String script) { this.motionSdkScript = script; }
+    public int getMotionSdkPort() { return motionSdkPort; }
+    public void setMotionSdkPort(int port) { this.motionSdkPort = port; }
+    public Duration getMotionSdkTimeout() { return motionSdkTimeout; }
+    public void setMotionSdkTimeout(Duration timeout) { this.motionSdkTimeout = timeout; }
 
     public boolean isPlaybackEnabled() {
         return playbackEnabled;

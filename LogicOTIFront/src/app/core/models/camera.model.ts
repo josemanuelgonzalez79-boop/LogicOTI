@@ -46,6 +46,8 @@ export interface CameraRecordingSearchResponse {
   requestedEndTime: string;
   items: CameraRecordingSegment[];
   total: number;
+  motionItems: CameraRecordingSegment[];
+  motionStatus: 'disabled' | 'available' | 'unavailable';
   playbackConfigured: boolean;
   timestamp: string;
 }

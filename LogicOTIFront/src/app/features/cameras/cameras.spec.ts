@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
-import { CameraListResponse } from '../../core/models/camera.model';
+import { CameraListResponse, CameraRecordingPlaybackResponse } from '../../core/models/camera.model';
 import { CameraApiService } from '../../core/services/camera-api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cameras } from './cameras';
@@ -200,6 +200,72 @@ describe('Cameras', () => {
     });
   });
 
+  it('conserva el último salto aunque el anterior responda después', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+    fixture.componentInstance.selectViewerMode('history');
+    fixture.detectChanges();
+
+    const first = new Subject<CameraRecordingPlaybackResponse>();
+    cameraApi.startRecordingPlayback.mockReturnValueOnce(first.asObservable());
+    const timeline = fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+    timeline.value = String(8 * 60 + 51);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(fixture.componentInstance.historyPlaybackLoadingSequence()).toBe(1);
+
+    timeline.value = String(9 * 60 + 21);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:09:21', endTime: '2026-09-22T09:44:09',
+    });
+    first.next({
+      cameraCode: 'CAM-001', cameraName: 'Frente acceso',
+      viewUrl: 'https://video.local/camera/old-session/',
+      expiresAt: '2026-09-22T19:00:00Z', timestamp: '2026-09-22T17:00:00Z',
+    });
+    first.complete();
+
+    expect(fixture.componentInstance.historyTimelinePositionSeconds()).toBe(9 * 60 + 21);
+    expect(fixture.componentInstance.historyPlaybackLoadingSequence()).toBeNull();
+  });
+
+  it('mantiene el cursor donde se soltó si la grabación empieza antes de la búsqueda', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    cameraApi.searchRecordings.mockReturnValueOnce(of({
+      cameraCode: 'CAM-001', cameraName: 'Frente acceso', channelNumber: 1,
+      requestedStartTime: '2026-09-23T01:27:00', requestedEndTime: '2026-09-23T05:00:00',
+      items: [{ sequence: 1, startTime: '2026-09-23T00:44:15',
+        endTime: '2026-09-23T04:39:12', codecType: 'H.264', recordingType: 'timing' }],
+      motionItems: [], motionStatus: 'available' as const, total: 1,
+      playbackConfigured: true, timestamp: '2026-09-23T17:00:00Z',
+    }));
+    fixture.detectChanges();
+    fixture.componentInstance.historyDate.set('2026-09-23');
+    fixture.componentInstance.historyStartTime.set('01:27');
+    fixture.componentInstance.historyEndTime.set('05:00');
+    fixture.componentInstance.searchHistory();
+    fixture.componentInstance.selectViewerMode('history');
+    fixture.detectChanges();
+
+    const timeline = fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+    timeline.value = String(39 * 60 + 34);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-23T02:06:34', endTime: '2026-09-23T04:39:12',
+    });
+    expect(fixture.componentInstance.historyTimelinePositionSeconds()).toBe(39 * 60 + 34);
+    expect(fixture.componentInstance.timelineClockTime()).toBe('02:06:34');
+    expect(timeline.value).toBe(String(39 * 60 + 34));
+  });
+
   it('distingue movimiento, grabación sin marca y huecos en el periodo', () => {
     const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
     cameraApi.searchRecordings.mockReturnValueOnce(
@@ -265,6 +331,32 @@ describe('Cameras', () => {
     fixture.componentInstance.seekTimeline();
     expect(cameraApi.startRecordingPlayback).not.toHaveBeenCalled();
     expect(fixture.componentInstance.historyTimelineError()).toContain('no devolvió');
+  });
+
+  it('pinta eventos del SDK en rojo y sigue reproduciendo la grabación ISAPI', () => {
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    cameraApi.searchRecordings.mockReturnValueOnce(of({
+      cameraCode: 'CAM-017', cameraName: 'Pasillo', channelNumber: 17,
+      requestedStartTime: '2026-09-23T09:30:00', requestedEndTime: '2026-09-23T10:00:00',
+      items: [{ sequence: 1, startTime: '2026-09-23T09:30:00',
+        endTime: '2026-09-23T10:00:00', codecType: 'H.264', recordingType: 'timing' }],
+      motionItems: [{ sequence: 1, startTime: '2026-09-23T09:43:00',
+        endTime: '2026-09-23T09:58:02', codecType: '', recordingType: 'MOTION' }],
+      motionStatus: 'available' as const, total: 1, playbackConfigured: true,
+      timestamp: '2026-09-23T17:00:00Z',
+    }));
+    const fixture = TestBed.createComponent(Cameras);
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+
+    expect(fixture.componentInstance.historyTimelineSlices().map((slice) => slice.kind))
+      .toEqual(['recorded', 'motion', 'recorded']);
+    expect(fixture.componentInstance.recordingSegments()).toHaveLength(1);
+    fixture.componentInstance.historyTimelinePositionSeconds.set(14 * 60);
+    fixture.componentInstance.seekTimeline();
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-23T09:44:00', endTime: '2026-09-23T10:00:00',
+    });
   });
 
   it('envía un movimiento solo desde una cámara PTZ para un rol operativo', () => {

@@ -295,10 +295,9 @@
                       type="range"
                       min="0"
                       [max]="historyTimelineDurationSeconds() - 1"
-                      [ngModel]="historyTimelinePositionSeconds()"
-                      (ngModelChange)="historyTimelinePositionSeconds.set(+$event)"
-                      (change)="seekTimeline()"
-                      [disabled]="historyPlaybackLoadingSequence() !== null"
+                      [value]="historyTimelinePositionSeconds()"
+                      (input)="previewTimeline($event)"
+                      (change)="seekTimeline($event)"
                       aria-label="Elegir hora en la línea de tiempo"
                     />
                   </div>
@@ -346,7 +345,11 @@
                       {{ historyTimelineError() }}
                     </p>
                   }
-                  @if (!historyHasMotion()) {
+                  @if (motionStatus() === 'unavailable') {
+                    <small>No se pudieron consultar las marcas de movimiento del NVR; puedes seguir navegando por las grabaciones.</small>
+                  } @else if (motionStatus() === 'disabled') {
+                    <small>Las marcas de movimiento requieren habilitar la consulta SDK en el backend.</small>
+                  } @else if (!historyHasMotion()) {
                     <small>
                       El NVR no devolvió eventos de movimiento en esta búsqueda. El azul indica
                       video disponible, no tiempo sin actividad.

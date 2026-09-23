@@ -12,6 +12,8 @@ public record CameraRecordingSearchResponse(
         LocalDateTime requestedEndTime,
         List<CameraRecordingSegmentResponse> items,
         int total,
+        List<CameraRecordingSegmentResponse> motionItems,
+        String motionStatus,
         boolean playbackConfigured,
         Instant timestamp
 ) {
