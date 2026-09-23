@@ -1,5 +1,6 @@
 # Consulta de solo lectura. Ejecutar con un intervalo donde se haya confirmado movimiento:
 # .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 20 -Start '2026-09-23T07:50:00' -End '2026-09-23T09:36:00' -SmartSearch
+# .\scripts\diagnosticar-eventos-nvr.ps1 -Channel 17 -Start '2026-09-23T09:00:00' -End '2026-09-23T13:00:00' -MotionFormats
 param(
     [Parameter(Mandatory = $true)]
     [ValidateRange(1, 32)]
@@ -14,7 +15,10 @@ param(
     [string]$NvrUrl = 'http://192.168.5.18',
 
     # Prueba opcional de búsqueda VCA. No modifica la configuración del NVR.
-    [switch]$SmartSearch
+    [switch]$SmartSearch,
+
+    # Compara formatos de metadataDescriptor documentados por Hikvision.
+    [switch]$MotionFormats
 )
 
 if ($End -le $Start) {
@@ -30,11 +34,24 @@ $client.Timeout = [timespan]::FromSeconds(25)
 $trackId = $Channel * 100 + 1
 
 try {
-    foreach ($filter in @(
+    $filters = if ($MotionFormats) { @(
+        @{ Name = 'Movimiento sin barra (motion)'; Descriptor = 'recordType.meta.hikvision.com/motion' },
+        @{ Name = 'Movimiento sin barra (MOTION)'; Descriptor = 'recordType.meta.hikvision.com/MOTION' },
+        @{ Name = 'Movimiento con doble barra (MOTION)'; Descriptor = '//recordType.meta.hikvision.com/MOTION' },
+        @{ Name = 'Movimiento estandar con doble barra (MOTION)'; Descriptor = '//recordType.meta.std-cgi.com/MOTION' }
+    ) } else { @(
         @{ Name = 'Todas las grabaciones'; Descriptor = '/recordType.meta.std-cgi.com' },
         @{ Name = 'Movimiento (MOTION)'; Descriptor = '/recordType.meta.hikvision.com/MOTION' },
         @{ Name = 'Movimiento (motion)'; Descriptor = '/recordType.meta.hikvision.com/motion' }
-    )) {
+    ) }
+
+    $contentTypeList = if ($MotionFormats) {
+        '<contentTypeList><contentType>video</contentType></contentTypeList>'
+    } else {
+        ''
+    }
+
+    foreach ($filter in $filters) {
         $xmlRequest = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <CMSearchDescription version="1.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
@@ -44,6 +61,7 @@ try {
     <startTime>$($Start.ToString("yyyy-MM-ddTHH:mm:ss'Z'"))</startTime>
     <endTime>$($End.ToString("yyyy-MM-ddTHH:mm:ss'Z'"))</endTime>
   </timeSpan></timeSpanList>
+  $contentTypeList
   <maxResults>100</maxResults>
   <searchResultPostion>0</searchResultPostion>
   <metadataList><metadataDescriptor>$($filter.Descriptor)</metadataDescriptor></metadataList>
@@ -130,6 +148,10 @@ try {
                 }
                 $status = $document.SelectSingleNode("//*[local-name()='responseStatusStrg' or local-name()='statusString' or local-name()='subStatusCode']")
                 $statusText = if ($null -eq $status) { $document.DocumentElement.LocalName } else { $status.InnerText }
+                $detail = $document.SelectSingleNode("//*[local-name()='subStatusCode']")
+                if ($null -ne $detail -and $detail.InnerText -ne $statusText) {
+                    $statusText = "$statusText ($($detail.InnerText))"
+                }
                 $matches = @($document.SelectNodes("//*[local-name()='searchMatchItem']"))
                 Write-Host "SmartSearch: HTTP $([int]$response.StatusCode), estado $statusText, resultados primera pagina $($matches.Count)"
                 $matches | Select-Object -First 10 | ForEach-Object {
