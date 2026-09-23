@@ -4,6 +4,9 @@
 
 ### Incorporado
 
+- Línea de tiempo interactiva del histórico con segmentos de movimiento, grabaciones sin marca y
+  periodos sin segmento devuelto; salto a la hora seleccionada.
+
 - Control PTZ opcional para las cámaras 25–28: movimientos breves, parada desde el backend,
   roles ADMIN/OPERATOR y conexión ISAPI directa o mediante proxy del NVR.
 

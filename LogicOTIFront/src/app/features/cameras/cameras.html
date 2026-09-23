@@ -276,6 +276,66 @@
                 </button>
               </form>
 
+              @if (historySearched() && historyTimelineDurationSeconds() > 0) {
+                <section class="history-timeline" aria-label="Línea de tiempo de grabaciones">
+                  <div class="history-timeline__header">
+                    <strong>Línea de tiempo</strong>
+                    <span>Hora elegida: {{ timelineClockTime() }}</span>
+                  </div>
+                  <div class="history-timeline__track">
+                    @for (slice of historyTimelineSlices(); track $index) {
+                      <span
+                        [class.history-timeline__motion]="slice.kind === 'motion'"
+                        [class.history-timeline__recorded]="slice.kind === 'recorded'"
+                        [class.history-timeline__gap]="slice.kind === 'gap'"
+                        [style.width.%]="slice.percent"
+                      ></span>
+                    }
+                    <input
+                      type="range"
+                      min="0"
+                      [max]="historyTimelineDurationSeconds() - 1"
+                      [ngModel]="historyTimelinePositionSeconds()"
+                      (ngModelChange)="historyTimelinePositionSeconds.set(+$event)"
+                      [disabled]="historyPlaybackLoadingSequence() !== null"
+                      aria-label="Elegir hora en la línea de tiempo"
+                    />
+                  </div>
+                  @if (historySearchRange(); as range) {
+                    <div class="history-timeline__times">
+                      <span>{{ range.startTime | date: 'HH:mm' }}</span>
+                      <span>{{ range.endTime | date: 'HH:mm' }}</span>
+                    </div>
+                  }
+                  <div class="history-timeline__legend">
+                    <span><i class="history-timeline__motion"></i> Movimiento marcado</span>
+                    <span><i class="history-timeline__recorded"></i> Grabado sin marca</span>
+                    <span><i class="history-timeline__gap"></i> Sin segmento devuelto</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="recording-action"
+                    [disabled]="
+                      !historyPlaybackConfigured() || historyPlaybackLoadingSequence() !== null
+                    "
+                    (click)="seekTimeline()"
+                  >
+                    Ir a la hora elegida
+                  </button>
+                  @if (historyTimelineError()) {
+                    <p class="history-message history-message--error" role="alert">
+                      {{ historyTimelineError() }}
+                    </p>
+                  }
+                  @if (!historyHasMotion()) {
+                    <small>
+                      El NVR no devolvió intervalos marcados como movimiento. El azul indica
+                      grabación sin esa marca; no confirma que no haya habido movimiento.
+                    </small>
+                  }
+                </section>
+              }
+
               @if (historyError()) {
                 <p class="history-message history-message--error">{{ historyError() }}</p>
               } @else if (historySearched() && recordingSegments().length === 0) {

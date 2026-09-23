@@ -39,6 +39,11 @@ ruta aleatoria y temporal en la API local de MediaMTX; esa API escucha únicamen
 El histórico permite saltar a una hora dentro del segmento: el backend verifica de nuevo que esa
 hora esté grabada y crea otra ruta temporal desde el punto elegido. El stream WebRTC no dispone de
 búsqueda continua mediante los controles nativos del video.
+La línea de tiempo del histórico usa los segmentos que devuelve el NVR: muestra en rojo los
+intervalos cuya grabación está marcada como movimiento, en azul los demás intervalos grabados y
+en gris los periodos sin un segmento devuelto. Se puede elegir una hora en esa barra para iniciar
+la reproducción. Una grabación de tipo `timing` no identifica por sí sola los momentos de
+movimiento; el azul significa que el NVR no devolvió esa marca, no que se haya probado inactividad.
 
 El control PTZ se habilita por separado con `CAMERA_PTZ_ENABLED=true` en el `.env` del backend.
 Solo aparece en vivo para los canales indicados por `CAMERA_PTZ_CHANNELS` (por defecto 25–28)

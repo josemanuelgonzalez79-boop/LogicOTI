@@ -190,6 +190,73 @@ describe('Cameras', () => {
     expect(fixture.componentInstance.historyPlaybackSeekSeconds()).toBe(90);
   });
 
+  it('distingue movimiento, grabación sin marca y huecos en el periodo', () => {
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    cameraApi.searchRecordings.mockReturnValueOnce(
+      of({
+        cameraCode: 'CAM-001',
+        cameraName: 'Frente acceso',
+        channelNumber: 1,
+        requestedStartTime: '2026-09-22T09:00:00',
+        requestedEndTime: '2026-09-22T10:00:00',
+        items: [
+          {
+            sequence: 1,
+            startTime: '2026-09-22T09:00:00',
+            endTime: '2026-09-22T09:30:00',
+            codecType: 'H.264',
+            recordingType: 'timing',
+          },
+          {
+            sequence: 2,
+            startTime: '2026-09-22T09:10:00',
+            endTime: '2026-09-22T09:15:00',
+            codecType: 'H.264',
+            recordingType: 'motion',
+          },
+        ],
+        total: 2,
+        playbackConfigured: true,
+        timestamp: '2026-09-22T17:00:00Z',
+      }),
+    );
+    const fixture = TestBed.createComponent(Cameras);
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+
+    expect(fixture.componentInstance.historyTimelineSlices().map((slice) => slice.kind)).toEqual([
+      'recorded',
+      'motion',
+      'recorded',
+      'gap',
+    ]);
+    expect(fixture.componentInstance.historyTimelineSlices().at(-1)?.percent).toBe(50);
+    fixture.componentInstance.historyTimelinePositionSeconds.set(12 * 60);
+    fixture.componentInstance.seekTimeline();
+    expect(cameraApi.startRecordingPlayback).toHaveBeenCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:12:00',
+      endTime: '2026-09-22T09:30:00',
+    });
+  });
+
+  it('no intenta reproducir una hora sin grabación y no inventa movimiento', () => {
+    const fixture = TestBed.createComponent(Cameras);
+    const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
+    fixture.detectChanges();
+    fixture.componentInstance.searchHistory();
+
+    expect(fixture.componentInstance.historyHasMotion()).toBe(false);
+    expect(fixture.componentInstance.historyTimelineSlices().map((slice) => slice.kind)).toEqual([
+      'gap',
+      'recorded',
+      'gap',
+    ]);
+    fixture.componentInstance.historyTimelinePositionSeconds.set(45 * 60);
+    fixture.componentInstance.seekTimeline();
+    expect(cameraApi.startRecordingPlayback).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.historyTimelineError()).toContain('no devolvió');
+  });
+
   it('envía un movimiento solo desde una cámara PTZ para un rol operativo', () => {
     requestedCameraCode = 'CAM-025';
     const fixture = TestBed.createComponent(Cameras);
