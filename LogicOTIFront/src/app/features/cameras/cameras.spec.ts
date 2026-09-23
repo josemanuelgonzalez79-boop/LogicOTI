@@ -172,7 +172,7 @@ describe('Cameras', () => {
     expect(fixture.componentInstance.historyPlaybackSegment()).toEqual(segment);
   });
 
-  it('salta a una hora elegida dentro del segmento', () => {
+  it('navega con la única línea de tiempo después de iniciar la reproducción', () => {
     const fixture = TestBed.createComponent(Cameras);
     const cameraApi = TestBed.inject(CameraApiService) as unknown as CameraApiServiceMock;
     fixture.detectChanges();
@@ -180,14 +180,24 @@ describe('Cameras', () => {
 
     const segment = fixture.componentInstance.recordingSegments()[0];
     fixture.componentInstance.playRecording(segment);
-    fixture.componentInstance.historyPlaybackSeekSeconds.set(90);
-    fixture.componentInstance.seekRecording();
+    fixture.componentInstance.selectViewerMode('history');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('input[type="range"]')).toHaveLength(1);
+    const timeline = fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+    timeline.value = String(8 * 60 + 51);
+    timeline.dispatchEvent(new Event('input', { bubbles: true }));
+    timeline.dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
       startTime: '2026-09-22T09:08:51',
       endTime: '2026-09-22T09:44:09',
     });
-    expect(fixture.componentInstance.historyPlaybackSeekSeconds()).toBe(90);
+    expect(fixture.componentInstance.historyTimelinePositionSeconds()).toBe(8 * 60 + 51);
+    fixture.componentInstance.jumpRecording(30);
+    expect(cameraApi.startRecordingPlayback).toHaveBeenLastCalledWith('CAM-001', {
+      startTime: '2026-09-22T09:09:21',
+      endTime: '2026-09-22T09:44:09',
+    });
   });
 
   it('distingue movimiento, grabación sin marca y huecos en el periodo', () => {

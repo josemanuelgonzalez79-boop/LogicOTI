@@ -297,6 +297,7 @@
                       [max]="historyTimelineDurationSeconds() - 1"
                       [ngModel]="historyTimelinePositionSeconds()"
                       (ngModelChange)="historyTimelinePositionSeconds.set(+$event)"
+                      (change)="seekTimeline()"
                       [disabled]="historyPlaybackLoadingSequence() !== null"
                       aria-label="Elegir hora en la línea de tiempo"
                     />
@@ -309,19 +310,37 @@
                   }
                   <div class="history-timeline__legend">
                     <span><i class="history-timeline__motion"></i> Movimiento marcado</span>
-                    <span><i class="history-timeline__recorded"></i> Grabado sin marca</span>
+                    <span><i class="history-timeline__recorded"></i> Grabación disponible</span>
                     <span><i class="history-timeline__gap"></i> Sin segmento devuelto</span>
                   </div>
-                  <button
-                    type="button"
-                    class="recording-action"
-                    [disabled]="
-                      !historyPlaybackConfigured() || historyPlaybackLoadingSequence() !== null
-                    "
-                    (click)="seekTimeline()"
-                  >
-                    Ir a la hora elegida
-                  </button>
+                  <div class="history-timeline__actions">
+                    <button
+                      type="button"
+                      class="recording-action"
+                      [disabled]="
+                        !historyPlaybackConfigured() || historyPlaybackLoadingSequence() !== null
+                      "
+                      (click)="seekTimeline()"
+                    >
+                      Ir a la hora elegida
+                    </button>
+                    @if (historyPlaybackUrl()) {
+                      <button
+                        type="button"
+                        [disabled]="historyPlaybackLoadingSequence() !== null"
+                        (click)="jumpRecording(-30)"
+                      >
+                        −30 s
+                      </button>
+                      <button
+                        type="button"
+                        [disabled]="historyPlaybackLoadingSequence() !== null"
+                        (click)="jumpRecording(30)"
+                      >
+                        +30 s
+                      </button>
+                    }
+                  </div>
                   @if (historyTimelineError()) {
                     <p class="history-message history-message--error" role="alert">
                       {{ historyTimelineError() }}
@@ -329,8 +348,8 @@
                   }
                   @if (!historyHasMotion()) {
                     <small>
-                      El NVR no devolvió intervalos marcados como movimiento. El azul indica
-                      grabación sin esa marca; no confirma que no haya habido movimiento.
+                      El NVR no devolvió eventos de movimiento en esta búsqueda. El azul indica
+                      video disponible, no tiempo sin actividad.
                     </small>
                   }
                 </section>
@@ -364,52 +383,6 @@
                         Cerrar
                       </button>
                     </header>
-                    @if (historyPlaybackSegment(); as playbackSegment) {
-                      <div class="history-seek">
-                        <label for="history-seek-position">
-                          Ir a una hora del segmento
-                          <strong>{{ seekClockTime(playbackSegment) }}</strong>
-                        </label>
-                        <input
-                          id="history-seek-position"
-                          type="range"
-                          min="0"
-                          [max]="lastSeekSecond(playbackSegment)"
-                          [ngModel]="historyPlaybackSeekSeconds()"
-                          (ngModelChange)="historyPlaybackSeekSeconds.set(+$event)"
-                          [disabled]="historyPlaybackLoadingSequence() !== null"
-                          [attr.aria-label]="'Elegir hora para la grabación de ' + camera.name"
-                        />
-                        <div class="history-seek__actions">
-                          <span>
-                            {{ playbackSegment.startTime | date: 'HH:mm:ss' }} –
-                            {{ playbackSegment.endTime | date: 'HH:mm:ss' }}
-                          </span>
-                          <button
-                            type="button"
-                            [disabled]="historyPlaybackLoadingSequence() !== null"
-                            (click)="jumpRecording(-30)"
-                          >
-                            −30 s
-                          </button>
-                          <button
-                            type="button"
-                            [disabled]="historyPlaybackLoadingSequence() !== null"
-                            (click)="jumpRecording(30)"
-                          >
-                            +30 s
-                          </button>
-                          <button
-                            type="button"
-                            [disabled]="historyPlaybackLoadingSequence() !== null"
-                            (click)="seekRecording()"
-                          >
-                            Ir a esta hora
-                          </button>
-                        </div>
-                        <small>El video volverá a cargar desde la hora seleccionada.</small>
-                      </div>
-                    }
                     <iframe
                       [src]="playbackUrl"
                       [title]="'Grabación histórica de ' + camera.name"
